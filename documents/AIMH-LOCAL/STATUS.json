@@ -81,7 +81,11 @@
     "security_design_review": {
       "status": "in_progress",
       "file": "SECURITY-REVIEW.md",
-      "startedAt": "2026-10-14T05:45:00Z"
+      "startedAt": "2026-10-14T05:45:00Z",
+      "completedAt": "2026-10-14T06:20:00Z",
+      "version": 1,
+      "qualityGate": "PASS WITH CONDITIONS — file hoàn chỉnh 700 dòng/74.3KB; verdict APPROVED WITH CONDITIONS: 0 Critical / 1 High (SR-01) / 2 Medium (SR-02, SR-03) / 7 Low / 8 Info (4 verified DESIGN-OK: no-Send 4 lớp, fail-closed auto-mode, quota caps, S2 không ReDoS); 12 DEV-REQUIREMENT DR-01..DR-12; KB ingested",
+      "amendment": "TDD v1.1 (SR-01/02/03 mitigations + DEV-SECURITY-CHECKLIST.md) — sa-agent sh_137913fbe001ZA27bJU4pcRNzd RUNNING; conditions chốt khi amendment gate pass"
     },
     "test_planning": {
       "status": "in_progress",
