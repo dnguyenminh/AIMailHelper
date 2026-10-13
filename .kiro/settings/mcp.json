@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "code-intelligence": {
+      "url": "http://127.0.0.1:9481/mcp",
+      "transportType": "httpStream",
+      "disabled": false
+    }
+  }
+}

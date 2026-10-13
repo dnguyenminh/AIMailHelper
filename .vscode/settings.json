@@ -1,0 +1,9 @@
+{
+    "sdlcAgents.pegaEndpoint": "https://znka1ghf.pegaacademy.net/prweb",
+    "sdlcAgents.pegaUsername": "SSA@TGB",
+    "sdlcAgents.atlassianConnectionType": "cloud",
+    "sdlcAgents.mcpServerPort": 9481,
+    "sdlcAgents.enableMcpServer": true,
+    "sdlcAgents.backend.url": "http://127.0.0.1:48721",
+    "sdlcAgents.jiraLastProject": "AMH"
+}

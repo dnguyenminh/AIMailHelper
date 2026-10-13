@@ -1,0 +1,65 @@
+{
+  "lastUpdated": "2026-10-13T16:54:29.887Z",
+  "files": {
+    "documents/templates/BRD-TEMPLATE.md": {
+      "version": "1.52.0",
+      "hash": "107dad0e2067bd99b7e6700223725fa1a6f577fe2f04aca35b5c1e29c303c2da",
+      "injectedAt": "2026-10-13T16:54:29.816Z"
+    },
+    "documents/templates/DESIGN-SYSTEM.md": {
+      "version": "1.52.0",
+      "hash": "ea86e44eb6a0a3d75c3b6cd4e0a31ceba20ba6cfa8faf2a263c83e793f9a1160",
+      "injectedAt": "2026-10-13T16:54:29.837Z"
+    },
+    "documents/templates/DPG-TEMPLATE.md": {
+      "version": "1.52.0",
+      "hash": "661039fc5e6a9d62b586736a85e5aeb9817d058ab6398391a04abe07192b0e40",
+      "injectedAt": "2026-10-13T16:54:29.839Z"
+    },
+    "documents/templates/FSD-TEMPLATE.md": {
+      "version": "1.52.0",
+      "hash": "4d90dc2d38e0fccf3b938cb9b60e5f3529b2b91a7098cb17032f3c49098b096a",
+      "injectedAt": "2026-10-13T16:54:29.853Z"
+    },
+    "documents/templates/RLN-TEMPLATE.md": {
+      "version": "1.52.0",
+      "hash": "172cbbd84ba8158bd67fd9bc7930ca730e8a4fb592ebd172fc598e15e1897878",
+      "injectedAt": "2026-10-13T16:54:29.856Z"
+    },
+    "documents/templates/SECURITY-REPORT-TEMPLATE.md": {
+      "version": "1.52.0",
+      "hash": "d95a696c432aabd34b8f3de8569abe1d7fc69fb28a59074efe8b6fc195377ca2",
+      "injectedAt": "2026-10-13T16:54:29.858Z"
+    },
+    "documents/templates/STC-TEMPLATE.md": {
+      "version": "1.52.0",
+      "hash": "381a047071c638a0c439319a748d1eaa1e1e05cdd7395200d8decaca990938bf",
+      "injectedAt": "2026-10-13T16:54:29.860Z"
+    },
+    "documents/templates/STP-TEMPLATE.md": {
+      "version": "1.52.0",
+      "hash": "3776d641e0d4b392ae594289cb3729dd7ee6738ee88848a54fdd1c926b80ad0d",
+      "injectedAt": "2026-10-13T16:54:29.862Z"
+    },
+    "documents/templates/TDD-TEMPLATE.md": {
+      "version": "1.52.0",
+      "hash": "a7b48be1efb93f56b62990d64f69df6dd8973f88303ab0637500c4f1389f6490",
+      "injectedAt": "2026-10-13T16:54:29.874Z"
+    },
+    "documents/templates/TEST-REPORT-TEMPLATE.md": {
+      "version": "1.52.0",
+      "hash": "686342e1bcb8ccce76d37a608c1678220477678455d61be9cb893384e0a949a8",
+      "injectedAt": "2026-10-13T16:54:29.884Z"
+    },
+    "documents/templates/UG-TEMPLATE.md": {
+      "version": "1.52.0",
+      "hash": "1802e577abe4176f5158b41c7c0a2b4352f9514bf9c5f4908f6d2f0fefa9464c",
+      "injectedAt": "2026-10-13T16:54:29.886Z"
+    },
+    "documents/templates/UI-SPEC-TEMPLATE.md": {
+      "version": "1.52.0",
+      "hash": "639bef72c63c15641c7c05da52d6b79e865610c96202f9fd8f526d4b3930fa73",
+      "injectedAt": "2026-10-13T16:54:29.887Z"
+    }
+  }
+}

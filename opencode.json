@@ -1,0 +1,89 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "sm-agent": {
+      "description": "Scrum Master — coordinates multi-agent SDLC pipeline (BA→SA→DEV→QA→DevOps)",
+      "mode": "subagent",
+      "permission": {
+        "edit": "ask",
+        "bash": "ask",
+        "task": "allow"
+      }
+    },
+    "ba-agent": {
+      "description": "Business Analyst — reads Jira tickets, creates BRD/FSD documents",
+      "mode": "subagent",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      }
+    },
+    "ta-agent": {
+      "description": "Technical Architect — enriches FSD with API contracts, integration specs, pseudocode",
+      "mode": "subagent",
+      "permission": {
+        "edit": "allow",
+        "bash": "ask"
+      }
+    },
+    "sa-agent": {
+      "description": "Solution Architect — reads BRD/FSD, analyzes codebase, creates TDD",
+      "mode": "subagent",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      }
+    },
+    "dev-agent": {
+      "description": "Developer — implements code from TDD, creates tests, writes User Guide",
+      "mode": "subagent",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow",
+        "task": "allow"
+      }
+    },
+    "qa-agent": {
+      "description": "QA Engineer — creates test plans (STP), test cases (STC), executes manual tests",
+      "mode": "subagent",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow",
+        "task": "allow"
+      }
+    },
+    "devops-agent": {
+      "description": "DevOps Engineer — deployment guides, release notes, CI/CD, git release",
+      "mode": "subagent",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow",
+        "task": "allow"
+      }
+    },
+    "security-agent": {
+      "description": "Security Expert — OWASP-based security audits with remediation code",
+      "mode": "subagent",
+      "permission": {
+        "edit": "allow",
+        "bash": "ask"
+      }
+    },
+    "ui-agent": {
+      "description": "UI/UX Designer — creates wireframes, mockups, HTML/CSS prototypes",
+      "mode": "subagent",
+      "permission": {
+        "edit": "allow",
+        "bash": "ask",
+        "task": "allow"
+      }
+    }
+  },
+  "mcp": {
+    "code-intelligence": {
+      "type": "remote",
+      "url": "http://127.0.0.1:9481/mcp",
+      "enabled": true
+    }
+  }
+}

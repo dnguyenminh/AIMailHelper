@@ -1,0 +1,110 @@
+{
+  "ticket": "AIMH-LOCAL",
+  "jira": {
+    "connected": false,
+    "reason": "Jira MCP tools not available in session (catalog has no jira_* tools; list_mcp_resources returned empty). Using internal placeholder key AIMH-LOCAL. No ticket key/URL fabricated.",
+    "epicKey": "AIMH-LOCAL",
+    "epicTitle": "AIMailHelper — Browser Extension AI cho Outlook 365 (PLAN.md)",
+    "subtasks": [
+      {
+        "id": "AIMH-LOCAL-1",
+        "title": "GĐ 1 — Scaffold (Vite+CRXJS+React+TS, manifest, popup/options shell, storage, messaging, i18n, message router)",
+        "phase": "implementation-gd1",
+        "status": "not_started"
+      },
+      {
+        "id": "AIMH-LOCAL-2",
+        "title": "GĐ 2 — LLM Config (6 adapters + registry + streaming Port + Options UI)",
+        "phase": "implementation-gd2",
+        "status": "not_started"
+      },
+      {
+        "id": "AIMH-LOCAL-3",
+        "title": "GĐ 3 — Đọc & phân tích email đang mở (owa-adapter detector/reader, self-healing tầng 1+2, panel AI)",
+        "phase": "implementation-gd3",
+        "status": "not_started"
+      },
+      {
+        "id": "AIMH-LOCAL-4",
+        "title": "GĐ 4 — Soạn trả lời AI (reply draft, tone/language, chèn compose box, vision-fallback tầng 3, diagnose)",
+        "phase": "implementation-gd4",
+        "status": "not_started"
+      },
+      {
+        "id": "AIMH-LOCAL-5",
+        "title": "GĐ 5 — Triage hộp thư (inbox scan, batch analyze, badge + Digest, cache theo message-id)",
+        "phase": "implementation-gd5",
+        "status": "not_started"
+      },
+      {
+        "id": "AIMH-LOCAL-6",
+        "title": "GĐ 6 — Auto-mode mặc định TẮT (MutationObserver, hàng chờ duyệt, approve batch)",
+        "phase": "implementation-gd6",
+        "status": "not_started"
+      }
+    ]
+  },
+  "autonomyLevel": "L3",
+  "projectPattern": "plugin (browser extension; .kiro/steering/patterns/plugin.md not found — using default plugin pattern emphasis: host interface isolation, capability detection, permission minimization)",
+  "currentPhase": "requirements",
+  "phases": {
+    "requirements": {
+      "status": "in_progress",
+      "file": "BRD.md",
+      "version": 0,
+      "startedAt": "2026-10-14T00:00:00Z"
+    },
+    "specification": {
+      "status": "not_started"
+    },
+    "design": {
+      "status": "not_started"
+    },
+    "feedback_loop": {
+      "status": "not_started",
+      "iterations": 0,
+      "maxIterations": 5
+    },
+    "security_design_review": {
+      "status": "not_started"
+    },
+    "test_planning": {
+      "status": "not_started"
+    },
+    "devops_setup": {
+      "status": "not_started"
+    },
+    "implementation": {
+      "status": "not_started"
+    },
+    "user_guide": {
+      "status": "not_started"
+    },
+    "security_code_review": {
+      "status": "not_started"
+    },
+    "testing": {
+      "status": "not_started"
+    },
+    "pentest": {
+      "status": "not_started"
+    },
+    "uat": {
+      "status": "not_started"
+    },
+    "deployment": {
+      "status": "not_started"
+    }
+  },
+  "constraints": {
+    "jiraTransitions": "SKIPPED — Jira unavailable",
+    "docxExport": "SKIPPED — export_docx tool unavailable; markdown-only artifacts",
+    "kb": "SKIPPED — mem_* tools unavailable; using documents/AIMH-LOCAL/REFERENCE-ANALYSIS.md and GLOSSARY.md as file-based fallback",
+    "git": "local repo initialized; branch AIMH-LOCAL; NO remote push (no remote configured)"
+  },
+  "circuitBreaker": {
+    "state": "closed",
+    "consecutiveFailures": 0
+  },
+  "lastUpdated": "2026-10-14T00:00:00Z"
+}
