@@ -1,0 +1,101 @@
+<mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="boundary" value="AIMailHelper — Extension MV3 trên Outlook Web (OWA)" style="swimlane;startSize=40;html=1;fontStyle=1;fontSize=13;fillColor=none;strokeColor=#0288d1;" vertex="1" parent="1">
+      <mxGeometry x="260" y="40" width="560" height="670" as="geometry"/>
+    </mxCell>
+    <mxCell id="uc1" value="Analyze Email&#10;(tóm tắt, độ quan trọng,&#10;ý định, deadline)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="boundary">
+      <mxGeometry x="40" y="70" width="230" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="uc2" value="Draft Reply (soạn draft + chèn vào&#10;Reply — không tự Send)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="boundary">
+      <mxGeometry x="40" y="170" width="230" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="uc3" value="Triage Inbox&#10;(badge + Digest ưu tiên)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="boundary">
+      <mxGeometry x="40" y="270" width="230" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="uc4" value="Approve / Reject Auto-drafts&#10;(hàng chờ duyệt)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="boundary">
+      <mxGeometry x="40" y="370" width="230" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="uc5" value="Configure LLM Provider&#10;(6 providers + Test Connection)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="boundary">
+      <mxGeometry x="40" y="470" width="230" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="uc6" value="Switch UI Language&#10;(vi / en)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="boundary">
+      <mxGeometry x="40" y="570" width="230" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="a1" value="Email User" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1f5fe;strokeColor=#0288d1;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="60" y="180" width="150" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="a2" value="Power User" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1f5fe;strokeColor=#0288d1;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="60" y="480" width="150" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="a3" value="LLM Provider (External):&#10;OpenAI / Azure OpenAI / Anthropic /&#10;Gemini / OpenAI-compatible /&#10;Ollama - LM Studio (local)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="920" y="240" width="220" height="140" as="geometry"/>
+    </mxCell>
+    <mxCell id="note1" value="An toàn: extension KHÔNG TỰ bấm Send —&#10;mọi draft do người dùng duyệt và gửi trong OWA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;dashed=1;" vertex="1" parent="1">
+      <mxGeometry x="260" y="740" width="560" height="50" as="geometry"/>
+    </mxCell>
+    <mxCell id="ea1" value="bấm AI phân tích" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;exitX=1;exitY=0.1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="a1" target="uc1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="240" y="186"/>
+          <mxPoint x="240" y="105"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="ea2" value="yêu cầu draft + chèn" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;exitX=1;exitY=0.42;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="a1" target="uc2">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="ea3" value="bấm Triage" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;exitX=1;exitY=0.7;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="a1" target="uc3">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="240" y="222"/>
+          <mxPoint x="240" y="305"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="ea4" value="duyệt / từ chối" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;exitX=1;exitY=0.95;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="a1" target="uc4">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="230" y="237"/>
+          <mxPoint x="230" y="405"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="ea5" value="cấu hình key / model" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;exitX=1;exitY=0.42;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="a2" target="uc5">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="ea6" value="đổi ngôn ngữ" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;exitX=1;exitY=0.9;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="a2" target="uc6">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="230" y="534"/>
+          <mxPoint x="230" y="605"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="el1" value="inference" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;dashed=1;strokeColor=#666666;fontSize=10;exitX=0;exitY=0.2;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="a3" target="uc1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="885" y="268"/>
+          <mxPoint x="885" y="105"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="el2" value="inference" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;dashed=1;strokeColor=#666666;fontSize=10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="a3" target="uc2">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="865" y="310"/>
+          <mxPoint x="865" y="205"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="el3" value="batch inference" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;dashed=1;strokeColor=#666666;fontSize=10;exitX=0;exitY=0.8;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="a3" target="uc3">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="845" y="352"/>
+          <mxPoint x="845" y="305"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+  </root>
+</mxGraphModel>

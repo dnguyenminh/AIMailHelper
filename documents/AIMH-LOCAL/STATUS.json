@@ -97,9 +97,10 @@
     }
   },
   "constraints": {
-    "jiraTransitions": "SKIPPED — Jira unavailable",
-    "docxExport": "SKIPPED — export_docx tool unavailable; markdown-only artifacts",
-    "kb": "SKIPPED — mem_* tools unavailable; using documents/AIMH-LOCAL/REFERENCE-ANALYSIS.md and GLOSSARY.md as file-based fallback",
+    "jiraTransitions": "SKIPPED — Jira unavailable (đã xác minh cuối cùng: tools/list 10 tools gốc không có jira_*; find_tools thử 4 query variations → 0 kết quả; orchestration_status chỉ có 2 child servers markitdown-mcp + markdown-exporter-mcp-local. Không retry Jira; placeholder AIMH-LOCAL giữ nguyên. Khi user cấp config, orchestrator sẽ đăng ký child server và thông báo sync.)",
+    "docxExport": "AVAILABLE via HTTP fallback http://127.0.0.1:48721/mcp (Accept header bắt buộc: application/json, text/event-stream) — execute_dynamic_tool export_docx {markdown, file_name?, options?}",
+    "kb": "AVAILABLE via HTTP fallback http://127.0.0.1:48721/mcp (Accept header bắt buộc) — mem_search/mem_ingest/mem_ingest_file/code_search; arguments là object. Draw.io: drawio_auto_layout/drawio_export_png bắt buộc cho mọi .drawio",
+    "mcpEndpoint": "http://127.0.0.1:48721/mcp (đã verify health 200 + mem_search 200 tại 2026-10-14)",
     "git": "local repo initialized; branch AIMH-LOCAL; NO remote push (no remote configured)"
   },
   "circuitBreaker": {
