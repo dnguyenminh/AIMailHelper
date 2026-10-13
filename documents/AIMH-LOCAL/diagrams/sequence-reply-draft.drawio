@@ -1,0 +1,156 @@
+<mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1420" pageHeight="880" math="0" shadow="0">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="p1" value="Người dùng" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1f5fe;strokeColor=#0288d1;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="40" y="20" width="130" height="50" as="geometry"/>
+    </mxCell>
+    <mxCell id="p2" value="Panel AI (preview)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="250" y="20" width="160" height="50" as="geometry"/>
+    </mxCell>
+    <mxCell id="p3" value="Service Worker" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="470" y="20" width="150" height="50" as="geometry"/>
+    </mxCell>
+    <mxCell id="p4" value="LLM Provider" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="680" y="20" width="150" height="50" as="geometry"/>
+    </mxCell>
+    <mxCell id="p5" value="actions.ts&#10;(owa-adapter)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="900" y="20" width="170" height="50" as="geometry"/>
+    </mxCell>
+    <mxCell id="p6" value="OWA compose box" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="1150" y="20" width="170" height="50" as="geometry"/>
+    </mxCell>
+    <mxCell id="l1" value="" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="105" y="70" as="sourcePoint"/>
+        <mxPoint x="105" y="740" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="l2" value="" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="330" y="70" as="sourcePoint"/>
+        <mxPoint x="330" y="740" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="l3" value="" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="545" y="70" as="sourcePoint"/>
+        <mxPoint x="545" y="740" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="l4" value="" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="755" y="70" as="sourcePoint"/>
+        <mxPoint x="755" y="740" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="l5" value="" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="985" y="70" as="sourcePoint"/>
+        <mxPoint x="985" y="740" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="l6" value="" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1235" y="70" as="sourcePoint"/>
+        <mxPoint x="1235" y="740" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="m1" value="1. Chọn tone + ngôn ngữ + hướng dẫn thêm" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="105" y="120" as="sourcePoint"/>
+        <mxPoint x="330" y="120" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="m2" value="2. Bấm 'Soạn trả lời'" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="105" y="160" as="sourcePoint"/>
+        <mxPoint x="330" y="160" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="m3" value="3. REPLY_REQUEST {EmailData, tone, language, extraInstructions}" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="330" y="200" as="sourcePoint"/>
+        <mxPoint x="545" y="200" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="m4" value="4. POST /chat/completions (stream, prompt reply)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="545" y="240" as="sourcePoint"/>
+        <mxPoint x="755" y="240" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="m5" value="5. SSE chunks" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;dashed=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="755" y="280" as="sourcePoint"/>
+        <mxPoint x="545" y="280" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="m6" value="6. Port chunk → draft preview streaming" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;dashed=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="545" y="320" as="sourcePoint"/>
+        <mxPoint x="330" y="320" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="m7" value="7. SSE [DONE]" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;dashed=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="755" y="360" as="sourcePoint"/>
+        <mxPoint x="545" y="360" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="m8" value="8. Port done → bật 'Chèn vào Reply'" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;dashed=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="545" y="400" as="sourcePoint"/>
+        <mxPoint x="330" y="400" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="m9" value="9. Hiển thị draft preview" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;dashed=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="330" y="440" as="sourcePoint"/>
+        <mxPoint x="105" y="440" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="m10" value="10. Bấm 'Chèn vào Reply'" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="105" y="480" as="sourcePoint"/>
+        <mxPoint x="330" y="480" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="m11" value="11. INSERT_DRAFT {draftContent}" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="330" y="520" as="sourcePoint"/>
+        <mxPoint x="985" y="520" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="m12" value="12. Mở reply box nếu chưa mở + định vị compose (T1 → T2 → T3 nếu bật)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="985" y="560" as="sourcePoint"/>
+        <mxPoint x="1235" y="560" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="m13" value="13. Điền draftContent (qua Ref ID/element, KHÔNG tọa độ)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="985" y="600" as="sourcePoint"/>
+        <mxPoint x="1235" y="600" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="m14" value="14. done (đã chèn)" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;dashed=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="985" y="640" as="sourcePoint"/>
+        <mxPoint x="330" y="640" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="m15" value="15. Xác nhận — người dùng tự xem/sửa/Send trong OWA" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;dashed=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="330" y="690" as="sourcePoint"/>
+        <mxPoint x="105" y="690" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="note1" value="AN TOÀN (BR-01): KHÔNG tồn tại code&#10;kích hoạt nút Send — mọi luồng kết thúc&#10;ở compose box; gửi thư là hành động của user." style="shape=note;size=16;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+      <mxGeometry x="620" y="760" width="420" height="90" as="geometry"/>
+    </mxCell>
+    <mxCell id="note2" value="Draft rỗng → nút chèn vô hiệu (BR-10);&#10;chèn thất bại → giữ preview copy tay (ERR-09)" style="shape=note;size=16;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+      <mxGeometry x="40" y="760" width="380" height="90" as="geometry"/>
+    </mxCell>
+  </root>
+</mxGraphModel>

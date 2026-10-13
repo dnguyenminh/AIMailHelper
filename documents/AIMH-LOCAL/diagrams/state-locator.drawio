@@ -1,0 +1,97 @@
+<mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1560" pageHeight="820" math="0" shadow="0">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="s0" value="idle" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="600" y="40" width="200" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="s1" value="T1: multi-strategy selectors&#10;(role / aria-label EN+VN / tree — dưới 1ms, 0 token)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="540" y="160" width="320" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="sF" value="element found — trả element / Ref ID cho caller" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="1000" y="160" width="260" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="s2" value="T2: semantic locator&#10;(a11y tree + LLM → Ref ID, filter interactive)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="540" y="300" width="320" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="sC" value="locator-cache&#10;(functionKey + layoutHash)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="1000" y="380" width="260" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="c1" value="vision fallback&#10;đã bật?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="600" y="440" width="200" height="90" as="geometry"/>
+    </mxCell>
+    <mxCell id="s3" value="T3: vision fallback&#10;(captureVisibleTab → nén ~1568px → vision LLM → elementFromPoint)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="240" y="580" width="360" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="sE" value="error — gợi ý bật Diagnose mode (UC-09)&#10;+ báo bug layout" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="1000" y="580" width="280" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="e1" value="cần định vị phần tử UI OWA" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="s0" target="s1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e2" value="khớp — trả element" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="s1" target="sF">
+      <mxGeometry x="-0.2" y="22" relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e3" value="không khớp (MS đổi UI)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;strokeColor=#b85450;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="s1" target="s2">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e4" value="thành công → Ref ID" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;exitX=1;exitY=0.25;entryX=0.25;entryY=1;" edge="1" parent="1" source="s2" target="sF">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="1065" y="320"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="e5" value="lưu cache (BR-06)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;exitX=1;exitY=0.75;entryX=0;entryY=0.5;" edge="1" parent="1" source="s2" target="sC">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="930" y="350"/>
+          <mxPoint x="930" y="410"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="e6" value="cache hit lần sau — 0 token" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;dashed=1;fontSize=10;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" parent="1" source="sC" target="sF">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e7" value="T2 thất bại" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;strokeColor=#b85450;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="s2" target="c1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e8" value="ĐÃ bật (opt-in)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;exitX=0;exitY=0.5;entryX=0.5;entryY=0;" edge="1" parent="1" source="c1" target="s3">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="420" y="485"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="e9" value="TẮT (mặc định — BR-03)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;strokeColor=#b85450;exitX=1;exitY=0.5;entryX=0.5;entryY=0;" edge="1" parent="1" source="c1" target="sE">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="1140" y="485"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="e10" value="định danh được phần tử (elementFromPoint)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;exitX=0.5;exitY=0;entryX=1;entryY=0.5;" edge="1" parent="1" source="s3" target="sF">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="420" y="680"/>
+          <mxPoint x="1420" y="680"/>
+          <mxPoint x="1420" y="195"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="e11" value="T3 thất bại" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;strokeColor=#b85450;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="s3" target="sE">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e12" value="hoàn tất — element cho caller" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endFill=0;dashed=1;fontSize=10;exitX=1;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="sF" target="s0">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="1500" y="195"/>
+          <mxPoint x="1500" y="70"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="note1" value="Quy tắc cache (BR-06): cache gắn layoutHash — MS đổi UI → hash đổi →&#10;cache TỰ VÔ HIỆU → T2 chạy lại đúng 1 lần. Khác cache triage (message-id).&#10;Quy tắc T3 (BR-03): mặc định TẮT + cảnh báo privacy; TẮT → không captureVisibleTab." style="shape=note;size=16;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=8;" vertex="1" parent="1">
+      <mxGeometry x="240" y="700" width="1040" height="90" as="geometry"/>
+    </mxCell>
+  </root>
+</mxGraphModel>

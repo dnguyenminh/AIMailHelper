@@ -37,3 +37,8 @@ Quy tắc XML: bắt đầu mxGraphModel, KHÔNG bọc mxfile, edge không self-
 
 ## Báo cáo khi xong
 (1) đường dẫn file tạo; (2) số UC, số BR, số FR theo GĐ; (3) trạng thái export PNG thật; (4) hạn chế nếu có.
+
+## BỔ SUNG (cập nhật mới nhất — ưu tiên áp dụng)
+- KB MCP server ĐANG CHẠY tại http://127.0.0.1:48721/mcp (header Accept: application/json, text/event-stream). BRD.md, REFERENCE-ANALYSIS.md, GLOSSARY.md ĐÃ được ingest vào KB. Trước khi viết FSD: nếu thấy tool mem_search trong tool list thì dùng (query: "AIMH-LOCAL BRD", "glossary AIMH"); nếu không thấy tool thì đọc trực tiếp các file documents/AIMH-LOCAL/ (đủ thông tin tương đương).
+- Draw.io diagrams: dùng draw.io CLI như Phase 1 đã làm (C:\Program Files\draw.io\draw.io.exe -x -f png -b 10 --width 2000). LƯU Ý XML: escape & và < trong label (đừng để raw & hay <), file bắt đầu mxGraphModel, KHÔNG mxfile wrapper, edge không self-closing. Sau export: vision self-check bằng cách đọc PNG (check overlap/đè node) — sửa layout nếu lỗi, tối đa 2 vòng. Nếu thấy tool drawio_auto_layout/drawio_export_png trong tool list có thể dùng thay/bổ sung.
+- DOCX: KHÔNG cần tự export — SM sẽ export sau.

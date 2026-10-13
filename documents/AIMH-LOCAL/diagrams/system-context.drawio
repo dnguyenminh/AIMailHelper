@@ -1,0 +1,99 @@
+<mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1060" math="0" shadow="0">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="user" value="Người dùng OWA&#10;(Work/School hoặc cá nhân)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1f5fe;strokeColor=#0288d1;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="40" y="290" width="160" height="80" as="geometry"/>
+    </mxCell>
+    <mxCell id="ext" value="AIMailHelper Extension (MV3 — Chrome/Edge)" style="swimlane;startSize=30;html=1;fontSize=12;fontStyle=1;fillColor=none;strokeColor=#0288d1;" vertex="1" parent="1">
+      <mxGeometry x="260" y="40" width="560" height="620" as="geometry"/>
+    </mxCell>
+    <mxCell id="popup" value="Popup&#10;provider active / bật-tắt / mở Options" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="ext">
+      <mxGeometry x="40" y="50" width="220" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="options" value="Options page (React)&#10;6 section cấu hình" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="ext">
+      <mxGeometry x="300" y="50" width="220" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="sw" value="Service Worker&#10;message router + LLM calls (fetch) + storage" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="ext">
+      <mxGeometry x="40" y="160" width="480" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="cs" value="Content Script (trang OWA)" style="swimlane;startSize=30;html=1;fontSize=11;fontStyle=1;fillColor=#f3e5f5;strokeColor=#9673a6;" vertex="1" parent="ext">
+      <mxGeometry x="40" y="270" width="480" height="320" as="geometry"/>
+    </mxCell>
+    <mxCell id="adapter" value="owa-adapter: detector / reader / actions / triage&#10;(actions KHÔNG bấm Send — BR-01)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="cs">
+      <mxGeometry x="20" y="40" width="440" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="locator" value="Self-healing locator 3 tầng:&#10;T1 selectors → T2 semantic + cache (layoutHash) → T3 vision (TẮT mặc định)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="cs">
+      <mxGeometry x="20" y="130" width="440" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="panel" value="Panel AI + badge + hàng chờ duyệt&#10;(React trong Shadow DOM)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="cs">
+      <mxGeometry x="20" y="230" width="440" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="owa" value="Outlook Web (OWA) — DOM&#10;outlook.office.com / outlook.office365.com / outlook.live.com&#10;(MS sở hữu DOM — có thể đổi bất cứ lúc nào)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="900" y="120" width="320" height="150" as="geometry"/>
+    </mxCell>
+    <mxCell id="llm" value="LLM Providers (user tự cấu hình — BR-05)&#10;• OpenAI — api.openai.com&#10;• Azure OpenAI — (res).openai.azure.com&#10;• Anthropic — api.anthropic.com&#10;• Gemini — generativelanguage.googleapis.com&#10;• OpenAI-compatible — Base URL tùy chỉnh&#10;• Local — Ollama :11434 / LM Studio :1234" style="rounded=1;whiteSpace=wrap;html=1;align=left;spacingLeft=10;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="900" y="430" width="320" height="310" as="geometry"/>
+    </mxCell>
+    <mxCell id="storage" value="chrome.storage&#10;sync: config + API key (mặc định)&#10;local: cache triage + locator, hàng chờ auto-mode" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="900" y="780" width="320" height="90" as="geometry"/>
+    </mxCell>
+    <mxCell id="e1" value="mở popup" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;" edge="1" parent="1" source="user" target="popup">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="230" y="330"/>
+          <mxPoint x="230" y="120"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="e2" value="cấu hình LLM / ngôn ngữ / auto-mode" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;" edge="1" parent="1" source="user" target="options">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="240" y="345"/>
+          <mxPoint x="240" y="140"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="e3" value="đọc / soạn / gửi thư (Send luôn do user — BR-01)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;" edge="1" parent="1" source="user" target="owa">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="120" y="20"/>
+          <mxPoint x="1060" y="20"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="e4" value="runtime messaging" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;" edge="1" parent="ext" source="popup" target="sw">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e5" value="config / test connection" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;" edge="1" parent="ext" source="options" target="sw">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e6" value="messaging.ts: Port streaming + typed requests" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;startArrow=classic;startFill=1;endArrow=classic;endFill=1;fontSize=10;" edge="1" parent="ext" source="sw" target="cs">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e7" value="đọc DOM / inject UI / điền draft (KHÔNG Send — BR-01)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;" edge="1" parent="1" source="cs" target="owa">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="880" y="470"/>
+          <mxPoint x="880" y="200"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="e8" value="HTTPS fetch + SSE streaming (email data — BR-05)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;" edge="1" parent="1" source="sw" target="llm">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="860" y="190"/>
+          <mxPoint x="860" y="560"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="e9" value="config (sync) / cache + queue (local)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;startArrow=open;startFill=0;endArrow=classic;endFill=1;fontSize=10;dashed=0;" edge="1" parent="1" source="sw" target="storage">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="840" y="210"/>
+          <mxPoint x="840" y="825"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+  </root>
+</mxGraphModel>

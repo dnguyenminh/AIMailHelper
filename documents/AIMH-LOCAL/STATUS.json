@@ -46,16 +46,23 @@
   },
   "autonomyLevel": "L3",
   "projectPattern": "plugin (browser extension; .kiro/steering/patterns/plugin.md not found — using default plugin pattern emphasis: host interface isolation, capability detection, permission minimization)",
-  "currentPhase": "requirements",
+  "currentPhase": "specification",
   "phases": {
     "requirements": {
-      "status": "in_progress",
+      "status": "done",
       "file": "BRD.md",
-      "version": 0,
-      "startedAt": "2026-10-14T00:00:00Z"
+      "version": 1,
+      "completedAt": "2026-10-14T01:45:00Z",
+      "qualityGate": "PASS (10 US + AC, 2 drawio XML-valid + PNG export thật, vision-checked; REFERENCE-ANALYSIS + GLOSSARY 10 terms; DOCX exported; KB ingested)"
     },
     "specification": {
-      "status": "not_started"
+      "status": "in_progress",
+      "file": "FSD.md",
+      "version": 1,
+      "startedAt": "2026-10-14T01:46:00Z",
+      "baDraftCompletedAt": "2026-10-14T02:40:00Z",
+      "baDraftQualityGate": "PASS (9 UC Main/Alt/Exception, 16 BR, 39 FR theo 6 GD, 11 data entities UNVERIFIED chờ SA, ERR-01..14, i18n spec, NFR định lượng, 14 TC, 7 Open Issues; 4 drawio + PNG export thật vision-checked; KB ingest FSD + 4 diagram — mem_search verify trả rỗng, xem RUN-LOG #12)",
+      "next": "TA enrichment (Step 2c) — API contracts chi tiết, integration specs, pseudocode; sau đó SM finalize + DOCX"
     },
     "design": {
       "status": "not_started"
@@ -107,5 +114,5 @@
     "state": "closed",
     "consecutiveFailures": 0
   },
-  "lastUpdated": "2026-10-14T00:00:00Z"
+  "lastUpdated": "2026-10-14T02:40:00Z"
 }
