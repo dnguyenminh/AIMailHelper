@@ -58,27 +58,35 @@
     "specification": {
       "status": "done",
       "file": "FSD.md",
-      "version": 1.2,
+      "version": 1.3,
       "completedAt": "2026-10-14T04:10:00Z",
       "qualityGate": "PASS — v1.0 BA draft (1229 dòng, 9 UC, 16 BR, 45 FR, ERR-01..14) + v1.1 TA enrich (1970 dòng, 6/6 API contracts, Port protocol, 6 pseudocode, ERR-15/16) + v1.2 BA review (2004 dòng, 11/11 entities BA-REVIEWED, BR-17, Open Issues 6 RESOLVED/4→SA/1 ack, FR mapping 45/45). 4 drawio+PNG vision-checked. DOCX 90KB exported. KB ingested",
       "next": "Phase 3 (TDD) — sa-agent"
     },
     "design": {
-      "status": "in_progress",
+      "status": "done",
       "file": "TDD.md",
-      "version": 0,
-      "startedAt": "2026-10-14T04:12:00Z"
+      "version": 1,
+      "completedAt": "2026-10-14T05:40:00Z",
+      "qualityGate": "PASS — 1141 dòng/98KB, 15 sections, 0 Mermaid/placeholder, Open Issues SA-owned ×6 resolved, no-Send ×20 refs; 4 drawio XML VALID + PNG (447/636/930/360KB, vision-checked); DISCREPANCY 0 Critical/High/Medium + 3 Low → feedback loop iter-1 running. DOCX 72KB (lưu ý: TDD có nhiều '---' separator → Pandoc YAML parse fail lần 1, export qua bản tạm thay '---'→'***'). Gap ghi nhận: TDD chưa nhắc prompt injection (email = untrusted input) → P3.7 security-agent sẽ review",
+      "next": "P3.7 security-agent + P4 qa-agent (song song)"
     },
     "feedback_loop": {
-      "status": "not_started",
-      "iterations": 0,
-      "maxIterations": 5
+      "status": "done",
+      "iterations": 1,
+      "maxIterations": 5,
+      "completedAt": "2026-10-14T07:30:00Z",
+      "result": "CONSISTENT — SA verify iter-1: FSD v1.3 đồng bộ TDD v1, 3/3 DISC (Low) fix đúng, 0 discrepancy còn mở; DISCREPANCY.md ĐÓNG. Ghi chú không chặn: TDD §6.1 ví dụ JSON TEST_CONNECTION còn keyStorage trong config (leftover cosmetic nội bộ TDD — gỡ ở lần chạm TDD tới)"
     },
     "security_design_review": {
-      "status": "not_started"
+      "status": "in_progress",
+      "file": "SECURITY-REVIEW.md",
+      "startedAt": "2026-10-14T05:45:00Z"
     },
     "test_planning": {
-      "status": "not_started"
+      "status": "in_progress",
+      "file": "STP.md",
+      "startedAt": "2026-10-14T05:45:00Z"
     },
     "devops_setup": {
       "status": "not_started"
@@ -116,5 +124,5 @@
     "state": "closed",
     "consecutiveFailures": 0
   },
-  "lastUpdated": "2026-10-14T02:40:00Z"
+  "lastUpdated": "2026-10-14T07:30:00Z"
 }

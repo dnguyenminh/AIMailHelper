@@ -13,7 +13,7 @@
 | Jira Ticket | AIMH-LOCAL (placeholder offline — chưa có ticket Jira thật) |
 | Title | AIMailHelper — Trợ lý AI cho Outlook Web (Browser Extension MV3) |
 | Author | BA Agent |
-| Version | 1.2 (v1.0 BA draft + TA v1.1 enrichment + BA feedback review) |
+| Version | 1.3 (v1.0 BA draft + TA v1.1 enrichment + BA feedback review v1.2 + feedback loop SA iter-1) |
 | Date | 2026-10-14 |
 | Status | Draft — BA reviewed v1.2 (chờ SA/TDD + SM finalize) |
 | Related BRD | documents/AIMH-LOCAL/BRD.md |
@@ -27,6 +27,7 @@
 | 1.0 | 2026-10-14 | BA Agent | Khởi tạo FSD draft v1 từ BRD + PLAN.md + GLOSSARY — offline placeholder, không gọi Jira, không export DOCX (SM export sau) |
 | 1.1 | 2026-10-14 | TA Agent | TA enrichment: API contract đầy đủ 6 LLM provider (endpoint/headers/body/SSE streaming/listModels/error mapping + retry — mục 5.2.0–5.2.6), Port streaming protocol + message router typed (5.3.1–5.3.3), chrome.storage quota + versioning/migration (5.4.1), pseudocode 6 thuật toán (6.6a–f), TA notes data model (mục 4), AF/EF bổ sung 9 UC, NFR định lượng bổ sung, ERR-15/16, cập nhật Open Issues #1/#2/#4 + thêm #8–#11 |
 | 1.2 | 2026-10-14 | BA Agent | BA feedback review: entities verified, Open Issues resolved, FR mapping confirmed |
+| 1.3 | 2026-10-14 | BA Agent | Feedback loop iter-1: áp 3 fix DISC-1/2/3 (đồng bộ TDD v1) |
 
 ---
 
@@ -646,8 +647,8 @@ Bảng quy tắc nghiệp vụ trung tâm, được tham chiếu bởi mọi Use
 
 | Key | Area (sync/local) | Kiểu dữ liệu | Ghi chú |
 |-----|-------------------|--------------|---------|
-| config.general | sync | { uiLanguage, keyStorage, extensionEnabled } | BR-15 |
-| config.providers.{providerId} | sync hoặc local (theo keyStorage — BR-04) | LLMConfig | API key đi kèm |
+| config.general | sync | { uiLanguage, keyStorage, extensionEnabled } | BR-15; keyStorage canonical ở ĐÂY (DISC-1 v1.3) |
+| config.providers.{providerId} | sync hoặc local (theo config.general.keyStorage — BR-04) | LLMConfig | API key đi kèm |
 | config.activeProvider | sync | ProviderId | — |
 | cache.triage.{messageId} | local | TriageScore | BR-07, BR-09 |
 | cache.locator.{functionKey} | local | LocatorCacheEntry | BR-06 (vô hiệu theo layoutHash) |
@@ -679,7 +680,9 @@ export type ProviderId =
 
 #### LLMConfig
 
-> **BA Review v1.2 — BA-REVIEWED (khớp BRD US-02, US-04):** đủ mọi trường trong Data Fields BRD Story 2 (apiKey/baseUrl/model/azure.*/local.url — điều kiện bắt buộc theo provider khớp Validation Rules của BRD); `local.preset` phục vụ preset 1-click (FR-GD2-07 — có trong Requirement Details của BRD Story 2); `keyStorage` là field của BRD Story 4. Ghi chú: BRD viết 3 trường azure* phẳng, FSD nhóm thành object `azure{}` — tương đương nghiệp vụ. Không trường thừa.
+> **BA Review v1.2 — BA-REVIEWED (khớp BRD US-02, US-04):** đủ mọi trường trong Data Fields BRD Story 2 (apiKey/baseUrl/model/azure.*/local.url — điều kiện bắt buộc theo provider khớp Validation Rules của BRD); `local.preset` phục vụ preset 1-click (FR-GD2-07 — có trong Requirement Details của BRD Story 2). **Cập nhật v1.3 (DISC-1):** keyStorage KHÔNG còn là trường của LLMConfig — là setting toàn cục ở `config.general` (nguồn BRD Story 4; khớp TDD §3.3, §6.3, §7.2). Ghi chú: BRD viết 3 trường azure* phẳng, FSD nhóm thành object `azure{}` — tương đương nghiệp vụ. Không trường thừa.
+
+> **Ghi chú v1.3 (DISC-1):** keyStorage là setting toàn cục ở config.general (DISC-1 v1.3) — quyết định nơi lưu API key của MỌI provider (BR-04), không phải thuộc tính của từng LLMConfig; mọi tham chiếu nơi lưu key quy về `config.general.keyStorage` (khớp TDD §3.3, §6.3, §7.2).
 
 | Attribute | Kiểu | Bắt buộc | Quy tắc | Mô tả |
 |-----------|------|----------|---------|-------|
@@ -692,7 +695,6 @@ export type ProviderId =
 | azure.apiVersion | string | Azure only | Định dạng phiên bản (vd 2024-10-21) | api-version |
 | local.url | string | Local only | URL hợp lệ | http://localhost:11434 / :1234 |
 | local.preset | "ollama" \| "lmstudio" | Local only | — | Preset 1-click |
-| keyStorage | "sync" \| "local" | Y | BR-04, BR-15 | Nơi lưu key |
 
 ```ts
 export interface LLMConfig {
@@ -702,7 +704,6 @@ export interface LLMConfig {
   model: string;
   azure?: { endpoint: string; deployment: string; apiVersion: string };
   local?: { url: string; preset: "ollama" | "lmstudio" };
-  keyStorage: "sync" | "local";
 }
 ```
 
@@ -1276,7 +1277,8 @@ LLMResponse: `text` = nối `candidates[0].content.parts[].text`; `finishReason`
 
 | HTTP | status trong body | ERR | Retry |
 |------|-------------------|-----|-------|
-| 400 | `INVALID_ARGUMENT` / `API_KEY_INVALID` | ERR-02 | Không |
+| 400 | `API_KEY_INVALID` | ERR-02 | Không — key sai/hết hạn |
+| 400 | `INVALID_ARGUMENT` (tham số request sai) | ERR-15 | Không — lỗi cấu hình/model người dùng |
 | 403 | `PERMISSION_DENIED` | ERR-02 | Không |
 | 429 | `RESOURCE_EXHAUSTED` (kèm `RetryInfo.retryDelay` dạng `"17s"` trong details) | ERR-03 | Dùng `retryDelay` từ details nếu có; không → 1→2→4s, max 3 |
 | 503 | `UNAVAILABLE` (model overloaded) | ERR-16 | 2→4→8s, max 3 |
@@ -1495,8 +1497,8 @@ type RpcResponse<T> =
 
 | Step | Description | Error Handling |
 |------|-------------|----------------|
-| 1 | Kiểm tra locator-cache theo layoutHash hiện tại | Cache hit → trả kết quả ngay, 0 token (BR-06) |
-| 2 | **Tầng 1 — selectors:** multi-strategy (role → aria-label EN/VN → cấu trúc tree); dưới 1ms, 0 token | Thất bại → sang bước 3 (BR-12) |
+| 1 | **Tầng 1 — selectors:** multi-strategy (role → aria-label EN/VN → cấu trúc tree); dưới 1ms, 0 token | Thất bại → sang bước 2 (BR-12) |
+| 2 | Kiểm tra locator-cache theo layoutHash hiện tại (chỉ khi T1 fail) | Cache hit → trả kết quả ngay, 0 token (BR-06); miss → sang bước 3 |
 | 3 | **Tầng 2 — semantic locator:** a11y-tree.ts sinh snapshot (role + label + Ref ID WeakRef, giới hạn max_chars, filter interactive) → semantic-locator.ts gửi LLM câu hỏi ngữ nghĩa → nhận Ref ID → thực hiện qua element map; lưu cache theo layoutHash | LLM lỗi → thông báo + thử lại; layoutHash đổi → cache cũ tự vô hiệu, T2 chạy lại 1 lần (BR-06) |
 | 4 | **Tầng 3 — vision fallback** (chỉ khi người dùng đã bật — BR-03): captureVisibleTab → nén mạnh (~1568px) → vision LLM định danh vùng → elementFromPoint + dispatch event | Chưa bật → dừng ở lỗi + gợi ý Diagnose; T3 thất bại → lỗi + Diagnose |
 | 5 | diagnose.ts (UC-09) log cấu trúc DOM/a11y khi cần debug | Snapshot quá lớn → cắt theo max_chars |
@@ -1994,10 +1996,11 @@ Ví dụ: uiLanguage = "vi" + replyLanguage = "en" → UI tiếng Việt, draft 
 | # | Thay đổi / Làm rõ so với BRD | Lý do |
 |---|------------------------------|-------|
 | 1 | BRD không có UC riêng cho View Digest, Switch Language, Diagnose OWA Layout — FSD tách thành UC-04, UC-08, UC-09 để test được và truy vết rõ | Chia nhỏ use case từ US-08, US-05, US-07 — không thêm tính năng mới ngoài scope |
-| 2 | Bổ sung data entities AutoModeRule, QueueItem, TestConnectionResult, EmailData.detectedView, LLMConfig.keyStorage | Suy ra trực tiếp từ AC/data fields của BRD story 4, 9 + PLAN.md — cần cho triển khai; marked UNVERIFIED chờ SA (BA-REVIEWED v1.2 — đã đối soát khớp BRD/PLAN, xem mục 4) |
+| 2 | Bổ sung data entities AutoModeRule, QueueItem, TestConnectionResult, EmailData.detectedView, LLMConfig.keyStorage | Suy ra trực tiếp từ AC/data fields của BRD story 4, 9 + PLAN.md — cần cho triển khai; marked UNVERIFIED chờ SA (BA-REVIEWED v1.2 — đã đối soát khớp BRD/PLAN, xem mục 4); *(v1.3: LLMConfig.keyStorage đã rút — keyStorage là setting toàn cục ở config.general — DISC-1, xem dòng 7)* |
 | 3 | Đánh số lỗi ERR-01..14 chuẩn hóa từ các Error Handling rải rác trong BRD | Cần cho ma trận lỗi tập trung (mục 9) và Port error codes |
 | 4 | i18n đặc tả key structure + fallback rule cụ thể (BRD chỉ yêu cầu song ngữ) | Làm rõ để DEV GĐ1 implement được ngay |
 | 5 | Các con số NFR (chunk đầu ~3s, triage 20 email dưới 60s, T2 cache hit dưới 10ms) là mục tiêu FSD đặt ra — BRD/PLAN chỉ có "vài giây", "dưới 1ms" | Cần định lượng để test; đã ghi chú chờ SA xác nhận (Open Issue #6) |
 | 6 | Wireframe chi tiết vi/en do DEV làm trong GĐ1–2 theo DESIGN-SYSTEM.md (không dùng UI-agent mockup cho FSD v1) | Quyết định SM: PLAN.md mục 4 đã mô tả component Options chi tiết |
+| 7 | v1.3 đồng bộ TDD v1 (feedback loop SA iter-1 — DISCREPANCY.md, 3 discrepancy mức Low): DISC-1 bỏ keyStorage khỏi LLMConfig — canonical là config.general.keyStorage (TDD §3.3, §6.3, §7.2); DISC-2 tách mapping Gemini 400 — API_KEY_INVALID → ERR-02, INVALID_ARGUMENT → ERR-15 (TDD §3.2, §9); DISC-3 mục 6.2 thứ tự self-healing T1 → cache → T2 (TDD §3.1, §5.3) | FSD phải nhất quán với TDD — nguồn sự thật kỹ thuật do SA chuẩn hóa |
 
 > **Truy vết ngược:** mọi UC/FR/BR trong FSD này ánh xạ về User Story US-01..US-10 của BRD (mục 3.0, 3.1) — không có yêu cầu nào ngoài scope BRD/PLAN.md. AIMH-LOCAL là placeholder offline: khi ticket Jira thật được tạo, FSD cần rà soát đối chiếu lại như BRD.

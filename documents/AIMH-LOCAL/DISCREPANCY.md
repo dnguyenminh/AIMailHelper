@@ -42,3 +42,26 @@
 - 11/11 entity data model (FSD mục 4, BA-REVIEWED v1.2): **khớp** thiết kế TDD §7.2 — chỉ có normalization/DISC-1 nêu trên.
 - API contracts 6 provider (FSD 5.2.0–5.2.6), Port protocol (5.3.1–5.3.3), storage migration (5.4.1), pseudocode (6.6a–f), ERR-01..16 (mục 9): **khớp**, TDD tái sử dụng nguyên văn làm nguồn sự thật.
 - 8/11 Open Issues do SA chủ trì đã RESOLVED trong TDD v1 (TDD §13; FSD mục 12 đã cập nhật trạng thái).
+
+
+---
+
+## Resolution — feedback loop iter-1 (2026-10-14)
+
+**Verifier:** SA Agent · **FSD verified:** FSD v1.3 · **TDD:** v1.0 · **Kết luận: FSD v1.3 đồng bộ TDD v1 — 0 discrepancy còn mở; DISCREPANCY.md ĐÓNG.**
+
+| DISC | Vùng FSD v1.3 đã sửa (đã kiểm) | Đối chiếu TDD | Kết quả |
+|------|-------------------------------|----------------|---------|
+| DISC-1 | 4.1: `config.general` đánh dấu canonical keyStorage ("keyStorage canonical ở ĐÂY — DISC-1 v1.3", area `config.providers.*` quy theo BR-04); 4.2: bảng LLMConfig + interface TS **KHÔNG còn** keyStorage; 2 ghi chú v1.3 trỏ TDD §3.3/§6.3/§7.2; 13.3 dòng 2 đã chú thích rút trường | §3.3 (canonical `config.general` + area routing BR-04, ghi chú DISC-1), §4.2 (LLMConfig final — comment "KHÔNG chứa keyStorage (DISC-1)"), §6.3 (schema: config.general chứa keyStorage) | ✅ KHỚP |
+| DISC-2 | 5.2.4: tách 2 dòng 400 — `API_KEY_INVALID` → ERR-02 (không retry — key sai/hết hạn) / `INVALID_ARGUMENT` → ERR-15 (không retry — lỗi cấu hình/model); nhất quán định nghĩa ERR-02/ERR-15 mục 9.1 (dòng 1847/1860) | §3.2 (TDD ủy quyền mapping chi tiết per-provider cho FSD 5.2.0–5.2.6 "bám nguyên" — nguồn sự thật đã cập nhật đúng); §9.2 dòng "401/403/404/400 (ERR-02/15)" + §9.4 tương thích — 400 map về 1 trong 2 theo status trong body | ✅ KHỚP |
+| DISC-3 | 6.2: bước 1 = T1 selectors (<1ms, 0 token), bước 2 = locator-cache **(chỉ khi T1 fail)**, bước 3 = T2, bước 4 = T3; khớp lại pseudocode 6.6b (tiêu đề "T1 fail → cache → build tree → LLM") | §3.1 (thứ tự canonical T1 → LocatorCache → T2 → T3 — ghi chú DISC-3), §5.3 (sequence: bước 2–3 T1 → bước 4–5 cache → bước 7+ T2; T1 hit không chạm cache — BR-12) | ✅ KHỚP |
+
+Kiểm tra bổ sung (đều đạt):
+- **Revision History:** có dòng v1.3 "Feedback loop iter-1: áp 3 fix DISC-1/2/3 (đồng bộ TDD v1)".
+- **13.3 Change Log:** dòng 7 ghi đủ 3 fix + tham chiếu đúng các mục TDD; dòng 2 chú thích LLMConfig.keyStorage đã rút.
+- **Quét sót:** không còn `keyStorage` trong LLMConfig (bảng lẫn TS) hay mapping 400 blanket ở bất kỳ vùng nào khác của FSD. `CONFIG_GET` trả `keyStorage` per-provider (FSD dòng 1421) là **view đọc derived** — giống hệt TDD §6.1 (dòng 582), không phải nguồn sự thật thứ hai: chấp nhận.
+
+### Ghi chú SA (không chặn — KHÔNG yêu cầu iter-2 trên FSD)
+- TDD v1 §6.1 ví dụ JSON `TEST_CONNECTION` (dòng 621) còn dính `keyStorage: "sync"` trong payload `config` — leftover cosmetic **nội bộ TDD**, mâu thuẫn với chính §4.2 và với FSD 5.3.3 (`{ config: LLMConfig }` đã sạch). FSD v1.3 đúng; gỡ ở lần chạm TDD tới (nếu có v1.1). **DEV lấy interface §4.2 làm chuẩn, không copy ví dụ JSON này.**
+
+**Verdict: CONSISTENT — feedback loop ĐÓNG tại iter-1.**
