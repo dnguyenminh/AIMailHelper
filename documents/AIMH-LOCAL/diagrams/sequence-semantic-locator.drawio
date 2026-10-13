@@ -1,0 +1,156 @@
+<mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1440" pageHeight="880" math="0" shadow="0">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="p1" value="Caller&#10;(reader / actions / triage)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1f5fe;strokeColor=#0288d1;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="40" y="20" width="200" height="50" as="geometry"/>
+    </mxCell>
+    <mxCell id="p2" value="semantic-locator.ts&#10;(locate orchestration)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="300" y="20" width="190" height="50" as="geometry"/>
+    </mxCell>
+    <mxCell id="p3" value="T1 selectors&#10;(&lt;1ms · 0 token)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="550" y="20" width="130" height="50" as="geometry"/>
+    </mxCell>
+    <mxCell id="p4" value="LocatorCache&#10;(layoutHash)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#9673a6;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="730" y="20" width="150" height="50" as="geometry"/>
+    </mxCell>
+    <mxCell id="p5" value="Service Worker&#10;(LOCATOR_RESOLVE)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="930" y="20" width="160" height="50" as="geometry"/>
+    </mxCell>
+    <mxCell id="p6" value="LLM Provider" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="1150" y="20" width="140" height="50" as="geometry"/>
+    </mxCell>
+    <mxCell id="l1" value="" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="140" y="70" as="sourcePoint"/>
+        <mxPoint x="140" y="850" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="l2" value="" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="395" y="70" as="sourcePoint"/>
+        <mxPoint x="395" y="850" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="l3" value="" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="615" y="70" as="sourcePoint"/>
+        <mxPoint x="615" y="850" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="l4" value="" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="805" y="70" as="sourcePoint"/>
+        <mxPoint x="805" y="850" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="l5" value="" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1010" y="70" as="sourcePoint"/>
+        <mxPoint x="1010" y="850" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="l6" value="" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1220" y="70" as="sourcePoint"/>
+        <mxPoint x="1220" y="850" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="m1" value="1. locate(functionKey, question)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="140" y="110" as="sourcePoint"/>
+        <mxPoint x="395" y="110" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="m2" value="2. trySelectors(functionKey) — TẦNG 1" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="395" y="150" as="sourcePoint"/>
+        <mxPoint x="615" y="150" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="m3" value="3. null (không khớp)" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;dashed=1;strokeColor=#666666;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="615" y="190" as="sourcePoint"/>
+        <mxPoint x="395" y="190" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="m4" value="4. get(functionKey, layoutHash())" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="395" y="230" as="sourcePoint"/>
+        <mxPoint x="805" y="230" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="m5" value="5. entry (selector) | null" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;dashed=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="805" y="270" as="sourcePoint"/>
+        <mxPoint x="395" y="270" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="fHit" value="alt  [cache hit — BR-06]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#666666;dashed=1;fontSize=10;fontStyle=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=4;" vertex="1" parent="1">
+      <mxGeometry x="520" y="290" width="720" height="90" as="geometry"/>
+    </mxCell>
+    <mxCell id="nHit" value="querySelector(value) → element" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=9;" vertex="1" parent="1">
+      <mxGeometry x="430" y="315" width="300" height="24" as="geometry"/>
+    </mxCell>
+    <mxCell id="m7" value="6. return element — cache hit · 0 token" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;dashed=1;strokeColor=#82b366;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="395" y="360" as="sourcePoint"/>
+        <mxPoint x="140" y="360" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="fMiss" value="alt  [cache miss → TẦNG 2 — BR-12]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#666666;dashed=1;fontSize=10;fontStyle=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=4;" vertex="1" parent="1">
+      <mxGeometry x="520" y="400" width="880" height="320" as="geometry"/>
+    </mxCell>
+    <mxCell id="nSnap" value="buildA11ySnapshot(): ≤20k chars · filter interactive (#4)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=9;" vertex="1" parent="1">
+      <mxGeometry x="430" y="425" width="360" height="24" as="geometry"/>
+    </mxCell>
+    <mxCell id="m9" value="7. LOCATOR_RESOLVE {functionKey, question, snapshot}" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="395" y="470" as="sourcePoint"/>
+        <mxPoint x="1010" y="470" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="m10" value="8. registry.get(active).chat(locate prompt)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1010" y="510" as="sourcePoint"/>
+        <mxPoint x="1220" y="510" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="m11" value="9. refId (vd: ref_12)" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;dashed=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1220" y="550" as="sourcePoint"/>
+        <mxPoint x="1010" y="550" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="m12" value="10. { refId }" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;dashed=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1010" y="590" as="sourcePoint"/>
+        <mxPoint x="395" y="590" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="nDeref" value="deref WeakRef(refId) → element" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=9;" vertex="1" parent="1">
+      <mxGeometry x="430" y="605" width="340" height="24" as="geometry"/>
+    </mxCell>
+    <mxCell id="nSel" value="deriveStructuralSelector(el) — refId chết khi reload → chỉ cache selector (#8)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=9;" vertex="1" parent="1">
+      <mxGeometry x="430" y="645" width="380" height="24" as="geometry"/>
+    </mxCell>
+    <mxCell id="m15" value="11. set(functionKey, selector, layoutHash)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="395" y="700" as="sourcePoint"/>
+        <mxPoint x="805" y="700" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="fErr" value="alt  [T2 thất bại]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#666666;dashed=1;fontSize=10;fontStyle=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=4;" vertex="1" parent="1">
+      <mxGeometry x="520" y="740" width="880" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="m16" value="12. null → ERR-06 + Diagnose (UC-09) · T3 nếu opt-in (BR-03)" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;dashed=1;strokeColor=#b85450;fontSize=10;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="395" y="780" as="sourcePoint"/>
+        <mxPoint x="140" y="780" as="targetPoint"/>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="nEnd" value="lần sau: T1 vẫn fail → cache HIT → 0 token" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="1">
+      <mxGeometry x="430" y="820" width="360" height="24" as="geometry"/>
+    </mxCell>
+  </root>
+</mxGraphModel>

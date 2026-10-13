@@ -1,0 +1,238 @@
+<mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1640" pageHeight="1400" math="0" shadow="0">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="t1" value="AIMailHelper — Class Diagram (LLM layer · OWA adapter locator · infra)" style="text;html=1;strokeColor=none;fillColor=none;fontSize=15;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="40" y="20" width="800" height="30" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsReg" value="&lt;b>«factory» LLMRegistry&lt;/b>&#10;- adapters: Map&amp;lt;ProviderId, LLMAdapter&amp;gt;&#10;+ register(id, adapter): void&#10;+ get(id): LLMAdapter&#10;+ resolveActive(config): LLMAdapter&#10;Factory pattern — 1 instance / SW" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="60" y="70" width="440" height="140" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsLLM" value="&lt;b>«interface» LLMAdapter&lt;/b>&#10;+ id: ProviderId&#10;+ chat(config, messages, opts?): Promise&amp;lt;LLMResponse&amp;gt;&#10;+ chatStream(config, messages, opts?): AsyncIterable&amp;lt;string&amp;gt;&#10;+ listModels(config): Promise&amp;lt;string[]&amp;gt;&#10;+ testConnection(config): Promise&amp;lt;TestConnectionResult&amp;gt;" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="560" y="70" width="420" height="140" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsOpenAI" value="&lt;b>OpenAIAdapter&lt;/b>&#10;+ chat / chatStream (SSE + [DONE])&#10;+ listModels: GET /v1/models&#10;+ testConnection&#10;- max_completion_tokens → fallback max_tokens" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="160" y="280" width="280" height="110" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsCompatible" value="&lt;b>OpenAICompatibleAdapter extends OpenAIAdapter&lt;/b>&#10;- baseUrl tùy chỉnh (OpenRouter/vLLM/proxy)&#10;- tolerant SSE: connection close = done&#10;- tolerant listModels: id ?? name ?? model" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="640" y="280" width="280" height="120" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsAzure" value="&lt;b>AzureAdapter extends OpenAIAdapter&lt;/b>&#10;- header api-key (KHÔNG Bearer)&#10;- path deployment + api-version&#10;- KHÔNG listModels (BR-17)&#10;- max_tokens (an toàn mọi api-version)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="1120" y="280" width="280" height="110" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsAnthropic" value="&lt;b>AnthropicAdapter&lt;/b>&#10;- transform: system → top-level&#10;- max_tokens BẮT BUỘC (default 2048 — #11)&#10;- header anthropic-dangerous-&#10;  direct-browser-access: true&#10;- SSE: content_block_delta → text" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="160" y="470" width="280" height="130" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsGemini" value="&lt;b>GeminiAdapter&lt;/b>&#10;- systemInstruction top-level&#10;- role assistant → model&#10;- x-goog-api-key (không ?key= — BR-08)&#10;- stream: :streamGenerateContent?alt=sse&#10;- KHÔNG [DONE] — server close = done" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="640" y="470" width="280" height="130" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsLocal" value="&lt;b>LocalAdapter extends OpenAICompatibleAdapter&lt;/b>&#10;- preset Ollama :11434 / LM Studio :1234&#10;- listModels: /api/tags (Ollama) · /v1/models&#10;- KHÔNG gửi Authorization&#10;- #1: SSE openai-compatible làm chính" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="1120" y="470" width="280" height="120" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsSse" value="&lt;b>sse.ts (util)&lt;/b>&#10;+ parseSse(res): AsyncIterable&amp;lt;SseEvent&amp;gt;&#10;+ parseNdjson (Plan B — 5.2.6)&#10;+ mapHttpToErr(status, body)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="160" y="650" width="280" height="90" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsOpts" value="&lt;b>ChatOptions + DEFAULT_CHAT_OPTIONS (#11 chốt)&lt;/b>&#10;+ temperature? · maxTokens? = 2048&#10;+ timeoutMs? · signal? · visionImage? (BR-03)&#10;TEMPERATURE: analyze 0.3 · reply 0.7 · triage 0.2&#10;TIMEOUT: test/list 15s · chat 60s · stream idle 30s" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#f3e5f5;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="640" y="650" width="280" height="120" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsPrompts" value="&lt;b>prompts.ts&lt;/b>&#10;+ buildAnalyzePrompt(lang)&#10;+ buildReplyPrompt(tone, lang)&#10;+ buildTriagePrompt(lang)&#10;+ serializeEmailData (5.2.0)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="1120" y="650" width="280" height="90" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsOwa" value="&lt;b>«facade» OwaAdapter&lt;/b>&#10;+ detectView(): DetectedView&#10;+ readEmail(): Promise&amp;lt;EmailData&amp;gt;&#10;+ insertDraft(draft): Promise&amp;lt;void&amp;gt;&#10;+ collectInboxItems(): InboxItem[]&#10;+ attachBadge(messageId, score)&#10;+ locate(functionKey, question)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="60" y="810" width="340" height="150" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsStrat" value="&lt;b>«interface» LocatorStrategy&lt;/b>&#10;+ resolve(functionKey, question):&#10;    Promise&amp;lt;Element | null&amp;gt;&#10;Strategy pattern — chuỗi T1 → cache → T2 → T3 (BR-12)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="440" y="810" width="340" height="110" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsT1" value="&lt;b>SelectorTier (T1)&lt;/b>&#10;+ tryFirst(functionKey)&#10;&lt;1ms · 0 token" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="820" y="810" width="200" height="100" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsT2" value="&lt;b>SemanticLocator (T2)&lt;/b>&#10;+ locate(functionKey, question)&#10;- buildSnapshot()&#10;- swLocatorResolve()&#10;- cache read/write (BR-06)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="1040" y="810" width="220" height="150" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsT3" value="&lt;b>VisionFallback (T3)&lt;/b>&#10;+ resolve()&#10;opt-in (BR-03)&#10;capture → 1568px" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="1280" y="810" width="180" height="130" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsCache" value="&lt;b>LocatorCache&lt;/b>&#10;- area: storage.local&#10;+ get(functionKey, layoutHash)&#10;+ set(functionKey, selector, hash)&#10;+ evictStaleHash()&#10;invariant: chỉ persist selector (#8)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#f3e5f5;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="60" y="1010" width="280" height="120" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsA11y" value="&lt;b>A11yTreeBuilder&lt;/b>&#10;+ buildSnapshot(): {text, truncated}&#10;- resolveRef → WeakRef element map&#10;MAX_SNAPSHOT_CHARS = 20.000 (#4)&#10;MAX_DEPTH = 18 · INTERACTIVE_ROLES filter" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="380" y="1010" width="300" height="130" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsRef" value="RefMap (module-level):&#10;refByElement: WeakMap&amp;lt;Element, string&amp;gt;&#10;elementsByRef: Map&amp;lt;string, WeakRef&amp;gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="720" y="1010" width="280" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsRouter" value="&lt;b>MessageRouter&lt;/b>&#10;- handlers: Map&amp;lt;RpcKind, Handler&amp;gt;&#10;+ register(kind, handler)&#10;+ dispatch(req): Promise&amp;lt;RpcResponse&amp;gt;&#10;+ attachPort(port)&#10;unknown kind → error envelope (ERR-15)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="60" y="1190" width="340" height="140" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsPort" value="&lt;b>PortStream (client + server)&lt;/b>&#10;+ request(kind, payload, onEvent)&#10;+ cancel(requestId)&#10;- heartbeat ping 20s (MV3 idle ~30s)&#10;- seq verify · done/error là message cuối" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#f3e5f5;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="440" y="1190" width="300" height="140" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsStore" value="&lt;b>StorageWrapper «repository»&lt;/b>&#10;+ getSection / setSection (validate BR-15)&#10;+ migrate() — chuỗi MIGRATIONS (5.4.1)&#10;+ lruEvictTriage(cap 500 — #10)&#10;area routing theo keyStorage (BR-04)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#f3e5f5;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="780" y="1190" width="320" height="140" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsErr" value="&lt;b>AppError&lt;/b>&#10;+ code: 'ERR-01'..'ERR-16'&#10;+ retryable: boolean&#10;+ i18nKey + params&#10;(không lộ key — BR-08)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="1140" y="1190" width="260" height="110" as="geometry"/>
+    </mxCell>
+    <mxCell id="clsSource" value="&lt;b>«factory» A11ySource&lt;/b>&#10;DomA11ySource (MVP)&#10;CdpA11ySource (Pro mode — #7)&#10;createA11ySource(mode)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="1440" y="1190" width="180" height="130" as="geometry"/>
+    </mxCell>
+    <mxCell id="imp1" value="«implements»" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;fontSize=9;exitX=0.5;exitY=0;entryX=0.05;entryY=1;" edge="1" parent="1" source="clsOpenAI" target="clsLLM">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="300" y="240"/>
+          <mxPoint x="580" y="240"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="imp2" value="«implements»" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;fontSize=9;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" parent="1" source="clsCompatible" target="clsLLM">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="imp3" value="«implements»" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;fontSize=9;exitX=0.5;exitY=0;entryX=0.95;entryY=1;" edge="1" parent="1" source="clsAzure" target="clsLLM">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="1260" y="240"/>
+          <mxPoint x="960" y="240"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="imp4" value="«implements»" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;fontSize=9;exitX=0.5;exitY=0;entryX=0;entryY=0.6;" edge="1" parent="1" source="clsAnthropic" target="clsLLM">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="300" y="440"/>
+          <mxPoint x="80" y="440"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="imp5" value="«implements»" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;fontSize=9;exitX=0.5;exitY=0;entryX=0;entryY=0.35;" edge="1" parent="1" source="clsGemini" target="clsLLM">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="780" y="410"/>
+          <mxPoint x="40" y="410"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="imp6" value="«implements»" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;fontSize=9;exitX=0.5;exitY=0;entryX=1;entryY=0.6;" edge="1" parent="1" source="clsLocal" target="clsLLM">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="1260" y="440"/>
+          <mxPoint x="1560" y="440"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="ext1" value="extends" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;fontSize=9;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="clsCompatible" target="clsOpenAI">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="ext2" value="extends" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;fontSize=9;exitX=0.5;exitY=1;entryX=0.5;entryY=1;" edge="1" parent="1" source="clsAzure" target="clsOpenAI">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="1260" y="420"/>
+          <mxPoint x="300" y="420"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="ext3" value="extends" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;fontSize=9;exitX=0;exitY=0.5;entryX=0.95;entryY=1;" edge="1" parent="1" source="clsLocal" target="clsCompatible">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="950" y="530"/>
+          <mxPoint x="950" y="420"/>
+          <mxPoint x="900" y="420"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="regEdge" value="creates / holds" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;fontSize=9;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="clsReg" target="clsLLM">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="owaEdge" value="uses (Facade → Strategy)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;fontSize=9;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="clsOwa" target="clsStrat">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="tier1" value="«implements» T1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;fontSize=9;exitX=0.5;exitY=0;entryX=0.5;entryY=0;" edge="1" parent="1" source="clsT1" target="clsStrat">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="920" y="770"/>
+          <mxPoint x="610" y="770"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="tier2" value="«implements» T2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;fontSize=9;exitX=0.5;exitY=0;entryX=0.65;entryY=0;" edge="1" parent="1" source="clsT2" target="clsStrat">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="1150" y="750"/>
+          <mxPoint x="660" y="750"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="tier3" value="«implements» T3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;fontSize=9;exitX=0.5;exitY=0;entryX=0.8;entryY=0;" edge="1" parent="1" source="clsT3" target="clsStrat">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="1370" y="730"/>
+          <mxPoint x="710" y="730"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="semCache" value="BR-06" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;fontSize=9;exitX=0.3;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="clsT2" target="clsCache">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="1106" y="990"/>
+          <mxPoint x="200" y="990"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="semA11y" value="snapshot" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;fontSize=9;exitX=0.8;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="clsT2" target="clsA11y">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="1216" y="1000"/>
+          <mxPoint x="530" y="1000"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="owaPort" value="Port stream" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;fontSize=9;exitX=0.9;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="clsOwa" target="clsPort">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="370" y="1160"/>
+          <mxPoint x="590" y="1160"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="owaRouter" value="RPC" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;fontSize=9;exitX=0;exitY=0.6;entryX=0;entryY=0.3;" edge="1" parent="1" source="clsOwa" target="clsRouter">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="20" y="900"/>
+          <mxPoint x="20" y="1230"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="routerReg" value="dispatch → adapter" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;fontSize=9;exitX=0;exitY=0.15;entryX=0;entryY=0.9;" edge="1" parent="1" source="clsRouter" target="clsReg">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="30" y="1210"/>
+          <mxPoint x="30" y="200"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cacheStore" value="persist" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;fontSize=9;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="clsCache" target="clsStore">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="200" y="1170"/>
+          <mxPoint x="940" y="1170"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="routerErr" value="error envelope" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;fontSize=9;exitX=0.5;exitY=1;entryX=0.5;entryY=1;" edge="1" parent="1" source="clsRouter" target="clsErr">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="230" y="1360"/>
+          <mxPoint x="1270" y="1360"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="sourceEdge" value="creates (Pro mode #7)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;fontSize=9;exitX=0.5;exitY=0;entryX=1;entryY=0.5;" edge="1" parent="1" source="clsSource" target="clsA11y">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="1530" y="1150"/>
+          <mxPoint x="700" y="1150"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+  </root>
+</mxGraphModel>

@@ -46,7 +46,7 @@
   },
   "autonomyLevel": "L3",
   "projectPattern": "plugin (browser extension; .kiro/steering/patterns/plugin.md not found — using default plugin pattern emphasis: host interface isolation, capability detection, permission minimization)",
-  "currentPhase": "specification",
+  "currentPhase": "design",
   "phases": {
     "requirements": {
       "status": "done",
@@ -56,16 +56,18 @@
       "qualityGate": "PASS (10 US + AC, 2 drawio XML-valid + PNG export thật, vision-checked; REFERENCE-ANALYSIS + GLOSSARY 10 terms; DOCX exported; KB ingested)"
     },
     "specification": {
-      "status": "in_progress",
+      "status": "done",
       "file": "FSD.md",
-      "version": 1,
-      "startedAt": "2026-10-14T01:46:00Z",
-      "baDraftCompletedAt": "2026-10-14T02:40:00Z",
-      "baDraftQualityGate": "PASS (9 UC Main/Alt/Exception, 16 BR, 39 FR theo 6 GD, 11 data entities UNVERIFIED chờ SA, ERR-01..14, i18n spec, NFR định lượng, 14 TC, 7 Open Issues; 4 drawio + PNG export thật vision-checked; KB ingest FSD + 4 diagram — mem_search verify trả rỗng, xem RUN-LOG #12)",
-      "next": "TA enrichment (Step 2c) — API contracts chi tiết, integration specs, pseudocode; sau đó SM finalize + DOCX"
+      "version": 1.2,
+      "completedAt": "2026-10-14T04:10:00Z",
+      "qualityGate": "PASS — v1.0 BA draft (1229 dòng, 9 UC, 16 BR, 45 FR, ERR-01..14) + v1.1 TA enrich (1970 dòng, 6/6 API contracts, Port protocol, 6 pseudocode, ERR-15/16) + v1.2 BA review (2004 dòng, 11/11 entities BA-REVIEWED, BR-17, Open Issues 6 RESOLVED/4→SA/1 ack, FR mapping 45/45). 4 drawio+PNG vision-checked. DOCX 90KB exported. KB ingested",
+      "next": "Phase 3 (TDD) — sa-agent"
     },
     "design": {
-      "status": "not_started"
+      "status": "in_progress",
+      "file": "TDD.md",
+      "version": 0,
+      "startedAt": "2026-10-14T04:12:00Z"
     },
     "feedback_loop": {
       "status": "not_started",
