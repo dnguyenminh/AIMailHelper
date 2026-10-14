@@ -99,7 +99,13 @@
       "next": "P4.5 devops-setup / P5 dev-agent (đọc STC + DEV-SECURITY-CHECKLIST trước từng GĐ)"
     },
     "devops_setup": {
-      "status": "not_started"
+      "status": "done",
+      "file": "DPG.md",
+      "startedAt": "2026-10-14T09:15:00Z",
+      "completedAt": "2026-10-14T09:40:00Z",
+      "version": 1,
+      "qualityGate": "PASS — ci.yml (build matrix Node 20: npm ci/typecheck/lint/vite build/zip + test vitest junit) + release.yml (tag v* → draft GH Release, KHÔNG auto-publish store); DPG.md 417 dòng đầy đủ 10 sections theo DPG-TEMPLATE (env DEV/TEST/PROD, không SIT/UAT server; rollback = unlist + hotfix bump PATCH; script contract cho GĐ1); 2 drawio (deployment-flow, rollback-flow) export PNG thật 300KB/298KB vision-checked (1 vòng fix); RLN để Phase 7 (ghi chú DPG §10.4). CI đỏ là kỳ vọng cho tới GĐ1 (src rỗng, chưa có package.json) và chỉ chạy khi repo có remote",
+      "next": "P5 dev-agent GĐ1 (đang chạy song song) — sau GĐ1 pipeline khớp script contract"
     },
     "implementation": {
       "status": "not_started"
@@ -134,5 +140,5 @@
     "state": "closed",
     "consecutiveFailures": 0
   },
-  "lastUpdated": "2026-10-14T07:30:00Z"
+  "lastUpdated": "2026-10-14T09:40:00Z"
 }
