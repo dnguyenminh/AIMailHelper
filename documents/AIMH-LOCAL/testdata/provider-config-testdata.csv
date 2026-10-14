@@ -1,0 +1,25 @@
+test_case_id,row_id,provider,apiKey,baseUrl,model,azure_endpoint,azure_deployment,azure_apiVersion,local_url,local_preset,keyStorage,expected_http_code,expected_result,description
+TC-101,MANIFEST-01,static,,,,,,,sync,,ok,Manifest chuẩn: 3 OWA host_permissions + optional localhost/https + CSP self; KHÔNG debugger/`<all_urls>` tĩnh (BR-16)
+TC-107,PC-REG-01,openai,sk-test-openai-1234567890,,gpt-4o-mini,,,,,sync,,resolve=openai-adapter,Registry map đúng adapter 1/6
+TC-107,PC-REG-02,azure,az-test-key-1234567890,,gpt-4o,https://myres.openai.azure.com,gpt-4o,2024-10-21,,sync,,resolve=azure-adapter,Registry map đúng 2/6
+TC-107,PC-REG-03,anthropic,ak-test-anthropic-123456,,claude-sonnet-4-5,,,,,sync,,resolve=anthropic-adapter,Registry 3/6
+TC-107,PC-REG-04,gemini,gm-test-key-1234567890,,gemini-2.5-flash,,,,,sync,,resolve=gemini-adapter,Registry 4/6
+TC-107,PC-REG-05,openai-compatible,,https://openrouter.ai/api/v1,meta-llama/llama-3.2-3b-instruct,,,,,sync,,resolve=compatible-adapter,Registry 5/6 — key tùy chọn
+TC-107,PC-REG-06,local,,,llama3.2:latest,,,http://localhost:11434,ollama,sync,,resolve=local-adapter,Registry 6/6 — không cần key
+TC-204,PC-TC-01,openai,,--MISSING--,gpt-4o-mini,,,,,sync,,ERR-11,Thiếu apiKey → chặn test ngay "Còn thiếu: apiKey" — 0 fetch (UC-06 AF-1)
+TC-204,PC-TC-02,openai,sk-test-openai-1234567890,,gpt-4o-mini,,,,,sync,,ok,Config đủ → testConnection trả ok/latency (mock 830ms)
+TC-204,PC-TC-03,openai,sk-test-openai-1234567890,,gpt-4o-mini,,,,,sync,,ERR-04,Mock hang → "Không phản hồi sau 15 giây" (timeout 15s)
+TC-205,PC-LM-01,openai,sk-test-openai-1234567890,,gpt-4o-mini,,,,,sync,,ok,"Mock /v1/models trả {data:[{id}]} → parse được"
+TC-205,PC-LM-02,local,,,llama3.2:latest,,,http://localhost:11434,ollama,sync,,"Mock /api/tags trả {models:[{name}]} → parse được"
+TC-205,PC-LM-03,openai-compatible,,https://openrouter.ai/api/v1,x,,,,,sync,,models-empty,"Mock trả HTML rác → models=[] + error; lưu cấu hình VẪN ok (BR-17)"
+TC-405,PC-TC-04,openai,sk-wrong-key-123456789,,gpt-4o-mini,,,,,sync,,ERR-02,"Key sai → message đỏ rõ ràng, KHÔNG lộ giá trị key (BR-08)"
+TC-510,PC-TC-05,openai,sk-wrong-key-123456789,,gpt-4o-mini,,,,,sync,,ERR-02,"Sai key khi analyze trên OWA → ERR-02 + nút sửa key nhanh, console sạch (BR-08)"
+TC-311,PC-TC-06,azure,az-test-key-1234567890,,gpt-4o,https://myres.openai.azure.com,gpt-4o,2024-10-21,,sync,,ok,"testConnection azure → {ok:true,message:""OK (200)"",latencyMs>=800}"
+TC-311,PC-TC-07,anthropic,ak-test-anthropic-123456,,claude-sonnet-4-5,,,,,sync,,ok,testConnection anthropic ok
+TC-311,PC-TC-08,gemini,gm-test-key-1234567890,,gemini-2.5-flash,,,,,sync,,ok,testConnection gemini ok
+TC-311,PC-TC-09,openai-compatible,,https://openrouter.ai/api/v1,meta-llama/llama-3.2-3b-instruct,,,,,sync,,ok,testConnection compatible ok (không Authorization khi key rỗng)
+TC-311,PC-TC-10,local,,,llama3.2:latest,,,http://localhost:11434,ollama,sync,,ok,testConnection local ok
+TC-311,PC-TC-11,openai,sk-test-openai-1234567890,,gpt-4o-mini,,,,,sync,,ok-false,"mock 401 → {ok:false,message rõ} KHÔNG chứa sk-test (BR-08)"
+TC-406,PC-MP-01,openai,sk-test-openai-1234567890,,gpt-4o-mini,,,,,sync,,ok,ModelPicker: nút fetch HIỆN + ô nhập tay luôn khả dụng (BR-17)
+TC-406,PC-MP-02,azure,az-test-key-1234567890,,gpt-4o,https://myres.openai.azure.com,gpt-4o,2024-10-21,,sync,,ok,"ModelPicker azure: nút fetch ẨN, nhập tay deployment (US-02 AC4)"
+TC-406,PC-MP-03,anthropic,ak-test-anthropic-123456,,claude-sonnet-4-5,,,,,sync,,ok,"ModelPicker anthropic: fetch theo kết quả spike CORS; nhập tay luôn khả dụng (BR-17)"

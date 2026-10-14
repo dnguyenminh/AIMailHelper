@@ -1,0 +1,9 @@
+row_id,test_case_id,key,vi_value,en_value,params,scenario,expected
+I18N-01,TC-106,popup.provider.label,"Provider: {provider}","Provider: {provider}","{provider:openai}",Key có ở cả vi + en → render placeholder,Hiển thị "Provider: openai" đúng ngôn ngữ hiện tại
+I18N-02,TC-106,popup.toggle.extension,"Bật extension","Enable extension",,Key có ở cả 2 bản,Render đúng bản theo uiLanguage
+I18N-03,TC-106,panel.analyze.importance.cao,Cao,High,,Nhãn importanceBadge,Render "Cao"/"High"
+I18N-04,TC-106,test.key.missing.vi,"(không có trong vi.json)","Fallback English text",,Key thiếu ở vi có ở en → fallback en + KHÔNG warn,Hiển thị English; UI không vỡ
+I18N-05,TC-106,test.key.missing.both,"(không có)","(không có)",,Key thiếu cả 2 → hiển thị raw key + console.warn (ERR-13),Hiển thị "test.key.missing.both"; warn đúng 1 lần
+I18N-06,TC-106,errors.invalidKey,"API key không hợp lệ hoặc không có quyền.","Invalid API key or insufficient permissions.",,"Port error i18nKey errors.invalidKey → panel render theo uiLanguage (TA note 5.3.2)",Lỗi hiển thị đúng ngôn ngữ; KHÔNG chứa key (BR-08)
+I18N-07,TC-407,options.general.privacyNote,"Nội dung email chỉ được gửi tới endpoint LLM bạn cấu hình.","Email content is only sent to the LLM endpoint you configure.",,Privacy note đổi theo ngôn ngữ (FR-GD2-08),Note vi/en đúng khi đổi uiLanguage
+I18N-08,TC-407,options.automation.autoModeWarning,"Extension sẽ tự soạn draft để bạn duyệt. Nó KHÔNG BAO GIỜ tự gửi email.","The extension will draft replies for your review. It will NEVER send email.",,Cảnh báo auto-mode 2 ngôn ngữ,Warning hiển thị khi bật (BR-02)

@@ -1,0 +1,9 @@
+row_id,test_case_id,scenario,tone,language,extra_instructions,draft_content,compose_state,vision_enabled,expected,description
+RPL-INS-01,TC-116,"Chèn draft vào compose contenteditable",chinh-thuc,vi,"Nhắc lại lịch họp thứ 3","Kính gửi anh Minh, cảm ơn anh đã phản hồi...",empty,false,"Native setter + dispatch input event; OWA React nhận state; KHÔNG có thao tác Send",Insert React-safe chính
+RPL-INS-02,TC-116,"Draft rỗng chặn lớp 2",chinh-thuc,vi,,"",empty,false,"Chặn ngay — KHÔNG gọi insertDraft; nút chèn vô hiệu (BR-10)",BR-10 defense-in-depth
+RPL-INS-03,TC-116,"Compose có sẵn nội dung — AF-5",than-mat,vi,,"Kính gửi anh Minh...",has-text ""đang viết dở"",false,"Trả needs-confirm {replace,append,cancel}; KHÔNG ghi đè im lặng; Hủy → giữ nguyên compose",AF-5 UC-02
+RPL-VIS-01,TC-125,"Vision TẮT + T1/T2 fail",chinh-thuc,vi,,,"t1-broken;t2-broken",false,"spy captureVisibleTab = 0 — KHÔNG BAO GIỜ capture khi TẮT (BR-03)",Điều kiện kép nhánh 1
+RPL-VIS-02,TC-125,"Vision BẬT + T1 hit",chinh-thuc,vi,,,"t1-ok",true,"0 capture — T3 không chạy khi T1 còn được",Điều kiện kép nhánh 2
+RPL-VIS-03,TC-125,"Vision BẬT + T1+T2 fail",chinh-thuc,vi,,,"t1-broken;t2-broken",true,"Đúng 1 capture; ảnh nén ~1568px JPEG q0.6; buffer xóa sau call",T3 chạy đúng pipeline
+RPL-VIS-04,TC-125,"Vision BẬT + T2 hit",chinh-thuc,vi,,,"t1-broken;t2-ok",true,"0 capture — T3 chỉ khi T1+T2 ĐỀU fail (BR-12)",Điều kiện kép nhánh 3
+RPL-E2E-01,TC-410,"E2E reply trên OWA thật",chinh-thuc,vi,"Nhắc lại lịch họp thứ 3","(stream thật từ Ollama)",empty,false,"Draft nằm trong compose; không nút Send của extension; người dùng tự Send (BR-01); uiLanguage=en + language=vi → draft VI (BR-11)",UC-02 main + BR-01 + BR-11

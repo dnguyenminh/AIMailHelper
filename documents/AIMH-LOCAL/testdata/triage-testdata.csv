@@ -1,0 +1,20 @@
+row_id,test_case_id,messageId,subject,sender,snippet,cached,note
+TRI-Pipe-01,TC-117,AAMkAAA1,"Email 1","a@x.com","Nội dung 1",false,Có messageId — quét bình thường
+TRI-Pipe-01,TC-117,AAMkAAA2,"Email 2","b@x.com","Nội dung 2",false,Có messageId
+TRI-Pipe-01,TC-117,AAMkAAA3,"Email 3","c@x.com","Nội dung 3",false,Có messageId
+TRI-Pipe-01,TC-117,AAMkAAA4,"Email 4","d@x.com","Nội dung 4",false,Có messageId
+TRI-Pipe-01,TC-117,AAMkAAA5,"Email 5","e@x.com","Nội dung 5",false,Có messageId
+TRI-Pipe-01,TC-117,AAMkAAA6,"Email 6","f@x.com","Nội dung 6",true,Đã cache → bỏ qua LLM (BR-09)
+TRI-Pipe-01,TC-117,AAMkAAA7,"Email 7","g@x.com","Nội dung 7",true,Đã cache → bỏ qua
+TRI-Pipe-01,TC-117,(missing),"Email 8 — row thiếu data-itemid và href AAMk","h@x.com","Nội dung 8",false,Bỏ qua + log ERR-12 — không gián đoạn batch
+TRI-Pipe-01,TC-117,(missing),"Email 9 — synthetic hash cũng không đủ dữ liệu","i@x.com","Nội dung 9",false,Bỏ qua + log ERR-12
+TRI-Pipe-01,TC-117,AAMkAAA10,"Email 10","j@x.com","Nội dung 10",false,Có messageId
+TRI-Pipe-03,TC-117,AAMkB001..AAMkB060,"60 email bulk","bulk@x.com","(60 dòng — id từ AAMkB001 đến AAMkB060)",false,60 item → cap 50; 10 chờ "Quét tiếp" (UC-03 EF-5)
+TRI-Back-01,TC-118,AAMkC001,"Rate limit email","rl@x.com","batch1 → mock 429 Retry-After:2",false,Chờ đúng 2s rồi retry (TC-118)
+TRI-Back-02,TC-118,AAMkC002,"Rate limit email 2","rl@x.com","mock 429 không Retry-After",false,Backoff throttleMs 1s→2s→4s cap 10s
+TRI-Back-03,TC-118,AAMkC003,"Rate limit email 3","rl@x.com","mock 429 × 3 liên tiếp",false,MAX_RETRY_BATCH=3 hết lượt → item "chưa chấm"; batch sau vẫn chạy
+TRI-Back-04,TC-118,AAMkC004,"Server error email","rl@x.com","mock 503 × 2 rồi thành công",false,ERR-16 backoff 2s→4s rồi OK — progress {done,total,failed} đúng
+TRI-IT-01,TC-209,AAMkD001..AAMkD010,"10 email integration","it@x.com","(10 dòng; batch 5+3+2 cached)",2-cached,"Cache ghi GỘP 1 lần/batch; badge 8 item; summary {done:8,failed:0,cachedSkipped:2}"
+TRI-E2E-01,TC-413,AAMkE001..AAMkE020,"20 email thật trên OWA","(người thật gửi cho chính mình)","(20 email thật: 5 quan trọng, 10 thường, 5 spam)",false,"E2E-UI: badge màu + Digest sort + reason; quét lần 2 → 0 LLM call cached (BR-09)"
+TRI-VIRT-01,TC-509,AAMkF001..AAMkF030,"Inbox dài > 1 viewport","virtual@x.com","(30 email — OWA ảo hóa: chỉ ~15 item trong DOM lúc đầu)",false,"Chỉ quét item trong DOM (BR-07); cuộn → quét bổ sung item mới; cached không tốn token"
+TRI-Folder-01,TC-117,AAMkG001..AAMkG010,"Đổi folder giữa chừng","f@x.com","folderChanged=true trước batch 2",false,"Dừng quét an toàn; giữ kết quả batch 1 (EF-2 UC-03)"

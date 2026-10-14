@@ -1,0 +1,23 @@
+test_case_id,row_id,section,field,value,valid,expected_code,description,related_tc
+TC-008,STO-VAL-01,general,uiLanguage,"""vi""",true,,Hợp lệ — chấp nhận,TC-008;TC-102
+TC-008,STO-VAL-02,general,uiLanguage,"""en""",true,,Hợp lệ,TC-008
+TC-008,STO-VAL-03,general,uiLanguage,"""fr""",false,ERR-15,Từ chối — chỉ nhận vi/en (BR-15),TC-008;TC-102;TC-202
+TC-102,STO-VAL-04,general,uiLanguage,"""VI""",false,ERR-15,Từ chối — case-sensitive,TC-102
+TC-102,STO-VAL-05,general,uiLanguage,"""vi """,false,ERR-15,Từ chối — có space,TC-102
+TC-102,STO-VAL-06,general,keyStorage,"""cloud""",false,ERR-15,Từ chối — chỉ sync/local,TC-102
+TC-102,STO-VAL-07,general,providerActive,"""chatgpt""",false,ERR-15,Từ chối — chỉ 6 ProviderId,TC-102
+TC-102,STO-VAL-08,prompts,replyLanguage,"""fr""",false,ERR-15,Từ chối — chỉ auto/vi/en,TC-102
+TC-102,STO-VAL-09,prompts,defaultTone,"""hai-huoc""",false,ERR-15,Từ chối — chỉ chinh-thuc/than-mat/ngan-gon,TC-102
+TC-102,STO-VAL-10,triage,score,101,false,ERR-15,Từ chối — score 0..100,TC-102
+TC-008,STO-VAL-11,general,keyStorage,"""local""",true,,Hợp lệ,TC-008;TC-103
+TC-103,STO-KEY-01,providers.openai,location,sync→local,true,,Chuyển khu: ghi local + XÓA khỏi sync — không tồn tại 2 bản (BR-04),TC-103;TC-203
+TC-103,STO-KEY-02,providers.openai,location,local→sync,true,,Chuyển ngược lại: ghi sync + xóa local,TC-103;TC-203
+TC-104,STO-MIG-01,storage.schemaVersion,fresh-install,absent→1,true,,Lần đầu: ghi schemaVersion=1 + defaults (automation.enabled=false; vision.enabled=false),TC-104
+TC-104,STO-MIG-02,storage.schemaVersion,downgrade,2→read-only,false,warning,Schema lớn hơn code → KHÔNG đụng dữ liệu + log cảnh báo,TC-104
+TC-213,STO-MIG-03,migration,step-fail,quota-throw,false,ERR,Bước fail → DỪNG chuỗi; giữ dữ liệu cũ; KHÔNG xóa apiKey (BR-04); banner Options,TC-213
+TC-105,STO-LRU-01,cache.triage,eviction,501st-entry,true,,Evict analyzedAt cũ nhất; size giữ ≤500 (LRU 500),TC-105;TC-006
+TC-105,STO-QUOTA-01,cache.triage,quota-full,local.set-reject,false,ERR-08,Ghi cache fail → ERR-08; giữ dữ liệu cũ; không mất key; không throw xuyên biên,TC-105;TC-505
+TC-105,STO-QUOTA-02,config.general,quota-full,local.set-reject,false,ERR-08,Ghi config fail → giữ giá trị cũ + thông báo,TC-105
+TC-201,STO-CFG-01,config,response-shape,CONFIG_GET,true,,Response có general/prompts/automation/vision/activeProvider/providers{hasKey}; KHÔNG apiKey (BR-08),TC-201
+TC-212,STO-STATE-01,runtime,state-toggle,extensionEnabled=false,true,,GET_RUNTIME_STATE trả trạng thái cập nhật,TC-212
+TC-505,STO-QUOTA-03,storage.local,fill-to-quota,10MB-pad,true,ERR-08,Điền đầy storage.local thật (DevTools) → triage mới → ERR-08 giữ dữ liệu cũ,TC-505

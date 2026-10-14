@@ -1,0 +1,24 @@
+row_id,test_case_id,functionKey,dom_fixture_desc,expected_selector_family,layout_change,description
+LOC-SEL-01,TC-109,reading-pane,"div role=main chứa [aria-label*=Message i] + [data-conversation]","[role=main] [aria-label*=Message i]",none,T1 chain 1 — reading-pane hit <1ms
+LOC-SEL-02,TC-109,message-toolbar,"[role=toolbar] trong reading-pane cạnh nhóm Reply","[role=toolbar]",none,T1 chain 2 — toolbar
+LOC-SEL-03,TC-109,reply-button,"button aria-label=""Reply"" + bản VN ""Trả lời""","[aria-label*=Reply i]:not([aria-label*=all i])",none,T1 chain 3 — reply-button EN/VN
+LOC-SEL-04,TC-109,compose-box,"div role=textbox aria-multiline=true","[role=textbox][aria-multiline=true]",none,T1 chain 4 — compose box
+LOC-SEL-05,TC-109,inbox-list,"div role=list chứa role=listitem con","[role=list]",none,T1 chain 5 — inbox list
+LOC-SEL-06,TC-109,inbox-item,"tr/div role=listitem","[role=listitem]",none,T1 chain 6 — item
+LOC-SEL-07,TC-121,send-button,"button aria-label=""Send"" (chỉ để diagnose đối chiếu)","[aria-label*=Send i]",none,send-button CHỈ expose cho diagnose — không API click (BR-01)
+LOC-TREE-01,TC-110,all,"DOM 5.000 node với 16 interactive roles + listitem",snapshot,none,"Snapshot ≤20.000 chars; truncated flag; ref_1..n ổn định trong 1 walk"
+LOC-HASH-01,TC-007,reading-pane,"Đổi text body email trong fixture",hash-unchanged,content-only,Đổi NỘI DUNG → hash GIỐNG NHAU (BR-06)
+LOC-HASH-02,TC-111,inbox-list,"Thêm node con vào [role=list]",hash-changed,structural,Đổi cấu trúc → hash ĐỔI
+LOC-HASH-03,TC-111,compose,"Đổi role của compose box",hash-changed,structural,Đổi role → hash ĐỔI
+LOC-CACHE-01,TC-112,compose-box,"Element không suy được structural selector",no-cache,none,KHÔNG ghi cache khi không suy được selector (#8)
+LOC-CACHE-02,TC-112,reading-pane,"100 lần ghi cache hợp lệ",selector-only,none,100% entry persisted strategy=""selector""; 0 refId; hash cũ bị xóa khi ghi hash mới
+LOC-ORCH-01,TC-113,compose-box,"T1 hit","return-immediately",none,"T1 hit → 0 cache.get + 0 LLM call (BR-12)"
+LOC-ORCH-02,TC-113,reading-pane,"T1 miss + cache hit cùng layoutHash","cache-hit",none,"Cache hit → querySelector; 0 LLM; <10ms (TC-611)"
+LOC-ORCH-03,TC-113,compose-box,"T1 miss + cache miss → LOCATOR_RESOLVE","t2-resolve",none,"Snapshot → LOCATOR_RESOLVE → refId ref_12 → deref → element"
+LOC-ORCH-04,TC-113,reading-pane,"Cache entry có layoutHash KHÁC","stale-miss",hash-changed,"Entry stale coi như KHÔNG TỒN TẠI — không thử resolve"
+LOC-DET-01,TC-115,reading-pane,"Fixture reading pane chuẩn",reading-pane,none,Detector mode 1/3
+LOC-DET-02,TC-115,popout,"Fixture cửa sổ bật riêng (popout window)",popout,none,Detector mode 2/3
+LOC-DET-03,TC-115,conversation,"Fixture conversation view có thread",conversation,none,Detector mode 3/3
+LOC-DET-04,TC-115,unknown,"DOM lạ không khớp probe nào",unknown,none,Detector trả unknown → caller quyết định lỗi (EF-3)
+LOC-RPC-01,TC-210,compose-box,"Snapshot gửi qua LOCATOR_RESOLVE",ref_12,none,"SW trả refId + usage{950,3}; CS deref; cache ghi selector theo layoutHash"
+LOC-E2E-01,TC-409,reading-pane,"Trên OWA thật: DevTools xóa attribute aria-label mà T1 phụ thuộc","t2-recovery",simulated-break,"T1 gãy thật → T2 phục hồi; reload → tier cache 0 token (BR-06/BR-12)"

@@ -1,0 +1,10 @@
+metric_id,test_case_id,metric,target,measurement_method,tool,description
+NFR-01,TC-610,T1 selectors latency,< 1ms (trung vị 1.000 lần); 0 token,console.time quanh tryFirst cho 7 functionKey,Vitest + jsdom,Selectors fast-path (FR-GD1-08)
+NFR-02,TC-611,T2 cache hit latency,< 10ms; 0 LLM call,Đo cache.get + querySelector 1.000 lần,Vitest,Locator cache theo layoutHash (BR-06)
+NFR-03,TC-612,A11y snapshot build,≤ 100ms với DOM ~5.000 node; ≤ 20.000 chars,Đo buildSnapshot 100 lần; assert length,Vitest + jsdom,Snapshot T2 (#4)
+NFR-04,TC-613,First token (analyze),~3s với provider cloud thông thường (mục tiêu — không SLA),DevTools Network TTFB request chat khi bấm phân tích,Chrome DevTools trên OWA,US-06 AC1 "trong vài giây"
+NFR-05,TC-615,Streaming added latency nội bộ,p95 < 10ms SW→CS; rAF ≤ 1 render/frame,Log timestamp chunk tại adapter vs PortClient; spy rAF count,Vitest + fake rAF,FSD mục 8 (TA v1.1)
+NFR-06,TC-616,Bundle size,≤ 1MB gzipped toàn extension; không SDK LLM,Build release + gzip + bundle analysis,vite build + bundle analyzer,FR-GD2-10 fetch thuần
+NFR-07,TC-614,Triage 20 email,< 60s với batchSize 5 + throttle 1000ms (sanity 12–24s),Đồng hồ bấm tay + progress event,OWA thật,US-08
+NFR-TC-01,TC-617,Test Connection timeout,≤ 15s hard → ERR-04,Đo thời gian testConnection với mock hang,AbortSignal.timeout + Vitest,UC-06 EF-1
+NFR-HB-01,TC-508,Stream dài không đứt,> 2 phút với heartbeat ping 20s (Chrome + Edge),Quan sát console ping + stream done; nếu đứt → ERR-07 giữ phần đã nhận,OWA thật + Ollama local,MV3 SW keepalive (Open Issue #9 — verify DEV/TA GĐ2)

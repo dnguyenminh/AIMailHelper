@@ -1,0 +1,19 @@
+row_id,test_case_id,domain,owa_mode,account,pre_state,steps_note,evidence_path
+OWA-ACC-1,TC-403;TC-415,outlook.office.com,reading-pane,work-test@congty.com (Work/School),đã đăng nhập,"Domain Work/School — mốc GĐ4 bắt buộc",evidence/TC-403-office.png
+OWA-ACC-2,TC-403;TC-415,outlook.office365.com,reading-pane,work-test@congty.com,đã đăng nhập,Domain Work/School 2,evidence/TC-403-office365.png
+OWA-ACC-3,TC-403;TC-415,outlook.live.com,reading-pane,personal-test@outlook.com (cá nhân),đã đăng nhập,Domain cá nhân — mốc GĐ4 bắt buộc,evidence/TC-403-live.png
+OWA-01,TC-501,outlook.office.com,reading-pane,work-test@congty.com,panel mở,"So sánh layout trước/sau panel; zoom 80-150%; dark/light OWA",evidence/TC-501-shadow-dom.png
+OWA-02,TC-503,outlook.office.com,reading-pane,work-test@congty.com,"đang stream email A","Đổi sang email B giữa chừng — cancel + phân tích B (AF-4)",evidence/TC-503-switch-email.png
+OWA-03,TC-504,outlook.office.com,reading-pane,work-test@congty.com,"draft preview của email A; đang mở email B","Bấm Chèn vào Reply → cảnh báo khác email (EF-5)",evidence/TC-504-messageid-mismatch.png
+OWA-04,TC-506,outlook.office.com,reading-pane,work-test@congty.com,popup mở,"Toggle tắt → thử tính năng → bật lại",evidence/TC-506-toggle-off.png
+OWA-05,TC-507,outlook.office.com,popout,work-test@congty.com,"sau 1 luồng lỗi ERR-06","Bật Diagnose → xuất report → đọc toàn bộ — body phải redact",evidence/TC-507-diagnose-report.png
+OWA-06,TC-508,outlook.office.com,reading-pane,work-test@congty.com,"Ollama local + email FIX-09 (dài)","Draft dài > 2 phút — quan sát ping 20s; Chrome + Edge",evidence/TC-508-long-stream.png
+OWA-07,TC-510,outlook.office.com,reading-pane,work-test@congty.com,"key sai sk-wrong-key-123456789","Analyze → ERR-02 + console sạch (BR-08)",evidence/TC-510-wrong-key.png
+E2E-401,TC-401,chrome://extensions + edge://extensions,n/a,n/a,"build dist/ GĐ-x","Load unpacked trên CẢ 2 browser — console trống",evidence/TC-401-load-unpacked.png
+E2E-402,TC-402,outlook.office.com,popup,work-test@congty.com,"provider=openai đã cấu hình","Popup: status/toggle/Options; restart browser → config bền (US-01 AC5)",evidence/TC-402-popup.png
+E2E-408,TC-408,outlook.office.com,reading-pane,work-test@congty.com,"email FIX-01 + provider OK","Analyze streaming 5 khía cạnh + badge màu; email FIX-03 → ERR-10",evidence/TC-408-analyze.png
+E2E-409,TC-409,outlook.office.com,reading-pane,work-test@congty.com,"DevTools phá attribute T1","T1 gãy → T2 phục hồi; reload → tier cache 0 token",evidence/TC-409-self-healing.png
+E2E-410,TC-410,outlook.office.com,reading-pane,work-test@congty.com,"panel có kết quả","tone/language → chèn compose → KHÔNG Send (BR-01) → user tự Send",evidence/TC-410-reply-insert.png
+E2E-412,TC-412,outlook.office.com,reading-pane,work-test@congty.com,"cài mới + DevTools network","vision mặc định TẮT 0 capture; bật có cảnh báo; T3 khi T1+T2 phá (BR-03)",evidence/TC-412-vision-optin.png
+E2E-413,TC-413,outlook.live.com,inbox-list,personal-test@outlook.com,"inbox ≥ 20 email TRI-E2E-01","Triage badge + Digest sort + reason; quét lại 0 LLM cached (BR-09)",evidence/TC-413-triage.png
+E2E-414,TC-414,outlook.live.com,inbox-list,personal-test@outlook.com,"auto-mode rule boss@x.com","mặc định TẮT; confirm; pending→Approve/Reject/Approve all; tắt giữ queue; KHÔNG tự Send",evidence/TC-414-automode.png

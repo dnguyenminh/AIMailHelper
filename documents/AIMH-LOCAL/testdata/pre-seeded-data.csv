@@ -1,0 +1,15 @@
+test_case_id,key,area,value_json,description,related_tc
+TC-104,storage.schemaVersion,sync,1,Bản schema hiện tại — ghi lần đầu khi onInstall,TC-104;TC-213
+TC-104,config.general,sync,"{""uiLanguage"":""vi"",""keyStorage"":""sync"",""extensionEnabled"":true}",Defaults lần đầu — uiLanguage/keyStorage/extensionEnabled,TC-104;TC-201;TC-212
+TC-104,config.prompts,sync,"{""customSystemPrompt"":null,""defaultTone"":""chinh-thuc"",""replyLanguage"":""auto""}",Defaults PromptSettings (BR-11),TC-104;TC-108
+TC-104,config.automation,sync,"{""enabled"":false,""rules"":[],""batchSize"":5,""throttleMs"":1000,""triageCap"":50}",Auto-mode MẶC ĐỊNH TẮT (BR-02) + cap 50,TC-104;TC-119;TC-414
+TC-104,config.vision,sync,"{""enabled"":false}",Vision fallback MẶC ĐỊNH TẮT (BR-03),TC-104;TC-125;TC-412
+TC-201,config.activeProvider,sync,"""openai""",Provider active mặc định cho automation,TC-201;TC-212;TC-402
+TC-301,config.providers.openai,sync,"{""provider"":""openai"",""apiKey"":""sk-test-openai-1234567890"",""model"":""gpt-4o-mini""}",Baseline OpenAI cho contract tests,TC-301;TC-302;TC-303;TC-404
+TC-304,config.providers.azure,sync,"{""provider"":""azure"",""apiKey"":""az-test-key-1234567890"",""model"":""gpt-4o"",""azure"":{""endpoint"":""https://myres.openai.azure.com"",""deployment"":""gpt-4o"",""apiVersion"":""2024-10-21""}}",Baseline Azure,TC-304;TC-311;TC-406
+TC-305,config.providers.anthropic,sync,"{""provider"":""anthropic"",""apiKey"":""ak-test-anthropic-123456"",""model"":""claude-sonnet-4-5""}",Baseline Anthropic,TC-305;TC-311
+TC-306,config.providers.gemini,sync,"{""provider"":""gemini"",""apiKey"":""gm-test-key-1234567890"",""model"":""gemini-2.5-flash""}",Baseline Gemini,TC-306;TC-311
+TC-307,config.providers.openai-compatible,sync,"{""provider"":""openai-compatible"",""apiKey"":"""",""baseUrl"":""https://openrouter.ai/api/v1"",""model"":""meta-llama/llama-3.2-3b-instruct""}",Baseline OpenAI-compatible — key rỗng (tùy chọn),TC-307;TC-311
+TC-308,config.providers.local,sync,"{""provider"":""local"",""model"":""llama3.2:latest"",""local"":{""url"":""http://localhost:11434"",""preset"":""ollama""}}",Baseline Local Ollama (không cần key),TC-308;TC-309;TC-404;TC-508
+TC-401,manifest.reference,static,"host_permissions=[outlook.office.com/*,outlook.office365.com/*,outlook.live.com/*]; optional=[http://localhost/*,http://127.0.0.1/*,https://*/*]; CSP=script-src 'self'",Bảng chuẩn manifest để assert (BR-16),TC-101;TC-606
+TC-401,evidence.dir,static,documents/AIMH-LOCAL/evidence/,Thư mục lưu screenshot manual,E2E-UI;SIT

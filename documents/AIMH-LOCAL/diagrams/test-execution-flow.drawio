@@ -1,0 +1,107 @@
+<mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="420" math="0" shadow="0">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="title" value="AIMH-LOCAL — Test Execution Flow: UT/IT → E2E-API → E2E-UI → SIT (entry/exit gates + defect feedback loop)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=15;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="300" y="10" width="1400" height="30" as="geometry"/>
+    </mxCell>
+    <mxCell id="start" value="Bắt đầu Phase 6&#10;Testing (build GĐ-x)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1f5fe;strokeColor=#0288d1;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="40" y="100" width="120" height="80" as="geometry"/>
+    </mxCell>
+    <mxCell id="b1" value="1. PBT + UT&#10;38 TC — Automated&#10;Vitest + fast-check + jsdom&#10;Entry: build pass + chrome mock sẵn sàng" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="200" y="90" width="160" height="100" as="geometry"/>
+    </mxCell>
+    <mxCell id="g1" value="Gate 1&#10;Exit: 100% pass?&#10;cov: adapters ≥85%&#10;locator ≥85% storage ≥80%" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1">
+      <mxGeometry x="400" y="80" width="150" height="120" as="geometry"/>
+    </mxCell>
+    <mxCell id="b2" value="2. IT&#10;21 TC — Automated&#10;chrome mock (createChromeMock)&#10;+ Port pair + router thật&#10;Entry: PBT/UT pass 100%" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="590" y="90" width="160" height="100" as="geometry"/>
+    </mxCell>
+    <mxCell id="g2" value="Gate 2&#10;Exit: 0 key trong log?&#10;Port protocol đúng?&#10;0 Crash SW?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1">
+      <mxGeometry x="790" y="80" width="150" height="120" as="geometry"/>
+    </mxCell>
+    <mxCell id="b3" value="3. E2E-API&#10;13 TC — Automated&#10;mock HTTP server&#10;6 provider contracts&#10;Entry: UT adapter pass" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="980" y="90" width="160" height="100" as="geometry"/>
+    </mxCell>
+    <mxCell id="g3" value="Gate 3&#10;Exit: 6/6 contract?&#10;ERR mapping đúng mã?&#10;0 rò key (BR-08)?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1">
+      <mxGeometry x="1180" y="80" width="150" height="120" as="geometry"/>
+    </mxCell>
+    <mxCell id="b4" value="4. E2E-UI (manual)&#10;17 TC — Gherkin&#10;OWA thật Chrome + Edge&#10;Entry: IT + E2E-API pass 100%" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="1370" y="90" width="160" height="100" as="geometry"/>
+    </mxCell>
+    <mxCell id="g4" value="Gate 4&#10;Exit: Mốc GĐ4 PASS cả&#10;2 domain? BR-01 verify?&#10;0 Critical/Major mở?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="1">
+      <mxGeometry x="1570" y="80" width="150" height="120" as="geometry"/>
+    </mxCell>
+    <mxCell id="b5" value="5. SIT (manual)&#10;10 TC — visual/UX/timing&#10;Entry: E2E-UI mốc PASS&#10;+ không Critical/Major mở" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="1760" y="90" width="160" height="100" as="geometry"/>
+    </mxCell>
+    <mxCell id="end" value="Sign-off&#10;Test Complete&#10;(RTM 100% executed)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="1960" y="100" width="120" height="80" as="geometry"/>
+    </mxCell>
+    <mxCell id="e0" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=10;" edge="1" parent="1" source="start" target="b1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e1" value="PASS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=9;" edge="1" parent="1" source="b1" target="g1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e2" value="PASS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=9;" edge="1" parent="1" source="g1" target="b2">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e3" value="PASS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=9;" edge="1" parent="1" source="b2" target="g2">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e4" value="PASS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=9;" edge="1" parent="1" source="g2" target="b3">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e5" value="PASS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=9;" edge="1" parent="1" source="b3" target="g3">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e6" value="PASS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=9;" edge="1" parent="1" source="g3" target="b4">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e7" value="PASS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=9;" edge="1" parent="1" source="b4" target="g4">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e8" value="PASS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=9;" edge="1" parent="1" source="g4" target="b5">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e9" value="SIT pass" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;fontSize=9;" edge="1" parent="1" source="b5" target="end">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="f1" value="FAIL → defect (P1/P2) → fix → re-run" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;dashed=1;strokeColor=#b85450;fontSize=9;" edge="1" parent="1" source="g1" target="b1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="475" y="260"/>
+          <mxPoint x="280" y="260"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="f2" value="FAIL → defect → fix → re-run" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;dashed=1;strokeColor=#b85450;fontSize=9;" edge="1" parent="1" source="g2" target="b2">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="865" y="290"/>
+          <mxPoint x="670" y="290"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="f3" value="FAIL → defect → fix → re-run" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;dashed=1;strokeColor=#b85450;fontSize=9;" edge="1" parent="1" source="g3" target="b3">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="1255" y="320"/>
+          <mxPoint x="1060" y="320"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="f4" value="FAIL → chặn GĐ5 (mốc 2 domain chưa pass)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;dashed=1;strokeColor=#b85450;fontSize=9;" edge="1" parent="1" source="g4" target="b4">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="1645" y="350"/>
+          <mxPoint x="1450" y="350"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="note1" value="Risk-based priority: P1 = BR-01 no-Send / BR-02 / BR-03 / BR-04 / BR-05 / BR-08 (fail 1 case P1 = chặn mốc GĐ) · Regression: re-run toàn bộ automation sau mỗi GĐ · Mock LLM = 0 token trong automation" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="40" y="380" width="1600" height="30" as="geometry"/>
+    </mxCell>
+  </root>
+</mxGraphModel>

@@ -1,0 +1,14 @@
+row_id,test_case_id,rules,queue_size_before,event,expected,description
+AM-Rule-01,TC-119,"[] (rules rỗng)",0,"email mới từ boss@x.com","chỉ analyze; 0 draft call",Rule rỗng → KHÔNG tự draft (BR-13)
+AM-Rule-02,TC-119,"[{""senderPattern"":""boss@x.com""}]",0,"email từ boss@x.com","draft → queueItem pending",Sender khớp → draft
+AM-Rule-03,TC-119,"[{""senderPattern"":""boss@x.com""}]",0,"email từ other@x.com","chỉ analyze; 0 draft",Sender không khớp → không draft
+AM-Rule-04,TC-119,"[{""subjectPattern"":""invoice""}]",0,"subject ""INVOICE #123""","draft pending",Subject substring case-insensitive
+AM-Rule-05,TC-119,"[{""minImportance"":70}]",0,"AnalysisResult score=69 / score=70","69→không draft; 70→draft",minImportance biên 69/70
+AM-Queue-01,TC-120,"[rule boss]",200,"email mới thứ 201","KHÔNG thêm + cảnh báo",QUEUE_MAX 200 bảo vệ
+AM-Queue-02,TC-120,"[rule boss]",1,"Approve item","status=approved + chèn qua actions",Approve từng cái (UC-07)
+AM-Queue-03,TC-120,"[rule boss]",1,"Reject item","loại khỏi hàng chờ; không chèn",Reject (UC-07 AF-2)
+AM-Queue-04,TC-120,"[rule boss]",3,"Tắt auto-mode","queue.autoDraft GIỮ NGUYÊN; observer hủy; 0 hành động",FR-GD6-06 — tắt giữ hàng chờ
+AM-IT-01,TC-211,"[rule boss]",3,"QUEUE_UPDATE approve id1 / reject id2 / mock insertDraft throw id3","id1 approved+chèn; id2 loại; id3 về pending (EF-2)",Queue qua router end-to-end
+AM-E2E-01,TC-414,"[{""senderPattern"":""boss@x.com""}]",0,"E2E trên OWA: gửi email test từ boss@x.com","pending → Approve → chèn compose; Reject → loại; Approve all → chèn lần lượt; tắt → queue giữ; KHÔNG tự Send",Luồng đầy đủ UC-07 + BR-02
+AM-E2E-02,TC-414,"toggle confirm",0,"Bật toggle → HỦY xác nhận","toggle KHÔNG đổi trạng thái",EF-3 UC-07 — không xác nhận không bật
+AM-SEC-01,TC-607,"[rule boss]",3,"Approve all với spy DOM events","CHỈ event lên reply-button + compose-box; 0 event lên send-button; luồng DỪNG ở compose",BR-01 runtime verify lớp 3

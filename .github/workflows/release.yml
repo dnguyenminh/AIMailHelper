@@ -1,0 +1,51 @@
+# AIMailHelper — Release skeleton (GitHub Actions)
+# Trigger: pushing a tag v* -> build + zip + create a DRAFT GitHub Release.
+# IMPORTANT: this workflow does NOT publish to the Chrome Web Store / Edge Add-ons.
+# Store upload is a MANUAL step performed by a maintainer (see DPG section 5.4).
+# Requires the GD1 scaffold (package.json with "build" script) to run green.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build + draft GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies (npm ci)
+        run: npm ci
+
+      - name: Build extension (vite + @crxjs/vite-plugin)
+        run: npm run build
+
+      - name: Package extension zip
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          cd dist
+          zip -r "../aimailhelper-v${VERSION}.zip" .
+
+      - name: Create draft GitHub Release with zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --draft \
+            --title "AIMailHelper ${GITHUB_REF_NAME}" \
+            --generate-notes \
+            "aimailhelper-${GITHUB_REF_NAME}.zip"

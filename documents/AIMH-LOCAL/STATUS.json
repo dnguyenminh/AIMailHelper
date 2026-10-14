@@ -46,7 +46,7 @@
   },
   "autonomyLevel": "L3",
   "projectPattern": "plugin (browser extension; .kiro/steering/patterns/plugin.md not found — using default plugin pattern emphasis: host interface isolation, capability detection, permission minimization)",
-  "currentPhase": "design",
+  "currentPhase": "test_planning",
   "phases": {
     "requirements": {
       "status": "done",
@@ -79,18 +79,24 @@
       "result": "CONSISTENT — SA verify iter-1: FSD v1.3 đồng bộ TDD v1, 3/3 DISC (Low) fix đúng, 0 discrepancy còn mở; DISCREPANCY.md ĐÓNG. Ghi chú không chặn: TDD §6.1 ví dụ JSON TEST_CONNECTION còn keyStorage trong config (leftover cosmetic nội bộ TDD — gỡ ở lần chạm TDD tới)"
     },
     "security_design_review": {
-      "status": "in_progress",
+      "status": "done",
       "file": "SECURITY-REVIEW.md",
       "startedAt": "2026-10-14T05:45:00Z",
-      "completedAt": "2026-10-14T06:20:00Z",
+      "completedAt": "2026-10-14T07:15:00Z",
       "version": 1,
-      "qualityGate": "PASS WITH CONDITIONS — file hoàn chỉnh 700 dòng/74.3KB; verdict APPROVED WITH CONDITIONS: 0 Critical / 1 High (SR-01) / 2 Medium (SR-02, SR-03) / 7 Low / 8 Info (4 verified DESIGN-OK: no-Send 4 lớp, fail-closed auto-mode, quota caps, S2 không ReDoS); 12 DEV-REQUIREMENT DR-01..DR-12; KB ingested",
-      "amendment": "TDD v1.1 (SR-01/02/03 mitigations + DEV-SECURITY-CHECKLIST.md) — sa-agent sh_137913fbe001ZA27bJU4pcRNzd RUNNING; conditions chốt khi amendment gate pass"
+      "qualityGate": "PASS WITH CONDITIONS — file hoàn chỉnh 700 dòng/74.3KB; verdict APPROVED WITH CONDITIONS: 0 Critical / 1 High (SR-01) / 2 Medium (SR-02, SR-03) / 7 Low / 8 Info (4 verified DESIGN-OK); 12 DEV-REQUIREMENT DR-01..DR-12; KB ingested",
+      "amendment": "TDD v1.1 DONE (commit b46b922): 1141→1204 dòng — §8.11 Prompt Injection Mitigation (SR-01 3 lớp), §3.1.2+§8.4 snapshot AND + bỏ fallback text-80 (SR-02), §8.1 redactSecrets đa pattern (SR-03), Revision 1.1 + traceability; DEV-SECURITY-CHECKLIST.md 99 dòng/21 items phủ 18/18 findings + 4 DESIGN-OK. KB ingested ×2. Diagrams không đổi (20 files)",
+      "next": "P4 gate (qa-agent đang chạy) → P4.5 devops → P5 dev"
     },
     "test_planning": {
-      "status": "in_progress",
-      "file": "STP.md",
-      "startedAt": "2026-10-14T05:45:00Z"
+      "status": "done",
+      "file": "STP.md + STC.md",
+      "version": 1.1,
+      "startedAt": "2026-10-14T05:45:00Z",
+      "completedAt": "2026-10-14T09:20:00Z",
+      "qualityGate": "PASS — STP v1.1 + STC v1.1 (99 TCs: PBT 8 / UT 30 / IT 21 / E2E-API 13 / E2E-UI 17 / SIT 10; automation 72,7%); RTM 97/97 = 100% (45 FR + 17 BR + 10 US + 9 UC + 16 ERR); 13 file test data CSV; 2 drawio + PNG vision-checked PASS vòng 1; BA review verdict APPROVED (6 Low observations đã áp vào v1.1); TEST-REPORT CSV 99 rows NOT_RUN; KHÔNG Jira/DOCX/XLSX (offline)",
+      "baReview": "APPROVED 2026-10-14 — 5/5 dimensions PASS, spot-check RTM 20/20 khớp",
+      "next": "P4.5 devops-setup / P5 dev-agent (đọc STC + DEV-SECURITY-CHECKLIST trước từng GĐ)"
     },
     "devops_setup": {
       "status": "not_started"

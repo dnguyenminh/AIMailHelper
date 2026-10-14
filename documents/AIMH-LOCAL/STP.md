@@ -13,13 +13,14 @@
 | Jira Ticket | AIMH-LOCAL (placeholder offline — chưa có ticket Jira thật) |
 | Title | AIMailHelper — Trợ lý AI cho Outlook Web (Browser Extension MV3) |
 | Author | QA Agent |
-| Version | 1.0 |
+| Version | 1.1 |
 | Date | 2026-10-14 |
-| Status | Draft — chờ SM review + BA review test cases (Phase 4 Step 4b/4b.5) |
+| Status | BA review APPROVED 2026-10-14 (6 Low observations đã áp — v1.1); chờ SM sign-off |
 | Related BRD | documents/AIMH-LOCAL/BRD.md (v1) |
-| Related FSD | documents/AIMH-LOCAL/FSD.md (v1.2 — BA-REVIEWED) |
-| Related TDD | documents/AIMH-LOCAL/TDD.md (v1.0) |
-| Related STC | documents/AIMH-LOCAL/STC.md (v1.0) |
+| Related FSD | documents/AIMH-LOCAL/FSD.md (v1.3 — BA-REVIEWED, feedback loop CONSISTENT) |
+| Related TDD | documents/AIMH-LOCAL/TDD.md (v1.1) |
+| Related Security | documents/AIMH-LOCAL/SECURITY-REVIEW.md (v1) |
+| Related STC | documents/AIMH-LOCAL/STC.md (v1.1 — BA APPROVED) |
 
 ---
 
@@ -37,6 +38,7 @@
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-10-14 | QA Agent | Khởi tạo STP v1 từ BRD v1 + FSD v1.2 + TDD v1.0 — offline placeholder; 6 test levels; RTM 45 FR + 17 BR + 10 US + 9 UC + 16 ERR = 100%; 2 draw.io diagrams (test-coverage, test-execution-flow) |
+| 1.1 | 2026-10-14 | QA Agent | Cập nhật nguồn: FSD v1.3 + TDD v1.1 (SR-01..03); áp BA review APPROVED — TC-415 đủ 3 domain OWA (US-06 AC3); làm rõ bảng summary UT/IT |
 
 ---
 
@@ -210,6 +212,8 @@ STP này định nghĩa **chiến lược kiểm thử** cho AIMailHelper — br
 | E2E-UI | 17 | 0 | 17 |
 | SIT | 10 | 0 | 10 |
 | **Total** | **99** | **72 (72,7%)** | **27 (27,3%)** |
+
+> Ghi chú nhất quán: UT 30 = 25 case mục 2 STC (TC-101..125) + 5 Security/NFR gán level UT (TC-605/606/610/612/616); IT 21 = 14 case mục 3 STC (TC-201..214) + 7 Security/NFR gán level IT (TC-601..604/607/611/615); E2E-API 13 = 12 mục 4 STC + TC-617; E2E-UI 17 = 15 mục 5 STC + TC-613/614. Tổng unique = 99.
 
 ### 3.4 RTM Summary — coverage theo User Story (BRD)
 
