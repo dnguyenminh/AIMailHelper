@@ -36,6 +36,7 @@
 |---------|------|--------|---------|
 | 1.0 | 2026-10-14 | SA Agent | Khởi tạo TDD v1 từ FSD v1.2 + BRD v1 + PLAN.md — offline placeholder; resolve Open Issues #1/#3/#5/#6/#7/#8/#10/#11; 4 drawio diagrams mới (architecture, component, class-diagram, sequence-semantic-locator); greenfield design |
 | 1.1 | 2026-10-14 | SA Agent | Security amendment: §8.11 prompt injection mitigation (SR-01), §3.1.2+§8.4 snapshot data-minimization (SR-02), §8.1 redactSecrets đa pattern (SR-03) — từ SECURITY-REVIEW.md P3.7 |
+| 1.2 | 2026-10-15 | SA Agent (SA-lite) | TD-7 (TA review GĐ2, áp ở GĐ4): §7.5 S3 synthetic id KHÔNG dùng sentAt-approx — hash chỉ subject\|sender.email\|preview-50 (SHA-256 trunc 16 hex); id bền giữa re-render, an toàn hơn spec — hành vi hiện tại được chính thức hóa |
 
 ---
 
@@ -814,7 +815,13 @@ export type PendingAutoDraft = QueueItem & { status: "pending" };  // alias TA n
 |---|----------|----------|--------|
 | S1 | Attribute probe | Đọc data-* trên list item: [data-itemid], [data-convid], [data-message-id] — lấy id item (ưu tiên) hoặc id conversation | Cao nếu attribute tồn tại ở bản build đó |
 | S2 | URL/href regex | Quét href/deep-link trong item: regex /(AAMk[A-Za-z0-9+/=]{20,})/ (ExchangeId prefix "AAMk") — lấy group đầu | Cao — id xuất hiện trong link chi tiết |
-| S3 | Synthetic content hash | Không có id: synthetic:{hash(subject|sender.email|sentAt-approx|preview-50)} (djb2/sha1 ngắn) — mark provenance="synthetic" | Trung bình — đổi nội dung row → id đổi → cache miss tự nhiên (an toàn, chỉ tốn thêm token) |
+| S3 | Synthetic content hash | Không có id: synthetic:{hash(subject|sender.email|preview-50)} (SHA-256 trunc 16 hex, SR-09) — mark provenance="synthetic" | Trung bình — đổi nội dung row → id đổi → cache miss tự nhiên (an toàn, chỉ tốn thêm token) |
+
+> **SA-lite amendment v1.2 (TD-7 — DEV áp theo quyết định SA):** S3 **KHÔNG dùng sentAt-approx** trong
+> công thức hash — chỉ `subject|sender.email|preview-50`. Lý do: id bền giữa re-render (OWA render lại
+> row không đổi sentAt hiển thị thì id giữ nguyên, tránh cache miss giả), và tránh phụ thuộc field
+> thời gian có thể không đọc được — an toàn hơn spec gốc. Impl: `message-id.ts` (SR-09: SHA-256
+> thay djb2/sha1).
 
 - **Fallback cứng:** không đủ dữ liệu cho cả 3 → bỏ qua item + log (ERR-12, FR-GD5-06) — không gián đoạn batch.
 - **Spike bắt buộc GĐ5** (task trong checklist §11): verify S1/S2 attribute names thực tế trên CẢ outlook.office.com và outlook.live.com; điều chỉnh selectors.ts theo kết quả; synthetic chỉ là lưới an toàn.

@@ -9,17 +9,21 @@ import { registerLocatorHandlers } from "./handlers/locator.handler";
 import { registerQueueHandlers } from "./handlers/queue.handler";
 import { registerStateHandlers } from "./handlers/state.handler";
 import { registerStreamHandlers } from "./handlers/stream.handler";
+import { registerReplyHandlers } from "./handlers/reply.handler";
+import { registerVisionHandlers } from "./handlers/vision.handler";
 
 const router = new MessageRouter();
 registerConfigHandlers(router); // GĐ1: CONFIG_GET/SET + KEY_STORAGE_SET thật (BR-04/BR-08/BR-15)
 registerConnectionHandlers(router); // GĐ2: TEST_CONNECTION/LIST_MODELS qua registry + adapter (§6.1 #4-5)
-registerLocatorHandlers(router); // stub → GĐ3
+registerLocatorHandlers(router); // GĐ3: LOCATOR_RESOLVE (T2)
+registerVisionHandlers(router); // GĐ4: VISION_CAPTURE/LOCATE (T3 — BR-03 opt-in)
 registerQueueHandlers(router); // stub → GĐ6
 registerStateHandlers(router); // GĐ1: GET_RUNTIME_STATE (FR-GD1-02)
 router.listen();
 
 const streamServer = new PortServer();
-registerStreamHandlers(streamServer); // GĐ2: kind "chat-test" — streaming qua Port (§6.2; analyze/reply GĐ3+)
+registerStreamHandlers(streamServer); // GĐ2: kind "chat-test" — streaming qua Port (§6.2)
+registerReplyHandlers(streamServer); // GĐ4: kind "reply" — UC-02 draft stream
 streamServer.attach();
 
 chrome.runtime.onInstalled.addListener(() => {

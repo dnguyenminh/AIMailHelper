@@ -73,5 +73,17 @@ export const PANEL_BASE_CSS = [
   ".aimh-error-msg { margin: 0; color: #a4262c; font-size: 12px; }",
   ".aimh-error-raw { margin: 0; padding: 6px; border-radius: 4px; background: #ffffff;",
   "  max-height: 160px; overflow: auto; white-space: pre-wrap; word-break: break-word;",
-  "  font-family: inherit; font-size: 11px; color: #5f6368; }"
+  "  font-family: inherit; font-size: 11px; color: #5f6368; }",
+  // GĐ4 — reply composer + diagnose + warning dialogs
+  ".aimh-reply { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid #e1e1e5;",
+  "  padding-top: 8px; }",
+  ".aimh-row { display: flex; gap: 6px; }",
+  ".aimh-input { flex: 1; padding: 4px 6px; border-radius: 4px; border: 1px solid #d1d1d7;",
+  "  background: #ffffff; color: #1b1b1f; font: inherit; font-size: 12px; min-width: 0; }",
+  ".aimh-warning { padding: 8px; border-radius: 6px; background: #fff4ce; display: flex;",
+  "  flex-direction: column; gap: 6px; }",
+  ".aimh-diagnose { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid #e1e1e5;",
+  "  padding-top: 8px; }",
+  ".aimh-report { max-height: 200px; overflow: auto; white-space: pre; font-family: monospace;",
+  "  font-size: 11px; }"
 ].join("\n");

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { LLMConfig, ProviderId } from "../shared/llm/types";
 import { sendMessage } from "../shared/messaging";
-import type { AutomationConfig, ConfigGetResponse, GeneralConfig, PromptsConfig } from "../shared/types";
+import type { AutomationConfig, ConfigGetResponse, GeneralConfig, PromptsConfig, VisionConfig } from "../shared/types";
 
 export interface ConfigData {
   data: ConfigGetResponse | null;
@@ -11,6 +11,7 @@ export interface ConfigData {
   setGeneral: (value: GeneralConfig) => Promise<void>;
   setPrompts: (value: PromptsConfig) => Promise<void>;
   setAutomation: (value: AutomationConfig) => Promise<void>;
+  setVision: (value: VisionConfig) => Promise<void>;
   setProvider: (providerId: ProviderId, value: LLMConfig) => Promise<void>;
   setActiveProvider: (providerId: ProviderId) => Promise<void>;
   setKeyStorage: (keyStorage: "sync" | "local") => Promise<void>;
@@ -40,6 +41,12 @@ export function useConfigData(): ConfigData {
     await reload();
   }, [reload]);
 
+  // GĐ4 (FR-GD4-05) — toggle vision T3; BR-03 validate fail-closed ở SW.
+  const setVision = useCallback(async (value: VisionConfig): Promise<void> => {
+    await sendMessage("CONFIG_SET", { section: "vision", value: value });
+    await reload();
+  }, [reload]);
+
   const setProvider = useCallback(async (providerId: ProviderId, value: LLMConfig): Promise<void> => {
     await sendMessage("CONFIG_SET", { section: "provider", providerId: providerId, value: value });
     await reload();
@@ -55,7 +62,7 @@ export function useConfigData(): ConfigData {
     await reload();
   }, [reload]);
 
-  return { data: data, reload: reload, setGeneral: setGeneral, setPrompts: setPrompts, setAutomation: setAutomation, setProvider: setProvider, setActiveProvider: setActiveProvider, setKeyStorage: setKeyStorage };
+  return { data: data, reload: reload, setGeneral: setGeneral, setPrompts: setPrompts, setAutomation: setAutomation, setVision: setVision, setProvider: setProvider, setActiveProvider: setActiveProvider, setKeyStorage: setKeyStorage };
 }
 
 // defaultDraftFor — template form lần đầu theo provider (FSD §3.4 Màn 2 #1).

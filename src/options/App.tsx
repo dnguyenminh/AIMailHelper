@@ -12,6 +12,7 @@ import { ModelPicker } from "./components/ModelPicker";
 import { PromptSettings } from "./components/PromptSettings";
 import { ProviderForm } from "./components/ProviderForm";
 import { TestConnection } from "./components/TestConnection";
+import { VisionSettings } from "./components/VisionSettings";
 import { defaultDraftFor, useConfigData } from "./useConfigData";
 
 export function App() {
@@ -52,6 +53,10 @@ export function App() {
       <section className="card">
         <h2>{t("options.section.prompts")}</h2>
         <PromptSettings config={config} />
+      </section>
+      <section className="card">
+        <h2>{t("options.section.vision")}</h2>
+        <VisionSettings config={config} />
       </section>
       <section className="card">
         <h2>{t("options.section.automation")}</h2>

@@ -47,6 +47,7 @@ export class AnalyzeController {
   private state: AnalysisUiState = IDLE;
   private raw = "";
   private frameId = 0;
+  private email: EmailData | null = null; // GĐ4 — email nguồn cho UC-02 (panel đọc qua getEmail)
 
   constructor(private readonly deps: AnalyzeDeps) {}
 
@@ -58,9 +59,11 @@ export class AnalyzeController {
     try {
       email = await this.deps.readEmail(); // ERR-10 (BR-14) / ERR-06 ném từ reader — EF-1/EF-3
     } catch (error) {
+      this.email = null;
       this.setState({ status: "error", raw: "", result: null, error: toAnalysisError(error) });
       return;
     }
+    this.email = email;
     this.raw = "";
     this.setState({ status: "streaming", raw: "", result: null, error: null });
     this.handle = this.deps.request("analyze", { email: email }, (event) => this.onEvent(event));
@@ -130,6 +133,11 @@ export class AnalyzeController {
 
   getState(): AnalysisUiState {
     return this.state;
+  }
+
+  // GĐ4 (UC-02) — EmailData của lần analyze gần nhất; null khi chưa analyze/đọc lỗi.
+  getEmail(): EmailData | null {
+    return this.email;
   }
 }
 

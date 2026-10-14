@@ -2,6 +2,8 @@
 // analyze: validate EmailData (BR-14 bodyText rỗng → ERR-10 ở SW nữa — §8.8) → buildChatMessages
 // ("analyze", uiLanguage, serializeEmailData fence — SR-01 L2) → chatStream → forward từng delta
 // (KHÔNG buffer — §2.5); cancel qua PortServer AbortController (ctx.signal); done/error message CUỐI.
+// GĐ4: kind "reply" tách sang reply.handler.ts — cùng vòng lặp stream-utils.
+import { AppError } from "../../shared/errors";
 import { parseEmailPayload } from "../../shared/analysis";
 import { DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } from "../../shared/llm/types";
 import type { ChatMessage, ChatOptions } from "../../shared/llm/types";
@@ -9,10 +11,10 @@ import { buildChatMessages, serializeEmailData } from "../../shared/llm/prompts"
 import { ensureHostPermission } from "../../shared/llm/permissions";
 import { storage } from "../../shared/storage";
 import { resolveActive } from "../llm-runtime";
-import { AppError } from "../../shared/errors";
 import type { EmailData } from "../../shared/types";
 import type { ActiveLLM } from "../llm-runtime";
 import type { StreamContext, StreamHandler } from "../../shared/port-server";
+import { streamToClient, sendError } from "./stream-utils";
 
 const CHAT_TEST_TEMPERATURE = 0.7;
 
@@ -79,42 +81,4 @@ const handleAnalyze: StreamHandler = async (payload, ctx: StreamContext): Promis
 async function buildAnalyzeMessages(email: EmailData): Promise<ChatMessage[]> {
   const [general, prompts] = await Promise.all([storage.getGeneral(), storage.getPrompts()]);
   return buildChatMessages("analyze", general.uiLanguage, serializeEmailData(email), prompts.customSystemPrompt);
-}
-
-// Vòng lặp stream dùng chung — forward ngay khi nhận; signal abort → dừng không gửi thêm (§6.2 #5).
-async function streamToClient(ctx: StreamContext, active: ActiveLLM, messages: ChatMessage[], options: ChatOptions): Promise<void> {
-  let seq = 0;
-  try {
-    for await (const delta of active.adapter.chatStream(active.config, messages, { ...options, signal: ctx.signal })) {
-      if (ctx.signal.aborted) return;
-      ctx.send({ type: "chunk", seq: seq, delta: delta });
-      seq += 1;
-    }
-    ctx.send({ type: "done" }); // usage/finishReason chỉ khi provider trả — stream chỉ yield text (§5.3.2 #4)
-  } catch (error) {
-    if (ctx.signal.aborted) return;
-    sendError(ctx, error);
-  }
-}
-
-function sendError(ctx: StreamContext, error: unknown): void {
-  const appError = toAppError(error);
-  ctx.send({
-    type: "error",
-    code: appError.code,
-    i18nKey: appError.i18nKey,
-    params: appError.params,
-    retryable: appError.retryable,
-    httpStatus: appError.httpStatus
-  });
-}
-
-function toAppError(error: unknown): AppError {
-  if (isAppError(error)) return error;
-  console.error("[AIMH][stream] unexpected error:", error); // KHÔNG log payload (BR-08)
-  return new AppError("ERR-15", "errors.badRequest");
-}
-
-function isAppError(error: unknown): error is AppError {
-  return error instanceof Error && "code" in error && "i18nKey" in error;
 }

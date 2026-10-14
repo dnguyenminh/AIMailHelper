@@ -56,9 +56,16 @@ export class PortServer {
     };
     const controller = new AbortController();
     this.aborts.set(requestId, controller);
-    send({ type: "accepted" }); // §6.2 #1 — accepted trước chunk đầu
-    await this.invokeHandler(requestId, kind, payload, controller, send, () => hasTerminal);
-    this.aborts.delete(requestId);
+    // CR-A (TA review GĐ3): port disconnect giữa stream làm postMessage throw → entry aborts
+    // phải LUÔN được dọn trong finally (không orphan: leak bộ nhớ + cancel trỏ vào entry chết).
+    try {
+      send({ type: "accepted" }); // §6.2 #1 — accepted trước chunk đầu
+      await this.invokeHandler(requestId, kind, payload, controller, send, () => hasTerminal);
+    } catch (error) {
+      console.warn("[AIMH][port] stream aborted (port disconnect?):", error instanceof Error ? error.message : error); // KHÔNG log payload (BR-08)
+    } finally {
+      this.aborts.delete(requestId);
+    }
   }
 
   // D-4: handler throw khi CHƯA có terminal event (chỉ có accepted/chunk) → gửi error terminal ngay —

@@ -177,5 +177,43 @@ describe("PortServer — terminal event guard khi handler throw (D-4/CR-2)", () 
   });
 });
 
+// CR-A (TA review GĐ3 — điều kiện Done GĐ4): port disconnect giữa stream làm postMessage throw —
+// entry trong aborts map PHẢI được dọn (try/finally trong PortServer.run), không orphan entry.
+describe("PortServer — CR-A port disconnect giữa stream dọn entry aborts", () => {
+  it("postMessage throw sau accepted (mock disconnect) → aborts map về rỗng", async () => {
+    await storage.setProviderConfig("openai", STORED);
+    await storage.setActiveProvider("openai");
+    const server = new PortServer();
+    server.register("chat-test", async (_payload, ctx) => {
+      ctx.send({ type: "chunk", seq: 0, delta: "một phần" }); // send #2 — sẽ bị port "disconnect" chặn
+      ctx.send({ type: "done" });
+    });
+    server.attach();
+    // Bắt server-side port qua onConnect (mock emit pair.server) rồi patch postMessage throw từ send #2.
+    let serverPort: { postMessage: (message: unknown) => void } | null = null;
+    (globalThis as unknown as Chrome).chrome.runtime.onConnect.addListener((port) => {
+      const candidate = port as { postMessage: (message: unknown) => void };
+      const original = candidate.postMessage.bind(candidate);
+      let sent = 0;
+      candidate.postMessage = (message: unknown) => {
+        sent += 1;
+        if (sent >= 2) throw new Error("Attempt to postMessage on disconnected port"); // giữa stream
+        original(message);
+      };
+      serverPort = candidate;
+    });
+    const { events, client } = collectEvents();
+    client.request("chat-test", { messages: [{ role: "user", content: "ping" }] }, (event) => events.push(event));
+    await vi.waitFor(() => {
+      expect(events.some((e) => e.type === "accepted")).toBe(true);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20)); // nhường run() hoàn tất cleanup
+    const aborts = (server as unknown as { aborts: Map<string, AbortController> }).aborts;
+    expect(serverPort).not.toBeNull();
+    expect(aborts.size).toBe(0); // CR-A — không orphan entry
+    client.disconnect();
+  });
+});
+
 
 
