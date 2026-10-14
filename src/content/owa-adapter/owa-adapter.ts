@@ -2,7 +2,6 @@
 // Biên DOM duy nhất (§1.4 #2): modules/components chỉ thấy facade; chuỗi locate theo §5.3:
 // SemanticLocator (T1→cache→T2) → T3 VisionFallback CHỈ khi T1+T2 fail (BR-12; BR-03 opt-in
 // kiểm tra kép tại vision-fallback). FunctionKey/LocatorStrategy/SelectorTier canonical selectors.ts.
-import { notImplementedError } from "../../shared/errors";
 import type { EmailData } from "../../shared/types";
 import { insertDraft, openReplyBox } from "./actions";
 import type { ActionsDeps, InsertDecision, InsertOutcome } from "./actions";
@@ -13,11 +12,19 @@ import { readEmail } from "./reader";
 import { resolveBySelectors, SelectorTier } from "./selectors";
 import type { FunctionKey, LocatorStrategy } from "./selectors";
 import { SemanticLocator } from "./semantic-locator";
+import {
+  attachBadge as attachTriageBadge,
+  collectInboxItems as collectItems,
+  hasFolderChanged,
+  readFolderSignature
+} from "./triage";
+import type { InboxItem } from "./triage";
 import { VisionFallback } from "./vision-fallback";
 import type { VisionLocator } from "./vision-fallback";
 
 export type { FunctionKey, LocatorStrategy } from "./selectors";
 export type { InsertDecision, InsertOutcome } from "./actions";
+export type { InboxItem } from "./triage";
 export type { VisionLocator } from "./vision-fallback";
 export { SelectorTier };
 
@@ -76,12 +83,24 @@ export class OwaAdapter {
     };
   }
 
-  collectInboxItems(): never {
-    throw notImplementedError("GĐ5"); // §3.1.6 triage (BR-07)
+  // §3.1.6 triage (GĐ5 — BR-07): items ĐANG HIỂN THỊ; thiếu message-id → bỏ qua + log (FR-GD5-06).
+  // locate KHÔNG opt-in vision (allowVision mặc định false — triage không cần T3, BR-03).
+  collectInboxItems(): Promise<InboxItem[]> {
+    return collectItems((key, question) => this.locate(key, question));
   }
 
-  attachBadge(_messageId: string, _score: number): never {
-    throw notImplementedError("GĐ5");
+  // FR-GD5-03 — badge màu trên list item qua adapter (SR-10; màu theo score — FSD UI spec).
+  attachBadge(messageId: string, score: number): boolean {
+    return attachTriageBadge(messageId, score);
+  }
+
+  // EF-2/EF-4 UC-03 — folder guard: signature trước scan, check lại trước mỗi batch (§3.1.6).
+  readFolderSignature(): Promise<Element | null> {
+    return readFolderSignature((key, question) => this.locate(key, question));
+  }
+
+  hasFolderChanged(before: Element | null): Promise<boolean> {
+    return hasFolderChanged(before, (key, question) => this.locate(key, question));
   }
 }
 

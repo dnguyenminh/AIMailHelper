@@ -54,3 +54,67 @@ describe("postJson — retry timeout 1 lần pre-first-chunk (CR-3)", () => {
     expect(mock).toHaveBeenCalledTimes(1);
   });
 });
+
+// GĐ5 (TC-118 gốc — tái dùng call.ts, chứng cứ §9.2): 429 Retry-After ưu tiên; không header →
+// delays 1s→2s→4s; 5xx → 2s→4s→8s; tất cả CHỈ pre-first-chunk. Fake timers đo đúng mốc chờ.
+describe("postJson — backoff 429/5xx (GĐ5 tái dùng — TC-118)", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("429 Retry-After: 2 → chờ đúng 2000ms rồi retry thành công (2 fetch calls)", async () => {
+    vi.useFakeTimers();
+    try {
+      const { mock } = stubFetch();
+      mock.mockImplementationOnce(async () => new Response("{}", { status: 429, headers: { "Retry-After": "2" } }));
+      queueResponse(mock, jsonResponse({ choices: [{ message: { content: "ok" } }] }));
+      const pending = postJson(URL_OPENAI, {}, { model: "gpt-4o-mini" }, { provider: "openai" });
+      await vi.advanceTimersByTimeAsync(1999); // chưa đủ 2s
+      expect(mock).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1); // đủ 2s → attempt 2
+      const response = await pending;
+      expect(response.ok).toBe(true);
+      expect(mock).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("429 không Retry-After → backoff 1s→2s→4s (3 lần) rồi ERR-03 (4 fetch calls)", async () => {
+    vi.useFakeTimers();
+    try {
+      const { mock } = stubFetch();
+      mock.mockImplementation(async () => new Response("{}", { status: 429 }));
+      const pending = postJson(URL_OPENAI, {}, { model: "gpt-4o-mini" }, { provider: "openai" });
+      const pendingExpect = expect(pending).rejects.toMatchObject({ code: "ERR-03", retryable: true });
+      await vi.advanceTimersByTimeAsync(1000); // 1
+      expect(mock).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(2000); // 2
+      expect(mock).toHaveBeenCalledTimes(3);
+      await vi.advanceTimersByTimeAsync(4000); // 3 → hết delays
+      await pendingExpect;
+      expect(mock).toHaveBeenCalledTimes(4);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("5xx → backoff 2s→4s→8s rồi ERR-16 (retryable — §9.2)", async () => {
+    vi.useFakeTimers();
+    try {
+      const { mock } = stubFetch();
+      mock.mockImplementation(async () => new Response("{}", { status: 500 }));
+      const pending = postJson(URL_OPENAI, {}, { model: "gpt-4o-mini" }, { provider: "openai" });
+      const pendingExpect = expect(pending).rejects.toMatchObject({ code: "ERR-16", retryable: true });
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(mock).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(4000);
+      expect(mock).toHaveBeenCalledTimes(3);
+      await vi.advanceTimersByTimeAsync(8000);
+      await pendingExpect;
+      expect(mock).toHaveBeenCalledTimes(4);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

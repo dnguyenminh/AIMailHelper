@@ -85,5 +85,10 @@ export const PANEL_BASE_CSS = [
   ".aimh-diagnose { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid #e1e1e5;",
   "  padding-top: 8px; }",
   ".aimh-report { max-height: 200px; overflow: auto; white-space: pre; font-family: monospace;",
-  "  font-size: 11px; }"
+  "  font-size: 11px; }",
+  // GĐ5 — triage + Digest (FSD 3.4 màn 4)
+  ".aimh-digest { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid #e1e1e5;",
+  "  padding-top: 8px; }",
+  ".aimh-digest-list { max-height: 220px; overflow: auto; display: flex; flex-direction: column;",
+  "  gap: 4px; }"
 ].join("\n");

@@ -117,7 +117,10 @@
       "gd4StartedAt": "2026-10-14T22:10:00Z",
       "gd4Note": "re-launch sau server restart (shell cũ sh_13ac32abd001gEWd7UiFw8FM9z cancelled giữa chừng — GD4 files chưa có trên disk, không mất code); 3 CR deferred GD3 (CR-A port try/finally, CR-B OWA-DOM-SPIKE.md, CR-C DOM boundary audit) nằm trong prompt phase5-dev-gd4.md",
       "gd4CompletedAt": "2026-10-15T04:35:00Z",
-      "gd4Result": "270/270 tests PASS (39 files; +67 mới vs GĐ3 baseline 203 — vượt mục tiêu ≥25); typecheck/lint/build exit 0; 3 CR GD3 applied (CR-A try/finally + test, CR-B OWA-DOM-SPIKE.md 38 probes UNVERIFIED, CR-C DOM boundary audit + TC-121); TD-7 TDD §7.5 amendment v1.2; commits b141e78 + fc27e47; hạn chế: manual OWA thật pending (TC-408/410/411/412/415 NOT_RUN); sự cố 2 session DEV song song đã hội tụ — chi tiết DEV-GD4-IMPLEMENTATION-SUMMARY.md; TA review pending"
+      "gd4Result": "270/270 tests PASS (39 files; +67 mới vs GĐ3 baseline 203 — vượt mục tiêu ≥25); typecheck/lint/build exit 0; 3 CR GD3 applied (CR-A try/finally + test, CR-B OWA-DOM-SPIKE.md 38 probes UNVERIFIED, CR-C DOM boundary audit + TC-121); TD-7 TDD §7.5 amendment v1.2; commits b141e78 + fc27e47; hạn chế: manual OWA thật pending (TC-408/410/411/412/415 NOT_RUN); sự cố 2 session DEV song song đã hội tụ — chi tiết DEV-GD4-IMPLEMENTATION-SUMMARY.md; TA review pending",
+      "gd5StartedAt": "2026-10-15T04:58:00Z",
+      "gd5CompletedAt": "2026-10-15T05:30:00Z",
+      "gd5Result": "319/319 tests PASS (47 files; +49 mới vs GĐ4 baseline 270 — vượt mục tiêu ≥12); typecheck/lint/build exit 0; GĐ5 done criteria: FR-GD5-06 ERR-12 skip+log ✓, BR-09 cache hit 0 LLM ✓ (test assert request count), LRU evict 500 ✓, cache ghi gộp batch ✓, cap 50 + EF-5 'Quét tiếp' ✓, EF-2/EF-4 folder đổi dừng giữ kết quả ✓, TD-8 reason≤300 REJECT ✓, badge createElement SR-10 ✓, Digest sort giảm dần ✓; TD-10 keyset vi===en test ✓; TD-11 reply EF-5 re-check có decision ✓; OWA-DOM-SPIKE +7 probes triage (#39-45 UNVERIFIED — deferred-to-UAT); spike OWA thật vẫn deferred-to-UAT theo DECISION #63"
     },
     "user_guide": {
       "status": "not_started"

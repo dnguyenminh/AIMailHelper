@@ -107,6 +107,14 @@ export interface TriageScore {
   analyzedAt: string; // ISO — freshness + LRU evict
 }
 
+// §4.2/§6.2 — 1 item triage gửi qua Port kind "triage-batch" (BR-07 — chỉ item đang hiển thị).
+export interface TriageItem {
+  messageId: string; // strategy chain §7.5 (S1/S2/S3); thiếu → item bị bỏ qua (FR-GD5-06)
+  subject: string;
+  sender: string;
+  snippet: string;
+}
+
 // §7.2 — LocatorCacheEntry (BR-06: layoutHash khác → vô hiệu).
 // INVARIANT #8: entry PERSISTED bắt buộc strategy="selector" (refId chết cùng JS context,
 // chỉ tồn tại trong session cache in-memory — không bao giờ ghi xuống storage).

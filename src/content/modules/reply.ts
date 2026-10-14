@@ -85,6 +85,8 @@ export class ReplyController {
 
   // UC-02 bước 7-8 + FSD 6.3 — EF-5 so khớp TRƯỚC khi chèn; không khớp → chỉ cảnh báo.
   // ignoreMismatch: luồng "Vẫn chèn" (EF-5) — người dùng đã quyết, KHÔNG kiểm lại (tránh loop).
+  // TD-11 (TA review GĐ4): re-check EF-5 CẢ trên lần chèn có decision (replace/append) —
+  // bỏ điều kiện `decision === undefined` trong guard (email có thể đổi giữa 2 lần confirm).
   async insert(
     currentMessageIdHint?: string,
     decision?: InsertDecision,
@@ -92,7 +94,7 @@ export class ReplyController {
   ): Promise<InsertOutcome | { kind: "mismatch" }> {
     if (this.state.draft.trim().length === 0) return { kind: "blocked-empty" }; // BR-10 lớp 2
     if (!this.sourceEmail) return { kind: "blocked-empty" };
-    if (decision === undefined && !ignoreMismatch) {
+    if (!ignoreMismatch) {
       const currentId = currentMessageIdHint !== undefined ? currentMessageIdHint : await this.deps.currentMessageId();
       if (currentId === null || currentId !== this.sourceEmail.messageId) {
         this.setState({ ...this.state, mismatch: true }); // EF-5 — KHÔNG chèn tự động

@@ -7,8 +7,11 @@ import { getCache, setCache } from "../../../shared/cache-store";
 import { t } from "../../../shared/i18n";
 import { createAnalyzeController } from "../../modules/analyze";
 import type { AnalysisUiState } from "../../modules/analyze";
+import { createTriageController } from "../../modules/digest";
+import type { TriageUiState } from "../../modules/digest";
 import { AnalysisView } from "./AnalysisView";
 import { DiagnoseView } from "./DiagnoseView";
+import { DigestView } from "./DigestView";
 import { ErrorBanner } from "./ErrorBanner";
 import { ReplySection } from "./ReplySection";
 
@@ -19,12 +22,15 @@ const isTrue = (value: unknown): true | null => (value === true ? true : null);
 
 export function Panel() {
   const [state, setState] = useState<AnalysisUiState>({ status: "idle", raw: "", result: null, error: null });
+  const [triage, setTriage] = useState<TriageUiState | null>(null);
   const [consentVisible, setConsentVisible] = useState(false);
   const [showDiagnose, setShowDiagnose] = useState(false);
   const controllerRef = useRef<ReturnType<typeof createAnalyzeController> | null>(null);
+  const triageRef = useRef<ReturnType<typeof createTriageController> | null>(null);
 
   useEffect(() => {
     controllerRef.current = createAnalyzeController(setState);
+    triageRef.current = createTriageController(setTriage); // GĐ5 — UC-03/UC-04
     void getCache(CONSENT_KEY, isTrue).then((shown) => setConsentVisible(shown !== true));
     const onExternal = (): void => {
       void controllerRef.current?.start();
@@ -33,6 +39,7 @@ export function Panel() {
     return () => {
       document.removeEventListener(EXTERNAL_ANALYZE_EVENT, onExternal);
       controllerRef.current?.cancel();
+      triageRef.current?.cancel();
     };
   }, []);
 
@@ -43,6 +50,21 @@ export function Panel() {
 
   const stop = useCallback((): void => {
     controllerRef.current?.cancel();
+  }, []);
+
+  // GĐ5 — UC-03/UC-04: Triage inbox + Quét tiếp (AF-5) + Quét lại (AF-2) + Dừng (EF-3).
+  const triageStart = useCallback((): void => {
+    setShowDiagnose(false);
+    void triageRef.current?.start();
+  }, []);
+  const triageScanMore = useCallback((): void => {
+    void triageRef.current?.scanMore();
+  }, []);
+  const triageRescan = useCallback((): void => {
+    void triageRef.current?.rescan();
+  }, []);
+  const triageStop = useCallback((): void => {
+    triageRef.current?.cancel();
   }, []);
 
   const ackConsent = useCallback((): void => {
@@ -78,6 +100,15 @@ export function Panel() {
       {state.result !== null && <AnalysisView result={state.result} />}
       {state.error !== null && <ErrorBanner error={state.error} onRetry={analyze} />}
       {state.result !== null && <ReplySection email={email} />}
+      {triage !== null && (
+        <DigestView
+          state={triage}
+          onStart={triageStart}
+          onScanMore={triageScanMore}
+          onRescan={triageRescan}
+          onStop={triageStop}
+        />
+      )}
       {showDiagnose && <DiagnoseView onClose={() => setShowDiagnose(false)} />}
     </div>
   );

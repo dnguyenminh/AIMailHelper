@@ -3,7 +3,7 @@
 import { AppError } from "./errors";
 import type { ErrCode } from "./errors";
 import type { ChatMessage } from "./llm/types";
-import type { EmailData, ReplyDraft } from "./types";
+import type { EmailData, ReplyDraft, TriageItem } from "./types";
 export type RpcKind =
   | "CONFIG_GET"
   | "CONFIG_SET"
@@ -55,7 +55,7 @@ export type RpcResponse<T> =
 export interface StreamRequestPayloads {
   "analyze": { email: EmailData };
   "reply": { email: EmailData; tone: ReplyDraft["tone"]; language: ReplyDraft["language"]; extraInstructions?: string };
-  "triage-batch": { items: { messageId: string; subject: string; sender: string; snippet: string }[] };
+  "triage-batch": { items: TriageItem[] };
   "chat-test": { messages: ChatMessage[] };
 }
 

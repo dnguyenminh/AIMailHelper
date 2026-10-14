@@ -51,11 +51,30 @@ export async function removeCache(key: string): Promise<void> {
 
 // Liệt kê key có prefix (enum qua get(null) — mock + Chrome đều hỗ trợ).
 export async function getCacheKeys(prefix: string): Promise<string[]> {
+  const all = await getCacheAll(prefix);
+  return Object.keys(all);
+}
+
+// Đọc TẤT CẢ entry có prefix trong MỘT lần get(null) (cache triage GĐ5 — tránh N lần get).
+export async function getCacheAll(prefix: string): Promise<Record<string, unknown>> {
   let all: Record<string, unknown>;
   try {
     all = (await area().get(null)) as Record<string, unknown>;
   } catch {
     throw storageError("get");
   }
-  return Object.keys(all).filter((key) => key.startsWith(prefix));
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(all)) {
+    if (key.startsWith(prefix)) result[key] = value;
+  }
+  return result;
+}
+
+// Ghi GỘP nhiều key trong MỘT lần set (§3.3 — cache triage ghi gộp batch, FSD 5.4.1 TA note).
+export async function setCacheMany(items: Record<string, unknown>): Promise<void> {
+  try {
+    await area().set(items);
+  } catch {
+    throw storageError("set");
+  }
 }

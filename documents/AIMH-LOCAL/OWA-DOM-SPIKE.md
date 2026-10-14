@@ -1,7 +1,8 @@
-# OWA-DOM-SPIKE — Checklist verify selector trên OWA thật (AIMH-LOCAL, GĐ4)
+# OWA-DOM-SPIKE — Checklist verify selector trên OWA thật (AIMH-LOCAL, GĐ4 + GĐ5 triage)
 
 > **Mục đích:** Đây là **checklist cho spike MANUAL** — user/QA chạy trên **OWA thật** ở mốc
-> **GĐ4-complete** (TDD §11 Done #1: cả `outlook.office.com` và `outlook.live.com`; STC TC-410/TC-415).
+> **GĐ4-complete** (TDD §11 Done #1: cả `outlook.office.com` và `outlook.live.com`; STC TC-410/TC-415)
+> và **GĐ5** cho nhóm probe triage (#39–45; STC TC-413).
 > **KHÔNG có kết quả verify nào ở đây** — mọi dòng đang ở trạng thái **UNVERIFIED**.
 > Điền trạng thái sau khi verify: `PASS` (selector khớp) / `ADJUSTED` (đã sửa selector — ghi selector
 > thay thế + commit) / `MISSING` (không tồn tại — cần strategy khác) vào cột Trạng thái.
@@ -98,13 +99,29 @@
 |---|-------|------|----------|---------------------------|------------|
 | 38 | `tag[role="…"][aria-label="…"]` 4 cấp (deriveStructuralSelector) | semantic-locator.ts | Path structural unique ≤4 cấp đủ nhận diện lại element sau reload | Sau cache hit → element đúng (không trúng phần tử khác); label chứa ký tự đặc biệt escape đúng | UNVERIFIED |
 
-## 9. Việc cần làm sau spike (GĐ4-complete)
+## 9. Triage — triage.ts (GĐ5 — BR-07/FR-GD5-01..03; EF-2/EF-4; AF-5)
 
-1. Điền cột Trạng thái cho cả 38 dòng trên **cả 2 domain** (2 bảng riêng nếu khác nhau).
-2. Selector `ADJUSTED`/`MISSING` → sửa `selectors.ts`/`detector.ts`/`reader.ts`/`message-id.ts` +
+> GĐ5 thêm 7 probe cho luồng triage (quét inbox ĐANG HIỂN THỊ + badge + folder guard). Chain
+> inbox-list/inbox-item trùng probe #10/#11 — ở đây verify ĐỘ PHỦ riêng cho triage (scope trong
+> list, virtualization, folder switch).
+
+| # | Probe | File | Giả định | Cách verify trên OWA thật | Trạng thái |
+|---|-------|------|----------|---------------------------|------------|
+| 39 | `[role="listitem"]` scope BÊN TRONG `[role="list"]` (list.querySelectorAll) | triage.ts (collectInboxItems) | Tất cả email đang hiển thị là listitem con của list inbox — item ngoài list (khác) không bị quét (BR-07) | Console: so số listitem trong list với số email hiển thị; kiểm tra không có listitem nào ngoài list bị đếm nhầm | UNVERIFIED |
+| 40 | `[role="heading"], h1, h2` BÊN TRONG listitem (subject probe) | triage.ts (readItem) | Subject email trong list nằm trong heading của listitem | Verify subject đọc đúng từng row; trường hợp row có 2 heading (thread)? | UNVERIFIED |
+| 41 | `[aria-label]` prefix `From/Từ` BÊN TRONG listitem (sender probe) | triage.ts (firstLabeled) | Hàng người gửi trong list có aria-label "From: …"/"Từ: …" như reading pane | Đọc aria-label thật của hàng From trong list item (có "Từ:" bản VI?) | UNVERIFIED |
+| 42 | S1 `[data-itemid]`/`[data-convid]`/`[data-message-id]` TRÊN LISTITEM (khác container đọc email) | triage.ts + message-id.ts | List item mang ExchangeId ở cấp row (không chỉ ở reading pane) — so probe #18-20 | Xem list item có attribute id nào; id có khớp email khi click mở không | UNVERIFIED |
+| 43 | Badge inject vào listitem (appendChild span .aimh-triage-badge) — không vỡ layout row | triage.ts (attachBadge) | appendChild span inline vào row OWA không phá flex/grid của row | Chạy triage thật → badge hiện góc phải row? Row có bị xuống dòng/vỡ không? | UNVERIFIED |
+| 44 | Đổi folder → container `[role="list"]` bị THAY THẾ (folder signature = identity container) | triage.ts (hasFolderChanged) | Click folder khác → OWA render lại list container (element mới) — EF-2 dừng an toàn | Bắt điểm đầu quét → click folder khác giữa chừng → xác nhận container cũ disconnected hay bị reuse (nếu reuse → cần bổ sung signal) | UNVERIFIED |
+| 45 | Virtualized scroll — item mới xuất hiện trong DOM sau cuộn; badge cũ có bị remove cùng row re-render không | triage.ts + AF-5 UC-03 | Cuộn → OWA mount/unmount row; badge gắn vào row có thể mất khi row re-render → quét lại gắn lại | Cuộn xuống → DOM có thêm listitem? Badge trên row cũ còn không sau khi cuộn ra-vào? | UNVERIFIED |
+
+## 10. Việc cần làm sau spike (GĐ4-complete + GĐ5 triage)
+
+1. Điền cột Trạng thái cho cả 45 dòng trên **cả 2 domain** (2 bảng riêng nếu khác nhau).
+2. Selector `ADJUSTED`/`MISSING` → sửa `selectors.ts`/`detector.ts`/`reader.ts`/`message-id.ts`/`triage.ts` +
    cập nhật test fixture + ghi commit "spike OWA: …".
-3. Chạy STC TC-408 (analyze) + TC-410/TC-411 (reply chèn) + TC-412 (vision) trên OWA thật →
-   cập nhật TEST-REPORT (hiện tại TC-410/415 = NOT_RUN theo kế hoạch offline).
+3. Chạy STC TC-408 (analyze) + TC-410/TC-411 (reply chèn) + TC-412 (vision) + TC-413 (triage badge/Digest)
+   trên OWA thật → cập nhật TEST-REPORT (hiện tại TC-410/415 = NOT_RUN theo kế hoạch offline).
 4. Xác nhận BR-01 trên thật: extension không bấm nút gửi OWA (quan sát DevTools khi chèn draft).
 
 ## Build OWA đã verify

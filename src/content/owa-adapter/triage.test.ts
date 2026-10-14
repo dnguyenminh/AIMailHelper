@@ -1,0 +1,143 @@
+// src/content/owa-adapter/triage.test.ts — GĐ5 §3.1.6: quét inbox ĐANG HIỂN THỊ (BR-07 — KHÔNG
+// tải thêm mail ngoài list), message-id chain S1/S2/S3 (§7.5), ERR-12 bỏ qua + log (FR-GD5-06),
+// badge createElement/textContent (SR-10) màu theo score, folder guard EF-2/EF-4.
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { AppError } from "../../shared/errors";
+import { attachBadge, collectInboxItems, hasFolderChanged, readFolderSignature } from "./triage";
+import type { LocateFn } from "./triage";
+
+function el(tag: string, attrs: Record<string, string>, text?: string): HTMLElement {
+  const element = document.createElement(tag);
+  for (const key of Object.keys(attrs)) element.setAttribute(key, attrs[key] as string);
+  if (text !== undefined) element.textContent = text;
+  return element;
+}
+
+interface RowSpec {
+  idAttr?: string; // S1
+  href?: string; // S2
+  subject: string;
+  sender?: string;
+  preview?: string;
+}
+
+function buildInbox(rows: RowSpec[]): HTMLElement {
+  const list = el("div", { role: "list", "aria-label": "Message list" });
+  for (const row of rows) {
+    const item = el("div", { role: "listitem" });
+    if (row.idAttr !== undefined) item.setAttribute("data-itemid", row.idAttr);
+    if (row.href !== undefined) item.appendChild(el("a", { href: row.href }, "mở"));
+    item.appendChild(el("h3", { role: "heading" }, row.subject));
+    if (row.sender !== undefined) item.appendChild(el("span", { "aria-label": "From: " + row.sender }, ""));
+    if (row.preview !== undefined) item.appendChild(el("span", { "aria-label": "preview" }, row.preview));
+    list.appendChild(item);
+  }
+  document.body.appendChild(list);
+  return list;
+}
+
+const locateFromList = (list: Element | null): LocateFn => async (key) =>
+  key === "inbox-list" ? list : key === "inbox-item" ? list?.querySelector('[role="listitem"]') ?? null : null;
+
+beforeEach(() => {
+  document.body.textContent = "";
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe("collectInboxItems — FR-GD5-01 + BR-07 (chỉ item đang hiển thị)", () => {
+  it("3 items: S1 attribute → S2 href AAMk → S3 synthetic; đủ subject/sender/snippet", async () => {
+    const list = buildInbox([
+      { idAttr: "AAMk-native-1", subject: "Báo giá tháng 10", sender: "An <an@x.vn>", preview: "Vui lòng xem báo giá" },
+      { href: "/link/AAMkABCDEFGHIJKLMN0123456789+/=", subject: "Nhắc hạn chót", sender: "binh@y.vn", preview: "Hạn là thứ Sáu" },
+      { subject: "Không có id", sender: "chi@z.vn", preview: "Nội dung ngắn" }
+    ]);
+    const items = await collectInboxItems(locateFromList(list));
+    expect(items).toHaveLength(3);
+    expect(items[0]?.messageId).toBe("AAMk-native-1"); // S1
+    expect(items[0]?.provenance).toBe("native");
+    expect(items[1]?.messageId).toBe("AAMkABCDEFGHIJKLMN0123456789+/="); // S2
+    expect(items[2]?.provenance).toBe("synthetic"); // S3
+    expect(items[2]?.messageId).toMatch(/^synthetic:[0-9a-f]{16}$/); // SHA-256 trunc 16 (SR-09)
+    expect(items[0]?.subject).toBe("Báo giá tháng 10");
+    expect(items[0]?.sender).toBe("An <an@x.vn>");
+    expect(items[0]?.snippet).toContain("Vui lòng xem báo giá");
+  });
+
+  it("BR-07: CHỈ duyệt item trong inbox-list — listitem ngoài list không bị quét", async () => {
+    buildInbox([{ idAttr: "in-list-1", subject: "Trong list", sender: "a@x.vn" }]);
+    const stray = el("div", { role: "listitem" });
+    stray.appendChild(el("h3", { role: "heading" }, "Ngoài list"));
+    document.body.appendChild(stray);
+    const items = await collectInboxItems(locateFromList(document.querySelector('[role="list"]')));
+    expect(items).toHaveLength(1);
+    expect(items[0]?.messageId).toBe("in-list-1");
+  });
+
+  // FR-GD5-06 / ERR-12 — item không đủ dữ liệu cả 3 strategy → bỏ qua + log, batch không gián đoạn.
+  it("item rỗng (không id, không subject/sender/preview) → bỏ qua + console.warn ERR-12", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const list = buildInbox([
+      { idAttr: "ok-1", subject: "Bình thường", sender: "a@x.vn" },
+      { subject: "", sender: "", preview: "" }
+    ]);
+    const items = await collectInboxItems(locateFromList(list));
+    expect(items).toHaveLength(1);
+    expect(items[0]?.messageId).toBe("ok-1");
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0]?.[0])).toContain("ERR-12");
+  });
+
+  it("không thấy inbox-list → ERR-06 (panel gợi ý Diagnose)", async () => {
+    const error = await collectInboxItems(locateFromList(null)).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(AppError);
+    expect((error as AppError).code).toBe("ERR-06");
+  });
+});
+
+describe("attachBadge — FR-GD5-03 (SR-10 createElement/textContent)", () => {
+  it("badge gắn vào item của lần quét: textContent = score, aria-label, màu đúng bands", async () => {
+    const list = buildInbox([
+      { idAttr: "hi", subject: "Cao", sender: "a@x.vn" },
+      { idAttr: "mid", subject: "Trung bình", sender: "b@x.vn" },
+      { idAttr: "lo", subject: "Thấp", sender: "c@x.vn" }
+    ]);
+    await collectInboxItems(locateFromList(list));
+    expect(attachBadge("hi", 85)).toBe(true); // đỏ ≥70
+    expect(attachBadge("mid", 55)).toBe(true); // cam 40-69
+    expect(attachBadge("lo", 12)).toBe(true); // xanh <40
+    const badges = list.querySelectorAll(".aimh-triage-badge");
+    expect(badges).toHaveLength(3);
+    expect(badges[0]?.textContent).toBe("85"); // SR-10 — textContent, không innerHTML
+    expect(badges[0]?.getAttribute("aria-label")).toBe("Mức độ quan trọng: 85/100");
+    expect(badges[0]?.getAttribute("style")).toContain("rgb(164, 38, 44)"); // đỏ ≥70 (jsdom normalize)
+    expect(badges[1]?.getAttribute("style")).toContain("rgb(138, 97, 22)"); // cam 40-69
+    expect(badges[2]?.getAttribute("style")).toContain("rgb(16, 124, 16)"); // xanh <40
+  });
+
+  it("quét lại → badge cũ bị thay (không nhân đôi); id lạ → false", async () => {
+    const list = buildInbox([{ idAttr: "m1", subject: "S", sender: "a@x.vn" }]);
+    await collectInboxItems(locateFromList(list));
+    attachBadge("m1", 90);
+    attachBadge("m1", 20);
+    expect(list.querySelectorAll(".aimh-triage-badge")).toHaveLength(1);
+    expect(list.querySelector(".aimh-triage-badge")?.textContent).toBe("20");
+    expect(attachBadge("không-tồn-tại", 50)).toBe(false);
+  });
+});
+
+describe("folder guard — EF-2/EF-4 (dừng an toàn giữa chừng)", () => {
+  it("cùng container → không đổi; container bị thay/tháo khỏi DOM → đã đổi", async () => {
+    const list = buildInbox([{ idAttr: "m1", subject: "S", sender: "a@x.vn" }]);
+    const signature = await readFolderSignature(locateFromList(list));
+    expect(signature).toBe(list);
+    expect(await hasFolderChanged(signature, locateFromList(list))).toBe(false);
+    // Đổi folder: container cũ bị tháo, list mới render
+    const newList = buildInbox([{ idAttr: "m2", subject: "Folder khác", sender: "b@x.vn" }]);
+    list.remove();
+    expect(await hasFolderChanged(signature, locateFromList(newList))).toBe(true); // container khác
+    expect(await hasFolderChanged(list, locateFromList(newList))).toBe(true); // cũ đã disconnect
+  });
+});

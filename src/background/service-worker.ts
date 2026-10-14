@@ -10,6 +10,7 @@ import { registerQueueHandlers } from "./handlers/queue.handler";
 import { registerStateHandlers } from "./handlers/state.handler";
 import { registerStreamHandlers } from "./handlers/stream.handler";
 import { registerReplyHandlers } from "./handlers/reply.handler";
+import { registerTriageHandlers } from "./handlers/triage.handler";
 import { registerVisionHandlers } from "./handlers/vision.handler";
 
 const router = new MessageRouter();
@@ -24,6 +25,7 @@ router.listen();
 const streamServer = new PortServer();
 registerStreamHandlers(streamServer); // GĐ2: kind "chat-test" — streaming qua Port (§6.2)
 registerReplyHandlers(streamServer); // GĐ4: kind "reply" — UC-02 draft stream
+registerTriageHandlers(streamServer); // GĐ5: kind "triage-batch" — UC-03 (progress §6.2 #7)
 streamServer.attach();
 
 chrome.runtime.onInstalled.addListener(() => {
