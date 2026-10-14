@@ -17,6 +17,12 @@ NHIỆM VỤ: Implement GĐ5 — Triage hộp thư cho ticket **AIMH-LOCAL** (of
 7. **triage.handler / stream** — kind "triage" qua Port (progress events); folder đổi giữa chừng → dừng an toàn giữ kết quả batch hiện tại (EF-4)
 8. **Tests** — mục tiêu ≥12 mới: triage.ts đọc list (fixture inbox); batch chia 3+3+3+1 (batchSize 3 — TC-118 pattern); backoff 429 Retry-After 2s + không header 1-2-4s + MAX_RETRY 3; progress đúng; cache hit 0 LLM (BR-09); cap 50 (60 item → quét 50 + thông báo); folder đổi dừng; parse reason >300 REJECT (TD-8); badge render createElement; Digest sort + EF-1 trống; messageId thiếu → bỏ qua + log (FR-GD5-06)
 
+## BỔ SUNG từ TA review GĐ4 (APPROVED w/warnings — làm cùng batch GĐ5):
+- **TD-10**: thêm 1 test đọc vi.json + en.json assert keyset bằng nhau (Object.keys) — chặn lệch keyset tương lai
+- **TD-11**: reply.ts insert() — EF-5 re-check cả trên lần chèn có decision (bỏ điều kiện `decision === undefined` trong guard)
+- **D1 ghi nhận (KHÔNG sửa code)**: analyze KHÔNG dùng T3 kể cả khi vision enabled (privacy-conservative) — đúng ý SM; SA sẽ ghi FSD AF-3 amendment sau. KHÔNG mở opt-in analyze
+- Lưu ý: spike OWA thật (38 probes) deferred-to-UAT — code GĐ5 không phụ thuộc kết quả spike
+
 ## Ràng buộc
 - File ≤200 dòng, function ≤20 dòng; SOLID; KHÔNG đụng reply/vision/diagnose (GĐ4 closed); KHÔNG đụng auto-mode (GĐ6)
 - BR-07: KHÔNG tải thêm mail ngoài list hiển thị; SR-10 audit pass
