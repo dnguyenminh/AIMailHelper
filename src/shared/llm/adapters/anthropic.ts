@@ -8,6 +8,7 @@ import type { Json, WireRequest } from "../base-adapter";
 import { AppError } from "../../errors";
 import type { ChatMessage, ChatOptions, LLMConfig } from "../types";
 import type { SseEvent } from "../sse";
+import { applyAnthropicImage } from "../vision-wire";
 
 const API_ROOT = "https://api.anthropic.com/v1";
 const ANTHROPIC_VERSION = "2023-06-01";
@@ -33,6 +34,7 @@ export class AnthropicAdapter extends BaseLLMAdapter {
       ...transformMessages(messages),
       stream: stream
     };
+    if (opts.visionImage) applyAnthropicImage(body, opts.visionImage); // GĐ4 T3 — gated additive
     return { url: API_ROOT + "/messages", headers: this.buildHeaders(config), body: body };
   }
 

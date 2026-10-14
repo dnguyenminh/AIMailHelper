@@ -7,22 +7,25 @@ import { AppError } from "../../errors";
 import type { ChatMessage, ChatOptions, LLMConfig } from "../types";
 import type { SseEvent } from "../sse";
 import { requiredKey } from "./openai";
+import { applyOpenAIImage } from "../vision-wire";
 
 export class AzureAdapter extends BaseLLMAdapter {
   readonly id = "azure" as const;
 
   protected buildRequest(config: LLMConfig, messages: ChatMessage[], opts: ChatOptions, stream: boolean): WireRequest {
     const azure = requireAzure(config);
+    const body: Json = {
+      messages: messages,
+      stream: stream,
+      temperature: opts.temperature ?? 0.3,
+      max_tokens: opts.maxTokens ?? 2048
+    };
+    if (opts.visionImage) applyOpenAIImage(body, opts.visionImage); // GĐ4 T3 — gated additive (vision-wire)
     return {
       url: azure.endpoint.replace(/\/$/, "") + "/openai/deployments/" + azure.deployment + "/chat/completions?api-version=" + azure.apiVersion,
       headers: { "api-key": requiredKey(config), "Content-Type": "application/json" },
       // KHÔNG có "model" — deployment nằm trong path (5.2.2); max_tokens an toàn với mọi api-version.
-      body: {
-        messages: messages,
-        stream: stream,
-        temperature: opts.temperature ?? 0.3,
-        max_tokens: opts.maxTokens ?? 2048
-      }
+      body: body
     };
   }
 

@@ -32,10 +32,22 @@ export interface DiagnoseReport {
   truncated: boolean;
 }
 
-// Label chức năng giữ lại trong report — pattern đóng (reply/gửi/soạn/xóa/tìm…).
+// Label chức năng giữ lại trong report — pattern ĐÓNG so khớp trên dạng ĐÃ BỎ DẤU (NFD strip +
+// đ→d + lowercase — "Trả lời" → "tra loi"; ký tự Việt precomposed không match được bằng class).
+// Token ngắn có \b 2 phía tránh khớp nhầm trong từ dài (vd "gui" trong "guidance").
 // Label không khớp (subject, tên người, nội dung) → "[redacted-label]" (M-2).
 const FUNCTIONAL_LABEL_PATTERN =
-  /reply|tr[ảa] l[ơo]?[ai]|forward|chuy[ểe]n tiếp|compose|so[ạa]n|g[ữu]i|delete|x[óo]a|archive|l[ưu]u|search|t[ìi]m|new|m[ớo]i|open|m[ởo]|close|[đd][óo]ng|settings|c[àa]i [đd][ặe]t|more|th[êe]m|menu|undo|ho[àa]n t[áa]c|flag|c[ờo]/i;
+  /reply|tra loi|forward|chuyen tiep|compose|soan|\bgui\b|delete|xoa|archive|luu|search|\btim\b|new|\bmoi\b|open|\bmo\b|close|\bdong\b|settings|cai dat|more|them|menu|undo|hoan tac|flag|\bco\b/i;
+
+// Bỏ dấu tiếng Việt: NFD → strip combining marks (U+0300..036F) → đ/Đ → d/D → lowercase.
+export function normalizeLabel(label: string): string {
+  return label
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase();
+}
 
 export function defaultDiagnoseDeps(): DiagnoseDeps {
   const index = createA11yIndex();
@@ -113,7 +125,18 @@ function probeSection(probes: ProbeResult[]): string {
 // M-2 — label trong snapshot được lọc lần 2: chỉ control chức năng giữ label.
 function snapshotSection(snapshot: string): string {
   const lines = snapshot.split("\n").map((line) => redactSnapshotLine(line));
-  return "--- A11Y SNAPSHOT (chỉ role + label chức năng — node khác [redacted-label]) ---\n" + lines.join("\n");
+  return "--- A11Y SNAPSHOT (chỉ role + label chức năng; node khác bị ẩn label) ---\n" + lines.join("\n");
+}
+
+// Label MANG NỘI DUNG (email trong label / label dài) → redact TRƯỚC khi test functional —
+// "a@x.vn gửi lúc 10:00" chứa từ chức năng nhưng vẫn là PII (M-2 — subject/sender không lọt).
+const EMAIL_IN_LABEL = /\S+@\S+\.\S+/;
+const CONTENT_LABEL_MAX = 80;
+
+function isFunctionalLabel(label: string): boolean {
+  if (EMAIL_IN_LABEL.test(label)) return false;
+  if (label.length > CONTENT_LABEL_MAX) return false;
+  return FUNCTIONAL_LABEL_PATTERN.test(normalizeLabel(label));
 }
 
 const LABELED_LINE = /^(\s*)([\w-]+)\s+"((?:[^"\\]|\\.)*)"\s+\((ref_\d+)\)$/;
@@ -122,7 +145,7 @@ function redactSnapshotLine(line: string): string {
   const match = LABELED_LINE.exec(line);
   if (!match) return line; // dòng không label — chỉ role + refId, an toàn
   const [, indent, role, label, ref] = match as unknown as [string, string, string, string, string];
-  if (FUNCTIONAL_LABEL_PATTERN.test(label)) return indent + role + ' "' + label + '" (' + ref + ")";
+  if (isFunctionalLabel(label)) return indent + role + ' "' + label + '" (' + ref + ")";
   return indent + role + ' "[redacted-label]" (' + ref + ")"; // M-2
 }
 

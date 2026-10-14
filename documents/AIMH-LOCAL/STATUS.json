@@ -115,7 +115,9 @@
       "gd3CompletedAt": "2026-10-14T17:00:00Z",
       "gd3Result": "199/199 tests PASS (30 files, +92 GĐ3); typecheck/lint/build exit 0; commit c12a456; M-1/M-2/SR-08/SR-09 áp; hạn chế: chưa test OWA thật — spike bắt buộc trước GĐ4",
       "gd4StartedAt": "2026-10-14T22:10:00Z",
-      "gd4Note": "re-launch sau server restart (shell cũ sh_13ac32abd001gEWd7UiFw8FM9z cancelled giữa chừng — GD4 files chưa có trên disk, không mất code); 3 CR deferred GD3 (CR-A port try/finally, CR-B OWA-DOM-SPIKE.md, CR-C DOM boundary audit) nằm trong prompt phase5-dev-gd4.md"
+      "gd4Note": "re-launch sau server restart (shell cũ sh_13ac32abd001gEWd7UiFw8FM9z cancelled giữa chừng — GD4 files chưa có trên disk, không mất code); 3 CR deferred GD3 (CR-A port try/finally, CR-B OWA-DOM-SPIKE.md, CR-C DOM boundary audit) nằm trong prompt phase5-dev-gd4.md",
+      "gd4CompletedAt": "2026-10-15T04:25:00Z",
+      "gd4Result": "203/203 tests, typecheck/lint/build exit 0; 3 CR GD3 applied (SPIKE file + try/finally + DOM audit); gap +4 tests vs >=12 ghi nhận; TA review pending"
     },
     "user_guide": {
       "status": "not_started"
@@ -147,5 +149,5 @@
     "state": "closed",
     "consecutiveFailures": 0
   },
-  "lastUpdated": "2026-10-14T22:10:00Z"
+  "lastUpdated": "2026-10-15T04:27:00Z"
 }

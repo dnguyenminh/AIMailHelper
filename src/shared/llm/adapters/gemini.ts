@@ -7,6 +7,7 @@ import { asArray, asNumber, asRecord, asText, BaseLLMAdapter } from "../base-ada
 import type { Json, WireRequest } from "../base-adapter";
 import type { ChatMessage, ChatOptions, LLMConfig, ProviderId } from "../types";
 import type { SseEvent } from "../sse";
+import { applyGeminiImage } from "../vision-wire";
 
 const API_ROOT = "https://generativelanguage.googleapis.com/v1beta";
 
@@ -23,6 +24,7 @@ export class GeminiAdapter extends BaseLLMAdapter {
       ...transformMessages(messages),
       generationConfig: { temperature: opts.temperature ?? 0.3, maxOutputTokens: opts.maxTokens ?? 2048 }
     };
+    if (opts.visionImage) applyGeminiImage(body, opts.visionImage); // GĐ4 T3 — gated additive
     return {
       url: API_ROOT + "/models/" + encodeURIComponent(config.model) + ":" + action,
       headers: this.buildHeaders(config),

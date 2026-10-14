@@ -8,6 +8,7 @@ import { AppError } from "../../errors";
 import type { ChatMessage, ChatOptions, LLMConfig, ProviderId } from "../types";
 import type { SseEvent } from "../sse";
 import { requiredKey } from "./openai";
+import { applyOpenAIImage } from "../vision-wire";
 
 export class OpenAICompatibleAdapter extends BaseLLMAdapter {
   readonly id: ProviderId = "openai-compatible";
@@ -24,17 +25,19 @@ export class OpenAICompatibleAdapter extends BaseLLMAdapter {
   }
 
   protected buildRequest(config: LLMConfig, messages: ChatMessage[], opts: ChatOptions, stream: boolean): WireRequest {
+    const body: Json = {
+      model: config.model,
+      messages: messages,
+      stream: stream,
+      temperature: opts.temperature ?? 0.3,
+      max_tokens: opts.maxTokens ?? 2048
+    };
+    if (opts.visionImage) applyOpenAIImage(body, opts.visionImage); // GĐ4 T3 — gated additive (vision-wire)
     return {
       url: this.chatUrl(config),
       headers: this.buildHeaders(config),
       // 5.2.5: body giống OpenAI nhưng dùng max_tokens (tolerant trên mọi server)
-      body: {
-        model: config.model,
-        messages: messages,
-        stream: stream,
-        temperature: opts.temperature ?? 0.3,
-        max_tokens: opts.maxTokens ?? 2048
-      }
+      body: body
     };
   }
 

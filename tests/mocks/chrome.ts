@@ -123,6 +123,7 @@ export interface ChromeMock {
   };
   permissions: { contains(): Promise<boolean>; request(): Promise<boolean> };
   tabs: { captureVisibleTab(): Promise<string> };
+  windows: { WINDOW_ID_CURRENT: number };
 }
 
 export function createChromeMock(): ChromeMock {
@@ -166,6 +167,7 @@ export function createChromeMock(): ChromeMock {
     },
     tabs: {
       captureVisibleTab: async () => "data:image/jpeg;base64,mock-capture"
-    }
+    },
+    windows: { WINDOW_ID_CURRENT: -2 }
   };
 }

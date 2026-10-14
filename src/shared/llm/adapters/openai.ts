@@ -5,6 +5,7 @@ import { CALL_TIMEOUT, getJson } from "../call";
 import { asArray, asNumber, asRecord, asText, BaseLLMAdapter } from "../base-adapter";
 import type { CallContext, Json, WireRequest } from "../base-adapter";
 import { isMaxTokensUnsupported } from "../errmap";
+import { applyOpenAIImage } from "../vision-wire";
 import type { ChatMessage, ChatOptions, LLMConfig, LLMResponse, ProviderId } from "../types";
 import type { SseEvent } from "../sse";
 
@@ -36,6 +37,7 @@ export class OpenAIAdapter extends BaseLLMAdapter {
       [ctx.maxTokenField ?? "max_completion_tokens"]: opts.maxTokens ?? 2048
     };
     if (stream) body["stream_options"] = { include_usage: true }; // usage ở chunk cuối (5.2.1)
+    if (opts.visionImage) applyOpenAIImage(body, opts.visionImage); // GĐ4 T3 — gated additive (vision-wire)
     return {
       url: API_ROOT + "/chat/completions",
       headers: { "Authorization": "Bearer " + requiredKey(config), "Content-Type": "application/json" },

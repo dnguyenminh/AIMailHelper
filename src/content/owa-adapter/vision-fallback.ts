@@ -15,7 +15,9 @@ export const VISION_TARGET_WIDTH = 1568; // pxPerToken ≈ 28 (REFERENCE-ANALYSI
 export const VISION_JPEG_QUALITY = 0.6;
 const DATA_URL_PATTERN = /^data:([^;]+);base64,(.+)$/;
 // SR-01 L3 — parse fail-closed: chỉ chấp nhận "(x%, y%)" với 2 số ≤ 100; text khác → null.
-const POINT_PATTERN = /\((\d{1,3})\s*%,\s*(\d{1,3})\s*%\)/;
+// "(x%, y%)" theo prompt; dung sai: % tùy chọn, số thập phân, dấu phân cách , ; khoảng trắng,
+// đứng giữa text khác. Range 0..100 kiểm ở parseVisionPoint — ngoài range → null (fail-closed).
+const POINT_PATTERN = /\(?\s*(\d{1,3}(?:\.\d+)?)\s*%?\s*[,;\s]\s*(\d{1,3}(?:\.\d+)?)\s*%?\s*\)?/;
 
 export interface VisionPoint {
   xPct: number;
