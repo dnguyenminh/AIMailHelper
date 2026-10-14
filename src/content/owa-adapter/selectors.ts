@@ -1,7 +1,19 @@
 // src/content/owa-adapter/selectors.ts — Tầng 1 multi-strategy selector chain (TDD §3.1.1; FR-GD1-08).
 // Chỉ dùng attribute bền vững của OWA (role, aria-label EN/VN, data-*) — KHÔNG class hash (gãy khi rebuild CSS).
 // Lưu ý spike (§15.2 #3): chain dựa trên pattern OWA phổ biến — bắt buộc verify GĐ3 trên cả 2 domain.
-import type { FunctionKey } from "./owa-adapter";
+// FunctionKey + SelectorTier (T1) đặt Ở ĐÂY để tránh vòng import owa-adapter ⇄ semantic-locator.
+export type FunctionKey =
+  | "reading-pane"
+  | "message-toolbar"
+  | "reply-button"
+  | "compose-box"
+  | "inbox-list"
+  | "inbox-item";
+
+// «interface» Strategy (§4.3) — impl: SelectorTier (T1) · SemanticLocator (T2, GĐ3) · VisionFallback (T3, GĐ4).
+export interface LocatorStrategy {
+  resolve(functionKey: FunctionKey, question: string): Promise<Element | null>;
+}
 
 export type SelectorChain = readonly string[];
 
@@ -37,4 +49,11 @@ export function resolveBySelectors(functionKey: FunctionKey, root: ParentNode = 
     if (element) return element;
   }
   return null;
+}
+
+// T1 fast-path — <1ms, 0 token (NFR §10). GĐ1 Done (3): chain trả element trên 3 domain (spike GĐ3).
+export class SelectorTier implements LocatorStrategy {
+  async resolve(functionKey: FunctionKey, _question: string): Promise<Element | null> {
+    return resolveBySelectors(functionKey);
+  }
 }

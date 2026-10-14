@@ -68,4 +68,4 @@ export async function setUiLanguage(lang: UiLanguage): Promise<void> {
   for (const listener of [...listeners]) listener(lang);
 }
 
-export const I18N_DICTIONARY_SIZE = 110; // keyset vi === en (assert trong test GĐ2)
+export const I18N_DICTIONARY_SIZE = 130; // keyset vi === en (assert trong test GĐ2)

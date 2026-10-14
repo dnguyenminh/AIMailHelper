@@ -4,7 +4,7 @@
 import type { EmailData } from "../types";
 import type { ChatMessage } from "./types";
 
-export type PromptKind = "analyze" | "reply" | "triage";
+export type PromptKind = "analyze" | "reply" | "triage" | "locate";
 export type PromptLanguage = "vi" | "en";
 
 // §8.11 Lớp 1 — hằng dùng chung, chèn vào mọi system prompt (verbatim theo TDD).
@@ -43,11 +43,21 @@ const TRIAGE_EN =
   "You are an inbox triage assistant. For EACH email in the list, score importance 0-100 " +
   "with a short reason (max 300 chars). Return EXACTLY one JSON array block: " +
   '[{"messageId":"...","score":0,"reason":"..."}].';
+// GĐ3 — prompt locate (§6.1 #6): LLM CHỈ trả refId hoặc null; parse fail-closed phía SW (SR-01 L3).
+const LOCATE_VI =
+  "Bạn là trợ lý định vị phần tử giao diện Outlook. Dưới đây là snapshot a11y: mỗi dòng là role, " +
+  "label chức năng (nếu có) và refId của phần tử. Chỉ TRẢ VỀ DUY NHẤT refId (vd ref_12) của phần tử " +
+  "khớp yêu cầu, hoặc chữ null nếu không có phần tử phù hợp. KHÔNG giải thích, KHÔNG thêm chữ khác.";
+const LOCATE_EN =
+  "You are an Outlook UI element locator. Below is an a11y snapshot: each line is a role, its " +
+  "functional label (if any) and refId. Return EXACTLY one refId (e.g. ref_12) of the element " +
+  "matching the request, or the word null when no element fits. No explanations, nothing else.";
 
 const BASE_PROMPTS: Record<PromptKind, Record<PromptLanguage, string>> = {
   analyze: { vi: ANALYZE_VI, en: ANALYZE_EN },
   reply: { vi: REPLY_VI, en: REPLY_EN },
-  triage: { vi: TRIAGE_VI, en: TRIAGE_EN }
+  triage: { vi: TRIAGE_VI, en: TRIAGE_EN },
+  locate: { vi: LOCATE_VI, en: LOCATE_EN }
 };
 
 // System prompt cuối: custom (nếu có) GIỮ nguyên ý người dùng + clause LUÔN được chèn (§8.11).
