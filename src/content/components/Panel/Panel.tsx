@@ -5,6 +5,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getCache, setCache } from "../../../shared/cache-store";
 import { t } from "../../../shared/i18n";
+import { createAutoModeController } from "../../modules/automode-deps";
+import type { AutoModeState } from "../../modules/automode-types";
+import { IDLE_AUTO } from "../../modules/automode-types";
 import { createAnalyzeController } from "../../modules/analyze";
 import type { AnalysisUiState } from "../../modules/analyze";
 import { createTriageController } from "../../modules/digest";
@@ -13,6 +16,7 @@ import { AnalysisView } from "./AnalysisView";
 import { DiagnoseView } from "./DiagnoseView";
 import { DigestView } from "./DigestView";
 import { ErrorBanner } from "./ErrorBanner";
+import { QueueView } from "./QueueView";
 import { ReplySection } from "./ReplySection";
 
 const CONSENT_KEY = "panel.consentShown"; // SR-18 — ghi nhận đã hiển thị
@@ -23,14 +27,19 @@ const isTrue = (value: unknown): true | null => (value === true ? true : null);
 export function Panel() {
   const [state, setState] = useState<AnalysisUiState>({ status: "idle", raw: "", result: null, error: null });
   const [triage, setTriage] = useState<TriageUiState | null>(null);
+  const [auto, setAuto] = useState<AutoModeState>(IDLE_AUTO); // GĐ6 — BR-02 false mặc định
+  const [showQueue, setShowQueue] = useState(false);
   const [consentVisible, setConsentVisible] = useState(false);
   const [showDiagnose, setShowDiagnose] = useState(false);
   const controllerRef = useRef<ReturnType<typeof createAnalyzeController> | null>(null);
   const triageRef = useRef<ReturnType<typeof createTriageController> | null>(null);
+  const autoRef = useRef<ReturnType<typeof createAutoModeController> | null>(null);
 
   useEffect(() => {
     controllerRef.current = createAnalyzeController(setState);
     triageRef.current = createTriageController(setTriage); // GĐ5 — UC-03/UC-04
+    autoRef.current = createAutoModeController(setAuto); // GĐ6 — observer CHỈ khi enabled (BR-02)
+    void autoRef.current.sync();
     void getCache(CONSENT_KEY, isTrue).then((shown) => setConsentVisible(shown !== true));
     const onExternal = (): void => {
       void controllerRef.current?.start();
@@ -40,6 +49,7 @@ export function Panel() {
       document.removeEventListener(EXTERNAL_ANALYZE_EVENT, onExternal);
       controllerRef.current?.cancel();
       triageRef.current?.cancel();
+      autoRef.current?.stop(); // tắt observer + hủy stream — hàng chờ GIỮ NGUYÊN (FR-GD6-06)
     };
   }, []);
 
@@ -88,6 +98,15 @@ export function Panel() {
         <button type="button" className="aimh-btn" onClick={() => setShowDiagnose((value) => !value)}>
           {t("panel.diagnose.button")}
         </button>
+        {/* GĐ6 — hàng chờ duyệt + badge "N chờ duyệt" (UC-07; chỉ hiện khi auto-mode bật hoặc còn pending) */}
+        {(auto.enabled || auto.pendingCount > 0) && (
+          <button type="button" className="aimh-btn" onClick={() => setShowQueue((value) => !value)}>
+            {t("panel.queue.button")}
+            {auto.pendingCount > 0 && (
+              <span className="aimh-badge aimh-badge-high" role="status">{t("panel.queue.badge", { count: auto.pendingCount })}</span>
+            )}
+          </button>
+        )}
       </div>
       {consentVisible && (
         <div className="aimh-consent" role="note">
@@ -109,6 +128,7 @@ export function Panel() {
           onStop={triageStop}
         />
       )}
+      {showQueue && <QueueView state={auto} controller={autoRef.current} />} {/* GĐ6 — UC-07 */}
       {showDiagnose && <DiagnoseView onClose={() => setShowDiagnose(false)} />}
     </div>
   );

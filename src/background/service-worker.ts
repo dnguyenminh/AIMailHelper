@@ -18,7 +18,7 @@ registerConfigHandlers(router); // GĐ1: CONFIG_GET/SET + KEY_STORAGE_SET thật
 registerConnectionHandlers(router); // GĐ2: TEST_CONNECTION/LIST_MODELS qua registry + adapter (§6.1 #4-5)
 registerLocatorHandlers(router); // GĐ3: LOCATOR_RESOLVE (T2)
 registerVisionHandlers(router); // GĐ4: VISION_CAPTURE/LOCATE (T3 — BR-03 opt-in)
-registerQueueHandlers(router); // stub → GĐ6
+registerQueueHandlers(router); // GĐ6: QUEUE_LIST/UPDATE thật (BR-15 validate; chèn ở CS — BR-01)
 registerStateHandlers(router); // GĐ1: GET_RUNTIME_STATE (FR-GD1-02)
 router.listen();
 
