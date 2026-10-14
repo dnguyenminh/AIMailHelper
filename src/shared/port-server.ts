@@ -49,24 +49,40 @@ export class PortServer {
   }
 
   private async run(port: chrome.runtime.Port, requestId: string, kind: StreamRequestKind, payload: unknown): Promise<void> {
+    let hasTerminal = false; // D-4: done/error là message CUỐI bắt buộc (§6.2 #3) — không gửi terminal kép
     const send = (event: StreamEventBody): void => {
+      if (event.type === "done" || event.type === "error") hasTerminal = true;
       port.postMessage({ ...event, requestId: requestId } as PortEvent);
     };
     const controller = new AbortController();
     this.aborts.set(requestId, controller);
     send({ type: "accepted" }); // §6.2 #1 — accepted trước chunk đầu
+    await this.invokeHandler(requestId, kind, payload, controller, send, () => hasTerminal);
+    this.aborts.delete(requestId);
+  }
+
+  // D-4: handler throw khi CHƯA có terminal event (chỉ có accepted/chunk) → gửi error terminal ngay —
+  // client KHÔNG treo chờ guardian idle 30s (§6.2 #3).
+  private async invokeHandler(
+    requestId: string,
+    kind: StreamRequestKind,
+    payload: unknown,
+    controller: AbortController,
+    send: (event: StreamEventBody) => void,
+    hasTerminal: () => boolean
+  ): Promise<void> {
     const handler = this.handlers.get(kind);
     if (!handler) {
       send({ type: "error", code: "ERR-15", i18nKey: "errors.notImplemented", params: { phase: "GĐ3" }, retryable: false });
-      this.aborts.delete(requestId);
       return;
     }
     try {
       await handler(payload, { requestId: requestId, signal: controller.signal, send: send });
     } catch (error) {
       console.error("[AIMH][port] stream handler failed:", kind, error); // KHÔNG log payload (BR-08)
-    } finally {
-      this.aborts.delete(requestId);
+      if (!hasTerminal()) {
+        send({ type: "error", code: "ERR-15", i18nKey: "errors.streamFailed", retryable: false });
+      }
     }
   }
 }

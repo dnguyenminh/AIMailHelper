@@ -6,6 +6,7 @@ import { t } from "../../shared/i18n";
 import { useUiLanguage } from "../../shared/i18n/react";
 import { getUiLanguage } from "../../shared/i18n";
 import { PortClient } from "../../shared/port-client";
+import type { StreamHandle } from "../../shared/port-client";
 import type { PortEvent } from "../../shared/messaging";
 import { systemPrompt } from "../../shared/llm/prompts";
 import type { ConfigData } from "../useConfigData";
@@ -23,6 +24,7 @@ export function ChatTest(props: { config: ConfigData }): JSX.Element {
   const [input, setInput] = useState("");
   const [state, setState] = useState<ChatState>({ output: "", phase: "idle", error: null });
   const clientRef = useRef<PortClient | null>(null);
+  const handleRef = useRef<StreamHandle | null>(null);
 
   useEffect(() => {
     const client = new PortClient();
@@ -39,7 +41,7 @@ export function ChatTest(props: { config: ConfigData }): JSX.Element {
       { role: "system" as const, content: systemPrompt("analyze", getUiLanguage(), prompts?.customSystemPrompt ?? null) },
       { role: "user" as const, content: text }
     ];
-    clientRef.current?.request("chat-test", { messages: messages }, onEvent);
+    handleRef.current = clientRef.current?.request("chat-test", { messages: messages }, onEvent) ?? null;
   };
 
   const onEvent = (event: PortEvent): void => {
@@ -58,7 +60,10 @@ export function ChatTest(props: { config: ConfigData }): JSX.Element {
   };
 
   const stop = (): void => {
-    clientRef.current?.disconnect(); // hủy stream — reconnect tạo port mới ở lần send sau
+    // TD-1: cancel đúng hợp đồng §5.3.1/§6.2 #5 — gửi {type:"cancel"} để SW abort fetch (tiết kiệm token);
+    // disconnect CHỈ trong cleanup useEffect (đóng port khi unmount).
+    handleRef.current?.cancel();
+    handleRef.current = null;
     setState((prev) => ({ ...prev, phase: prev.phase === "streaming" ? "done" : prev.phase }));
   };
 

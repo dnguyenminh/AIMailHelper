@@ -72,6 +72,15 @@ function requireNonEmpty(value: unknown, field: string): string {
   throw badRequest(field, "non-empty string");
 }
 
+// D-3 (TA follow-up GĐ1): azure.apiVersion BẮT BUỘC định dạng YYYY-MM-DD (TDD §8.8, BR-15).
+const API_VERSION_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function requireApiVersion(value: unknown, field: string): string {
+  const version = requireNonEmpty(value, field);
+  if (!API_VERSION_RE.test(version)) throw badRequest(field, "YYYY-MM-DD");
+  return version;
+}
+
 export function isProviderId(value: unknown): value is ProviderId {
   return typeof value === "string" && (PROVIDER_IDS as readonly string[]).includes(value);
 }
@@ -143,7 +152,7 @@ export function validateVision(value: unknown): VisionConfig {
 }
 
 // §8.8 — LLMConfig per-provider: key bắt buộc 4 cloud; baseUrl cho compatible (SR-06);
-// model không rỗng; azure.apiVersion định dạng YYYY-MM-DD; local.url localhost + preset enum.
+// model không rỗng; azure.apiVersion regex YYYY-MM-DD (D-3); local.url localhost + preset enum.
 export function validateProviderConfig(value: unknown): LLMConfig {
   const raw = requireObject(value, "providerConfig");
   const provider = requireEnum(raw["provider"], PROVIDER_IDS, "provider");
@@ -160,7 +169,7 @@ export function validateProviderConfig(value: unknown): LLMConfig {
     config.azure = {
       endpoint: requireNonEmpty(azure["endpoint"], "azure.endpoint"),
       deployment: requireNonEmpty(azure["deployment"], "azure.deployment"),
-      apiVersion: requireNonEmpty(azure["apiVersion"], "azure.apiVersion")
+      apiVersion: requireApiVersion(azure["apiVersion"], "azure.apiVersion")
     };
   }
   if (provider === "local") {

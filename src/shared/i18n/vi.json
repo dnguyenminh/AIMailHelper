@@ -93,6 +93,7 @@
   "errors.localOriginsHint": "Ollama từ chối kết nối. Đặt biến môi trường OLLAMA_ORIGINS=chrome-extension://* rồi khởi động lại Ollama.",
   "errors.owaNotFound": "Không định vị được phần tử Outlook (layout có thể đã đổi).",
   "errors.streamInterrupted": "Luồng dữ liệu bị gián đoạn. Phần đã nhận được giữ lại.",
+  "errors.streamFailed": "Luồng xử lý gặp lỗi chưa xác định. Vui lòng thử lại.",
   "errors.storageQuota": "Bộ lưu trữ lỗi hoặc đầy. Hãy dọn cache rồi thử lại.",
   "errors.insertFailed": "Không chèn được draft vào khung soạn thảo. Bạn có thể copy từ preview.",
   "errors.emptyEmail": "Email trống hoặc không đọc được nội dung.",

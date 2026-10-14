@@ -117,5 +117,65 @@ describe("chat-test qua Port streaming (GĐ2 Done — chat test từ Options)", 
   });
 });
 
+// CR-2 / D-4 (TA follow-up GĐ1): handler throw → client PHẢI nhận terminal event ngay (§6.2 #3 —
+// done/error là message cuối bắt buộc), KHÔNG treo tới guardian idle 30s.
+describe("PortServer — terminal event guard khi handler throw (D-4/CR-2)", () => {
+  function bootWithHandler(handler: Parameters<PortServer["register"]>[1]): void {
+    const server = new PortServer();
+    server.register("chat-test", handler);
+    server.attach();
+  }
+
+  it("handler throw NGAY (chỉ có accepted) → client nhận error terminal ERR-15 errors.streamFailed", async () => {
+    bootWithHandler(async () => {
+      throw new Error("boom");
+    });
+    const { events, client } = collectEvents();
+    client.request("chat-test", { messages: [{ role: "user", content: "ping" }] }, (event) => events.push(event));
+    await vi.waitFor(() => {
+      expect(events.some((e) => e.type === "error")).toBe(true);
+    });
+    const types = events.map((e) => e.type);
+    expect(types[0]).toBe("accepted");
+    expect(types[types.length - 1]).toBe("error"); // error là message CUỐI — không treo
+    const errorEvent = events.find((e) => e.type === "error") as Extract<PortEvent, { type: "error" }>;
+    expect(errorEvent.code).toBe("ERR-15");
+    expect(errorEvent.i18nKey).toBe("errors.streamFailed");
+    expect(errorEvent.retryable).toBe(false);
+    client.disconnect();
+  });
+
+  it("handler gửi chunk rồi throw → VẪN nhận error terminal (§6.2 #3 — không bỏ trường hợp này)", async () => {
+    bootWithHandler(async (_payload, ctx) => {
+      ctx.send({ type: "chunk", seq: 0, delta: "một phần" });
+      throw new Error("mid-stream boom");
+    });
+    const { events, client } = collectEvents();
+    client.request("chat-test", { messages: [{ role: "user", content: "ping" }] }, (event) => events.push(event));
+    await vi.waitFor(() => {
+      expect(events.some((e) => e.type === "error")).toBe(true);
+    });
+    const errorEvent = events.find((e) => e.type === "error") as Extract<PortEvent, { type: "error" }>;
+    expect(errorEvent.code).toBe("ERR-15");
+    client.disconnect();
+  });
+
+  it("handler đã gửi done rồi throw → KHÔNG gửi error kép (message cuối vẫn là done)", async () => {
+    bootWithHandler(async (_payload, ctx) => {
+      ctx.send({ type: "done", finishReason: "stop" });
+      throw new Error("late boom");
+    });
+    const { events, client } = collectEvents();
+    client.request("chat-test", { messages: [{ role: "user", content: "ping" }] }, (event) => events.push(event));
+    await vi.waitFor(() => {
+      expect(events.some((e) => e.type === "done")).toBe(true);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20)); // nhường slot cho error kép (nếu có bug)
+    expect(events.some((e) => e.type === "error")).toBe(false);
+    expect(events[events.length - 1]?.type).toBe("done");
+    client.disconnect();
+  });
+});
+
 
 

@@ -93,6 +93,7 @@
   "errors.localOriginsHint": "Ollama refused the connection. Set the environment variable OLLAMA_ORIGINS=chrome-extension://* and restart Ollama.",
   "errors.owaNotFound": "Could not locate the Outlook element (layout may have changed).",
   "errors.streamInterrupted": "The stream was interrupted. Received content is kept.",
+  "errors.streamFailed": "The stream failed with an unexpected error. Please try again.",
   "errors.storageQuota": "Storage failed or is full. Clear the cache and retry.",
   "errors.insertFailed": "Could not insert the draft into the compose box. Copy it from the preview.",
   "errors.emptyEmail": "The email is empty or unreadable.",

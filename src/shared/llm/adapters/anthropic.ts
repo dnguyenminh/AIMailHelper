@@ -12,6 +12,7 @@ import type { SseEvent } from "../sse";
 const API_ROOT = "https://api.anthropic.com/v1";
 const ANTHROPIC_VERSION = "2023-06-01";
 const PAGE_LIMIT = 100;
+const MAX_PAGES = 10; // TD-2: server lặp has_more=true cùng trang → KHÔNG loop vô hạn
 
 export class AnthropicAdapter extends BaseLLMAdapter {
   readonly id = "anthropic" as const;
@@ -61,11 +62,11 @@ export class AnthropicAdapter extends BaseLLMAdapter {
     return delta["type"] === "text_delta" ? asText(delta["text"]) : "";
   }
 
-  // GET /v1/models?limit=100 — phân trang has_more → after_id (5.2.3). ⚠ CORS spike chưa verify.
+  // GET /v1/models?limit=100 — phân trang has_more → after_id (5.2.3); cap 10 trang (TD-2). ⚠ CORS spike chưa verify.
   override async listModels(config: LLMConfig): Promise<string[]> {
     const models: string[] = [];
     let afterId: string | null = null;
-    for (;;) {
+    for (let page = 0; page < MAX_PAGES; page += 1) {
       const url = API_ROOT + "/models?limit=" + PAGE_LIMIT + (afterId !== null ? "&after_id=" + encodeURIComponent(afterId) : "");
       const response = await getJson(url, this.buildHeaders(config), { provider: this.id, timeoutMs: CALL_TIMEOUT.listModels });
       const payload = asRecord(await response.json());

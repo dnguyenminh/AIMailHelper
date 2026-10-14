@@ -51,6 +51,19 @@ describe("StorageWrapper — validate BR-15 (GĐ1 Done #2)", () => {
       storage.setProviderConfig("openai", { provider: "openai", model: "gpt-4o-mini" })
     ).rejects.toMatchObject({ code: "ERR-15" });
   });
+
+  // CR-1 / D-3 (TA follow-up GĐ1): azure.apiVersion regex YYYY-MM-DD — sai format → ERR-15 (BR-15)
+  it("validateProviderConfig: azure.apiVersion sai format bị từ chối, đúng format được chấp nhận (BR-15 — CR-1)", async () => {
+    const base = { provider: "azure" as const, apiKey: "k", model: "d", azure: { endpoint: "https://r.openai.azure.com", deployment: "d" } };
+    for (const bad of ["2024", "10-2024", "2024/10/01", "2024-10-21T00:00:00Z", "abc"]) {
+      await expect(
+        storage.setProviderConfig("azure", { ...base, azure: { ...base.azure, apiVersion: bad } })
+      ).rejects.toMatchObject({ code: "ERR-15", i18nKey: "errors.badRequest", params: { field: "azure.apiVersion", allowed: "YYYY-MM-DD" } });
+    }
+    await expect(
+      storage.setProviderConfig("azure", { ...base, azure: { ...base.azure, apiVersion: "2024-10-21" } })
+    ).resolves.toBeUndefined();
+  });
 });
 
 describe("StorageWrapper — area routing BR-04 (GĐ1)", () => {
