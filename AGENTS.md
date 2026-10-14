@@ -141,7 +141,7 @@ Then `tools/list` to confirm connection, and `tools/call` to execute tools. Fail
 
 ### Document Attachments
 - Naming: `{DOC}-v{version}-{TICKET}.docx`
-- Process: embed_images → export_docx → jira_update_issue
+- Process: embed_image → export_docx → jira_update_issue
 
 ---
 
