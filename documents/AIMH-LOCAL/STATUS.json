@@ -111,7 +111,9 @@
       "status": "in_progress",
       "startedAt": "2026-10-14T09:50:00Z",
       "gd1CompletedAt": "2026-10-14T10:20:00Z",
-      "gd1Result": "25/25 tests PASS; typecheck/build/lint exit 0; SR-07/10/12 applied; commit pending"
+      "gd1Result": "25/25 tests PASS; typecheck/build/lint exit 0; SR-07/10/12 applied; commit pending",
+      "gd3CompletedAt": "2026-10-14T17:00:00Z",
+      "gd3Result": "199/199 tests PASS (30 files, +92 GĐ3); typecheck/lint/build exit 0; commit c12a456; M-1/M-2/SR-08/SR-09 áp; hạn chế: chưa test OWA thật — spike bắt buộc trước GĐ4"
     },
     "user_guide": {
       "status": "not_started"
@@ -143,5 +145,5 @@
     "state": "closed",
     "consecutiveFailures": 0
   },
-  "lastUpdated": "2026-10-14T10:20:00Z"
+  "lastUpdated": "2026-10-14T17:00:00Z"
 }
