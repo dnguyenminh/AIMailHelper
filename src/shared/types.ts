@@ -1,5 +1,5 @@
 // src/shared/types.ts — entities chuẩn hóa (TDD §7.2) + config sections (§6.3). KHÔNG cài logic.
-import type { ProviderId } from "./llm/types";
+import type { LLMConfig, ProviderId } from "./llm/types";
 
 export type { ChatMessage, ChatOptions, LLMConfig, LLMResponse, ProviderId, TestConnectionResult } from "./llm/types";
 
@@ -49,9 +49,11 @@ export interface AppConfig {
 }
 
 // §6.1 #1 — CONFIG_GET response: KHÔNG BAO GIỜ trả apiKey nguyên văn (BR-08).
+// config = field phi nhạy cảm (model/baseUrl/azure/local) để Options prefill form — GĐ2 amendment.
 export interface ProviderStatus {
   hasKey: boolean;
   keyStorage: KeyStorage;
+  config: Omit<LLMConfig, "apiKey"> | null;
 }
 
 export interface ConfigGetResponse extends AppConfig {

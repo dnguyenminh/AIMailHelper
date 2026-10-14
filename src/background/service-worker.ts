@@ -8,16 +8,18 @@ import { registerConnectionHandlers } from "./handlers/connection.handler";
 import { registerLocatorHandlers } from "./handlers/locator.handler";
 import { registerQueueHandlers } from "./handlers/queue.handler";
 import { registerStateHandlers } from "./handlers/state.handler";
+import { registerStreamHandlers } from "./handlers/stream.handler";
 
 const router = new MessageRouter();
 registerConfigHandlers(router); // GĐ1: CONFIG_GET/SET + KEY_STORAGE_SET thật (BR-04/BR-08/BR-15)
-registerConnectionHandlers(router); // stub → GĐ2
+registerConnectionHandlers(router); // GĐ2: TEST_CONNECTION/LIST_MODELS qua registry + adapter (§6.1 #4-5)
 registerLocatorHandlers(router); // stub → GĐ3
 registerQueueHandlers(router); // stub → GĐ6
 registerStateHandlers(router); // GĐ1: GET_RUNTIME_STATE (FR-GD1-02)
 router.listen();
 
-const streamServer = new PortServer(); // GĐ1: attach skeleton — stream handlers cài ở GĐ2 (§6.2)
+const streamServer = new PortServer();
+registerStreamHandlers(streamServer); // GĐ2: kind "chat-test" — streaming qua Port (§6.2; analyze/reply GĐ3+)
 streamServer.attach();
 
 chrome.runtime.onInstalled.addListener(() => {

@@ -36,6 +36,7 @@ export interface ChatOptions {
   timeoutMs?: number; // 15s test/list · 60s chat · idle 30s stream (§9.1)
   signal?: AbortSignal; // gắn Port cancel (§6.2)
   visionImage?: { base64: string; mediaType: string }; // chỉ T3 (BR-03)
+  retryDelays?: number[]; // override backoff trong unit test (mặc định FSD 5.2.0 — call.ts)
 }
 
 export const DEFAULT_MAX_TOKENS = 2048;

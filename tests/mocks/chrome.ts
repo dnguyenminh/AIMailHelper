@@ -85,6 +85,8 @@ export interface PortPair {
 }
 
 // Duplex fake: client.postMessage → server.onMessage; ngược lại; disconnect thủ công (test EF-7).
+// postMessage defer qua queueMicrotask — mô phỏng Chrome thật: message post ngay sau connect vẫn được
+// deliver sau khi listener onConnect/onMessage gắn xong (tránh mất message đầu — bug mock).
 export function createPortPair(name: string): PortPair {
   const clientMessages = createEvent();
   const serverMessages = createEvent();
@@ -94,14 +96,14 @@ export function createPortPair(name: string): PortPair {
     name: name,
     onMessage: clientMessages,
     onDisconnect: clientDisconnect,
-    postMessage: (message: unknown) => serverMessages.emit(message),
+    postMessage: (message: unknown) => queueMicrotask(() => serverMessages.emit(message)),
     disconnect: () => serverDisconnect.emit()
   };
   const server = {
     name: name,
     onMessage: serverMessages,
     onDisconnect: serverDisconnect,
-    postMessage: (message: unknown) => clientMessages.emit(message),
+    postMessage: (message: unknown) => queueMicrotask(() => clientMessages.emit(message)),
     disconnect: () => clientDisconnect.emit()
   };
   return { client: client, server: server, clientMessages: clientMessages, serverMessages: serverMessages };
@@ -138,7 +140,9 @@ export function createChromeMock(): ChromeMock {
     if (!results.some((result) => result === true)) resolve(undefined);
   });
 
-  const connect = (name: string): unknown => {
+  const connect = (connectInfo: unknown): unknown => {
+    // chrome.runtime.connect(connectInfo: {name}) — PortClient truyền OBJECT (§3.4); string cũng chấp nhận.
+    const name = typeof connectInfo === "string" ? connectInfo : String((connectInfo as { name?: unknown })?.name ?? "");
     const pair = createPortPair(name);
     queueMicrotask(() => onConnect.emit(pair.server));
     return pair.client;

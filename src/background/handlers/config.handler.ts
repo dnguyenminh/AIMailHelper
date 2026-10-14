@@ -1,7 +1,7 @@
 // src/background/handlers/config.handler.ts — CONFIG_GET/SET + KEY_STORAGE_SET (TDD §4.4, §6.1 #1-3).
 // CONFIG_GET KHÔNG trả apiKey nguyên văn — chỉ hasKey (BR-08).
 import { AppError } from "../../shared/errors";
-import type { ProviderId } from "../../shared/llm/types";
+import type { LLMConfig, ProviderId } from "../../shared/llm/types";
 import { storage } from "../../shared/storage";
 import { isProviderId } from "../../shared/storage-schema";
 import type { ConfigGetResponse, AutomationConfig, GeneralConfig, KeyStorage, PromptsConfig, ProviderStatus, VisionConfig } from "../../shared/types";
@@ -26,13 +26,20 @@ const handleConfigGet: RpcHandler = async (): Promise<ConfigGetResponse> => {
   for (const id of providerIds) {
     const config = await storage.getProviderConfig(id);
     const hasKey = config !== null && typeof config.apiKey === "string" && config.apiKey.length > 0;
-    providers[id] = { hasKey: hasKey, keyStorage: general.keyStorage };
+    // BR-08: chỉ trả field phi nhạy cảm để prefill form (GĐ2 amendment) — apiKey KHÔNG BAO GIỜ rời SW.
+    const nonSecret = { ...(config ?? ({} as LLMConfig)) } as Partial<LLMConfig>;
+    delete nonSecret.apiKey;
+    providers[id] = {
+      hasKey: hasKey,
+      keyStorage: general.keyStorage,
+      config: config !== null ? (nonSecret as Omit<LLMConfig, "apiKey">) : null
+    };
   }
   return { general: general, prompts: prompts, automation: automation, vision: vision, activeProvider: activeProvider, providers: providers };
 };
 
 interface ConfigSetPayload {
-  section: "general" | "prompts" | "automation" | "vision" | "provider";
+  section: "general" | "prompts" | "automation" | "vision" | "provider" | "activeProvider";
   providerId?: unknown;
   value: unknown;
 }
@@ -55,6 +62,9 @@ const handleConfigSet: RpcHandler = async (payload): Promise<{ ok: true }> => {
     case "provider":
       await setProviderSection(request);
       break;
+    case "activeProvider": // GĐ2: đổi provider active từ ProviderForm (§6.1 #1 activeProvider)
+      await storage.setActiveProvider(request.value as ProviderId);
+      break;
     default:
       throw new AppError("ERR-15", "errors.badRequest", { field: "section" });
   }
@@ -66,7 +76,13 @@ async function setProviderSection(request: ConfigSetPayload): Promise<void> {
   if (!isProviderId(providerId)) {
     throw new AppError("ERR-15", "errors.badRequest", { field: "providerId" });
   }
-  await storage.setProviderConfig(providerId as ProviderId, request.value);
+  // BR-08: form để trống apiKey = giữ key đã lưu (key chưa bao giờ rời SW — merge ở SW).
+  const incoming = (request.value ?? {}) as Record<string, unknown>;
+  if (typeof incoming["apiKey"] !== "string" || (incoming["apiKey"] as string).length === 0) {
+    const existing = await storage.getProviderConfig(providerId as ProviderId);
+    if (existing?.apiKey !== undefined) incoming["apiKey"] = existing.apiKey;
+  }
+  await storage.setProviderConfig(providerId as ProviderId, incoming);
 }
 
 const handleKeyStorageSet: RpcHandler = async (payload): Promise<{ ok: true }> => {
@@ -83,7 +99,7 @@ const handleKeyStorageSet: RpcHandler = async (payload): Promise<{ ok: true }> =
 function parseConfigSet(payload: unknown): ConfigSetPayload {
   const raw = (payload ?? {}) as Record<string, unknown>;
   const section = raw["section"];
-  const sections = ["general", "prompts", "automation", "vision", "provider"];
+  const sections = ["general", "prompts", "automation", "vision", "provider", "activeProvider"];
   if (typeof section !== "string" || !sections.includes(section) || !("value" in raw)) {
     throw new AppError("ERR-15", "errors.badRequest", { field: "section" });
   }
