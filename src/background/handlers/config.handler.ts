@@ -4,7 +4,7 @@ import { AppError } from "../../shared/errors";
 import type { ProviderId } from "../../shared/llm/types";
 import { storage } from "../../shared/storage";
 import { isProviderId } from "../../shared/storage-schema";
-import type { ConfigGetResponse, GeneralConfig, KeyStorage, ProviderStatus } from "../../shared/types";
+import type { ConfigGetResponse, AutomationConfig, GeneralConfig, KeyStorage, PromptsConfig, ProviderStatus, VisionConfig } from "../../shared/types";
 import type { MessageRouter, RpcHandler } from "../router";
 
 export function registerConfigHandlers(router: MessageRouter): void {

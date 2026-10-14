@@ -44,6 +44,14 @@ function badRequest(field: string, allowed: string): AppError {
   return new AppError("ERR-15", "errors.badRequest", { field, allowed });
 }
 
+// BR-15: giá trị sai → từ chối, KHÔNG âm thầm sửa (§8.8) — cả dữ liệu hỏng non-object từ devtools.
+function requireObject(value: unknown, field: string): Record<string, unknown> {
+  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  throw badRequest(field, "object");
+}
+
 function requireEnum<T extends string>(value: unknown, allowed: readonly T[], field: string): T {
   if (typeof value === "string" && (allowed as readonly string[]).includes(value)) return value as T;
   throw badRequest(field, allowed.join("|"));
@@ -83,7 +91,7 @@ export function validateBaseUrl(value: string, field: string): string {
 }
 
 export function validateGeneral(value: unknown): GeneralConfig {
-  const raw = (value ?? {}) as Record<string, unknown>;
+  const raw = requireObject(value, "general");
   return {
     uiLanguage: requireEnum(raw["uiLanguage"] ?? DEFAULT_GENERAL.uiLanguage, UI_LANGUAGES, "uiLanguage"),
     keyStorage: requireEnum(raw["keyStorage"] ?? DEFAULT_GENERAL.keyStorage, KEY_STORAGE_AREAS, "keyStorage"),
@@ -92,8 +100,9 @@ export function validateGeneral(value: unknown): GeneralConfig {
 }
 
 export function validatePrompts(value: unknown): PromptsConfig {
-  const raw = (value ?? {}) as Record<string, unknown>;
+  const raw = requireObject(value, "prompts");
   const custom = raw["customSystemPrompt"] ?? DEFAULT_PROMPTS.customSystemPrompt;
+  if (custom !== null && typeof custom !== "string") throw badRequest("customSystemPrompt", "string|null");
   return {
     customSystemPrompt: custom === null || typeof custom === "string" ? (custom as string | null) : null,
     defaultTone: requireEnum(raw["defaultTone"] ?? DEFAULT_PROMPTS.defaultTone, REPLY_TONES, "defaultTone"),
@@ -102,7 +111,7 @@ export function validatePrompts(value: unknown): PromptsConfig {
 }
 
 function validateRule(value: unknown): AutoModeRuleProps {
-  const raw = (value ?? {}) as Record<string, unknown>;
+  const raw = requireObject(value, "rules[]");
   return {
     senderPattern: typeof raw["senderPattern"] === "string" ? raw["senderPattern"] : undefined,
     subjectPattern: typeof raw["subjectPattern"] === "string" ? raw["subjectPattern"] : undefined,
@@ -117,7 +126,7 @@ interface AutoModeRuleProps {
 }
 
 export function validateAutomation(value: unknown): AutomationConfig {
-  const raw = (value ?? {}) as Record<string, unknown>;
+  const raw = requireObject(value, "automation");
   const rules = Array.isArray(raw["rules"]) ? (raw["rules"] as unknown[]).map(validateRule) : DEFAULT_AUTOMATION.rules;
   return {
     enabled: requireBool(raw["enabled"] ?? DEFAULT_AUTOMATION.enabled, "automation.enabled"),
@@ -129,14 +138,14 @@ export function validateAutomation(value: unknown): AutomationConfig {
 }
 
 export function validateVision(value: unknown): VisionConfig {
-  const raw = (value ?? {}) as Record<string, unknown>;
+  const raw = requireObject(value, "vision");
   return { enabled: requireBool(raw["enabled"] ?? DEFAULT_VISION.enabled, "vision.enabled") };
 }
 
 // §8.8 — LLMConfig per-provider: key bắt buộc 4 cloud; baseUrl cho compatible (SR-06);
 // model không rỗng; azure.apiVersion định dạng YYYY-MM-DD; local.url localhost + preset enum.
 export function validateProviderConfig(value: unknown): LLMConfig {
-  const raw = (value ?? {}) as Record<string, unknown>;
+  const raw = requireObject(value, "providerConfig");
   const provider = requireEnum(raw["provider"], PROVIDER_IDS, "provider");
   const config: LLMConfig = { provider: provider, model: requireNonEmpty(raw["model"], "model") };
   if (typeof raw["apiKey"] === "string" && raw["apiKey"].length > 0) config.apiKey = raw["apiKey"];

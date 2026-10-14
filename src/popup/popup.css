@@ -1,0 +1,56 @@
+/* src/popup/popup.css — popup shell (DESIGN-SYSTEM tokens rút gọn cho GĐ1). */
+:root {
+  --aimh-color-bg: #ffffff;
+  --aimh-color-text: #1b1b1f;
+  --aimh-color-muted: #5f6368;
+  --aimh-color-primary: #0b57d0;
+  --aimh-color-border: #dadce0;
+  --aimh-radius: 8px;
+}
+
+body {
+  margin: 0;
+  width: 260px;
+  font-family: system-ui, "Segoe UI", sans-serif;
+  font-size: 13px;
+  color: var(--aimh-color-text);
+  background: var(--aimh-color-bg);
+}
+
+.popup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+}
+
+.popup-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.popup-provider {
+  margin: 0;
+  color: var(--aimh-color-muted);
+}
+
+.popup-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.popup-options {
+  padding: 8px 10px;
+  border: 1px solid var(--aimh-color-border);
+  border-radius: var(--aimh-radius);
+  background: var(--aimh-color-bg);
+  color: var(--aimh-color-primary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.popup-options:hover {
+  background: #f6f9fe;
+}

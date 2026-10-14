@@ -2,6 +2,7 @@
 // Router + Registry pattern: thêm RPC kind mới không sửa dispatch; error envelope thống nhất (§6.1).
 // Handler ném AppError → error envelope; lỗi lạ → ERR-15 + console.error (KHÔNG crash SW, KHÔNG log key — BR-08).
 import { AppError, DEFAULT_ERROR_I18N } from "../shared/errors";
+import type { ErrCode } from "../shared/errors";
 import { isRpcKind } from "../shared/messaging";
 import type { RpcKind, RpcRequest, RpcResponse } from "../shared/messaging";
 
@@ -58,7 +59,7 @@ function parseRequest(message: unknown): RpcRequest | null {
 }
 
 interface RpcErrorEnvelope {
-  code: "ERR-15";
+  code: ErrCode;
   i18nKey: string;
   params?: Record<string, string>;
 }

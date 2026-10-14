@@ -10,7 +10,7 @@
         "id": "AIMH-LOCAL-1",
         "title": "GĐ 1 — Scaffold (Vite+CRXJS+React+TS, manifest, popup/options shell, storage, messaging, i18n, message router)",
         "phase": "implementation-gd1",
-        "status": "not_started"
+        "status": "done"
       },
       {
         "id": "AIMH-LOCAL-2",
@@ -108,7 +108,10 @@
       "next": "P5 dev-agent GĐ1 (đang chạy song song) — sau GĐ1 pipeline khớp script contract"
     },
     "implementation": {
-      "status": "not_started"
+      "status": "in_progress",
+      "startedAt": "2026-10-14T09:50:00Z",
+      "gd1CompletedAt": "2026-10-14T10:20:00Z",
+      "gd1Result": "25/25 tests PASS; typecheck/build/lint exit 0; SR-07/10/12 applied; commit pending"
     },
     "user_guide": {
       "status": "not_started"
@@ -140,5 +143,5 @@
     "state": "closed",
     "consecutiveFailures": 0
   },
-  "lastUpdated": "2026-10-14T09:40:00Z"
+  "lastUpdated": "2026-10-14T10:20:00Z"
 }

@@ -79,13 +79,22 @@ const writeSection = (key: string, validated: unknown): Promise<void> =>
 
 export const storage = {
   getGeneral: (): Promise<GeneralConfig> => readSection(KEY_GENERAL, validateGeneral, DEFAULT_GENERAL),
-  setGeneral: (value: GeneralConfig): Promise<void> => writeSection(KEY_GENERAL, validateGeneral(value)),
+  // set* là async — validate BR-15 throw bên trong async → rejection (caller dùng await + try/catch).
+  async setGeneral(value: GeneralConfig): Promise<void> {
+    await writeSection(KEY_GENERAL, validateGeneral(value));
+  },
   getPrompts: (): Promise<PromptsConfig> => readSection(KEY_PROMPTS, validatePrompts, DEFAULT_PROMPTS),
-  setPrompts: (value: PromptsConfig): Promise<void> => writeSection(KEY_PROMPTS, validatePrompts(value)),
+  async setPrompts(value: PromptsConfig): Promise<void> {
+    await writeSection(KEY_PROMPTS, validatePrompts(value));
+  },
   getAutomation: (): Promise<AutomationConfig> => readSection(KEY_AUTOMATION, validateAutomation, DEFAULT_AUTOMATION),
-  setAutomation: (value: AutomationConfig): Promise<void> => writeSection(KEY_AUTOMATION, validateAutomation(value)),
+  async setAutomation(value: AutomationConfig): Promise<void> {
+    await writeSection(KEY_AUTOMATION, validateAutomation(value));
+  },
   getVision: (): Promise<VisionConfig> => readSection(KEY_VISION, validateVision, DEFAULT_VISION),
-  setVision: (value: VisionConfig): Promise<void> => writeSection(KEY_VISION, validateVision(value)),
+  async setVision(value: VisionConfig): Promise<void> {
+    await writeSection(KEY_VISION, validateVision(value));
+  },
 
   async getActiveProvider(): Promise<ProviderId> {
     const data = await getRaw(chrome.storage.sync, [KEY_ACTIVE_PROVIDER]);

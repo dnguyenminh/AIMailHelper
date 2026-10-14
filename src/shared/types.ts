@@ -1,5 +1,5 @@
 // src/shared/types.ts — entities chuẩn hóa (TDD §7.2) + config sections (§6.3). KHÔNG cài logic.
-import type { LLMConfig, ProviderId } from "./llm/types";
+import type { ProviderId } from "./llm/types";
 
 export type { ChatMessage, ChatOptions, LLMConfig, LLMResponse, ProviderId, TestConnectionResult } from "./llm/types";
 
