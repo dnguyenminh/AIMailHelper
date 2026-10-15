@@ -106,20 +106,11 @@ export class OwaAdapter {
 
 const BUTTON_ID = "aimh-analyze-button";
 
-// SR-10 — createElement/textContent, không innerHTML; guard duplicate (toolbar re-render OWA).
-function injectToolbarButton(onClick: () => void): HTMLElement | null {
-  const toolbar = resolveBySelectors("message-toolbar");
-  if (!toolbar || document.getElementById(BUTTON_ID)) return null;
-  const button = document.createElement("button");
-  button.id = BUTTON_ID;
-  button.type = "button";
-  button.setAttribute("aria-label", "AI phân tích");
-  button.textContent = "AI phân tích";
-  button.style.cssText =
-    "margin-left:8px;padding:2px 10px;border-radius:4px;border:1px solid #0f6cbd;background:#0f6cbd;color:#fff;font:inherit;cursor:pointer;";
-  button.addEventListener("click", onClick);
-  toolbar.appendChild(button);
-  return button;
+// UAT-2: TẮT toolbar injection cho đến khi OWA-DOM-SPIKE.md xác minh — chèn DOM node vào
+// container React của OWA có thể phá layout trang (trang bị vỡ, phát hiện UAT 15/10).
+// Nút "AI phân tích" VẪN dùng được trong panel (panel-only mode — quyết định GĐ3 giữ nguyên).
+function injectToolbarButton(_onClick: () => void): HTMLElement | null {
+  return null; // spike-pending: không mutate DOM của OWA
 }
 
 export const owaAdapter = new OwaAdapter(); // instance dùng chung content script
