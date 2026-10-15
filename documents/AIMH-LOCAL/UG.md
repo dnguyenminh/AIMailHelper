@@ -14,7 +14,7 @@
 | Title | AIMailHelper — Trợ lý AI cho Outlook Web (Browser Extension MV3) |
 | Author | DEV Agent |
 | Reviewer | BA Agent |
-| Version | 1.0 |
+| Version | 1.1 |
 | Date | 2026-10-15 |
 | Status | Draft |
 | Extension version | 0.1.0 (package.json + manifest.config.ts) |
@@ -31,6 +31,7 @@
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-10-15 | DEV Agent | Khởi tạo UG v1 — đối chiếu code GĐ1–6 + i18n vi.json; KHÔNG Jira, KHÔNG DOCX |
+| 1.1 | 2026-10-15 | BA Agent | BA review: sửa trình bày nút "AI phân tích" toolbar (mục 2.3/4.1/6.3) — toolbar không đảm bảo xuất hiện trên OWA thật (spike UNVERIFIED, deferred-to-UAT); các mục khác PASS không đổi |
 
 ---
 
@@ -125,7 +126,7 @@ Khi extension được duyệt lên **Chrome Web Store** và **Edge Add-ons** (x
 
 1. Bấm icon **AIMailHelper** trên thanh công cụ → popup hiện ra với tiêu đề **"AIMailHelper"**, dòng **"Provider: openai"** (giá trị mặc định), ô tick **"Bật extension"** và nút **"Mở Options"**.
 2. Bấm **"Mở Options"** → trang **"AIMailHelper — Cấu hình"** hiển thị đủ các phần (xem mục 3).
-3. Mở Outlook Web và mở 1 email → xuất hiện **panel AI** cạnh email với nút **"AI phân tích"**; nút này cũng được thêm vào **thanh công cụ của email**.
+3. Mở Outlook Web và mở 1 email → xuất hiện **panel AI** cạnh email với nút **"AI phân tích"** — đây là dấu hiệu chính. Nút này cũng được thêm vào **thanh công cụ của email** khi extension tìm được thanh công cụ Outlook; trên một số phiên bản OWA nút toolbar có thể chưa xuất hiện — nút trên panel luôn dùng được (xem mục 6.3).
 4. Trang `chrome://extensions` → thẻ AIMailHelper **không có nút "Errors"** báo đỏ.
 
 | Triệu chứng | Nguyên nhân | Cách xử lý |
@@ -238,7 +239,7 @@ Phần **"Cài đặt chung"** → **"Ngôn ngữ giao diện"**: **"Tiếng Vi�
 **Cách làm:**
 
 1. Mở email trong Outlook Web (xem ở khung đọc bên phải, hoặc bật riêng ra cửa sổ — cả hai chế độ đều được).
-2. Bấm nút **"AI phân tích"** — có 2 chỗ: nút được thêm vào **thanh công cụ của email**, hoặc nút trên **panel AI** cạnh email.
+2. Bấm nút **"AI phân tích"** — nút trên **panel AI** cạnh email luôn có sẵn; ngoài ra còn 1 chỗ nữa là **thanh công cụ của email** (nút toolbar chỉ xuất hiện khi extension tìm được toolbar của Outlook — nếu không thấy, dùng nút trên panel).
 3. Lần đầu tiên sẽ hiện banner xin phép (nguyên văn): *"Lần đầu dùng: nội dung email bạn mở sẽ được gửi tới endpoint LLM bạn cấu hình để phân tích."* → bấm **"Đã hiểu"** (banner chỉ hiện một lần).
 4. Panel hiển thị **"Đang đọc email…"** → **"Đang phân tích…"** → kết quả hiện dần từng phần. Có thể bấm **"Dừng"** bất cứ lúc nào.
 
@@ -486,7 +487,7 @@ Ollama mặc định chặn request từ trang web/extension khác (CORS) — c�
 | Tình huống | Xử lý |
 |------------|-------|
 | Panel AI không hiện trong Outlook | Kiểm tra ô **"Bật extension"** trên popup; đúng 1 trong 3 domain Outlook được hỗ trợ; refresh tab Outlook; `chrome://extensions` bấm nút refresh trên thẻ extension |
-| Nút "AI phân tích" không xuất hiện trên toolbar email | Vẫn còn nút **"AI phân tích"** trên panel AI cạnh email; nếu cả hai không có → Outlook vừa đổi giao diện, bấm **"Diagnose"** và báo lỗi |
+| Nút "AI phân tích" không xuất hiện trên toolbar email | Nút toolbar phụ thuộc việc tìm được toolbar Outlook (có thể không có trên phiên bản OWA hiện tại) — nút **"AI phân tích"** trên panel AI cạnh email luôn dùng được; nếu cả hai không có → Outlook vừa đổi giao diện, bấm **"Diagnose"** và báo lỗi |
 | Test Connection xanh nhưng phân tích báo lỗi | Chưa chọn/lưu **model** — vào phần "Model" chọn model rồi **"Lưu cấu hình provider"** |
 | Đổi ngôn ngữ không ăn | Đổi trong phần "Cài đặt chung"; toàn bộ label đổi ngay; mục hiếm gặp thiếu bản dịch sẽ hiện *"Thiếu bản dịch cho mục này."* (ERR-13) mà không vỡ giao diện |
 | Muốn xóa cache triage | Cache tự quản (tối đa 500 email gần nhất, tự dọn). Buộc chấm lại email → **"Quét lại (bỏ cache)"**. Bộ nhớ đầy → lỗi ERR-08 kèm hướng dẫn |
