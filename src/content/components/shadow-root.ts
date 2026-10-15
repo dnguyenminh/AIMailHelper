@@ -95,7 +95,7 @@ export const PANEL_BASE_CSS = [
   ".aimh-panel { resize: both; overflow: auto; max-height: 80vh; max-width: 480px; min-width: 230px;",
   "  min-height: 96px; }",
   ".aimh-titlebar { display: flex; align-items: center; justify-content: space-between;",
-  "  cursor: move; user-select: none; padding-bottom: 6px; }",
+  "  cursor: move; user-select: none; touch-action: none; padding-bottom: 6px; }",
   ".aimh-titlebar .aimh-panel-title { pointer-events: none; }",
   ".aimh-winbtns { display: flex; gap: 2px; }",
   ".aimh-winbtns button { border: none; background: transparent; color: #5f6368; cursor: pointer;",

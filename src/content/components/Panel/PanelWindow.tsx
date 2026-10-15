@@ -2,7 +2,7 @@
 // kéo thả qua thanh tiêu đề, thu nhỏ (--), ẩn (×) thành bong bóng tròn, khôi phục; vị trí +
 // trạng thái persist sessionStorage (theo tab — hợp lý cho cửa sổ gắn tab). Host element nằm
 // NGOÀI shadow (position:fixed) — set style trực tiếp qua prop host.
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { t } from "../../../shared/i18n";
 
@@ -19,7 +19,6 @@ interface SavedWindow {
 
 export function PanelWindow({ host, children }: { host: HTMLDivElement | null; children: ReactNode }) {
   const [win, setWin] = useState<WindowState>("expanded");
-  const dragRef = useRef<{ dx: number; dy: number; width: number } | null>(null);
 
   // Khôi phục vị trí + trạng thái lưu lúc mount.
   useEffect(() => {
@@ -36,6 +35,7 @@ export function PanelWindow({ host, children }: { host: HTMLDivElement | null; c
     } catch {
       /* sessionStorage lỗi — dùng mặc định */
     }
+    console.info("[AIMH] panel ready — kéo thanh tiêu đề để di chuyển");
   }, [host]);
 
   const applyPos = useCallback(
@@ -53,25 +53,36 @@ export function PanelWindow({ host, children }: { host: HTMLDivElement | null; c
     [host]
   );
 
-  const onTitleDown = useCallback(
-    (e: React.MouseEvent): void => {
-      if (!host || (e.target as HTMLElement).closest("button")) return; // nút điều khiển — không kéo
+  // UAT — kéo thả bằng Pointer Events + capture TRÊN CHÍNH thanh tiêu đề (không qua window):
+  // mousemove trên window dễ bị trang OWA chặn/hủy; pointer capture giữ chuỗi drag ngay cả khi
+  // chuột ra ngoài panel. touch-action:none trong CSS để touch cũng kéo được.
+  const onTitlePointerDown = useCallback(
+    (e: React.PointerEvent): void => {
+      if (!host || !e.isPrimary || (e.target as HTMLElement).closest("button")) return; // nút — không kéo
+      const bar = e.currentTarget as HTMLElement;
       const rect = host.getBoundingClientRect();
-      dragRef.current = { dx: e.clientX - rect.left, dy: e.clientY - rect.top, width: rect.width };
+      const dx = e.clientX - rect.left;
+      const dy = e.clientY - rect.top;
+      const width = rect.width;
       host.style.right = "auto";
-      const move = (ev: MouseEvent): void => {
-        if (!dragRef.current) return;
-        const x = Math.min(Math.max(ev.clientX - dragRef.current.dx, 4), Math.max(window.innerWidth - dragRef.current.width - 4, 4));
-        const y = Math.min(Math.max(ev.clientY - dragRef.current.dy, 4), window.innerHeight - 36);
+      try {
+        bar.setPointerCapture(e.pointerId);
+      } catch {
+        /* capture không hỗ trợ — vẫn kéo bằng pointermove */
+      }
+      const move = (ev: PointerEvent): void => {
+        const x = Math.min(Math.max(ev.clientX - dx, 4), Math.max(window.innerWidth - width - 4, 4));
+        const y = Math.min(Math.max(ev.clientY - dy, 4), window.innerHeight - 36);
         applyPos(x + "px", y + "px");
       };
       const up = (): void => {
-        dragRef.current = null;
-        window.removeEventListener("mousemove", move);
-        window.removeEventListener("mouseup", up);
+        bar.removeEventListener("pointermove", move);
+        bar.removeEventListener("pointerup", up);
+        bar.removeEventListener("pointercancel", up);
       };
-      window.addEventListener("mousemove", move);
-      window.addEventListener("mouseup", up);
+      bar.addEventListener("pointermove", move);
+      bar.addEventListener("pointerup", up);
+      bar.addEventListener("pointercancel", up);
     },
     [applyPos, host]
   );
@@ -95,7 +106,7 @@ export function PanelWindow({ host, children }: { host: HTMLDivElement | null; c
 
   return (
     <div className="aimh-panel">
-      <div className="aimh-titlebar" onMouseDown={onTitleDown} role="heading" aria-level={1}>
+      <div className="aimh-titlebar" onPointerDown={onTitlePointerDown} role="heading" aria-level={1}>
         <span className="aimh-panel-title">{t("panel.title")}</span>
         <span className="aimh-winbtns">
           <button
