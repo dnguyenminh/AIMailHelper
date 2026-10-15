@@ -19,8 +19,15 @@ export type SelectorChain = readonly string[];
 
 export const SELECTOR_CHAINS: Record<FunctionKey, SelectorChain> = {
   // [role=main] [aria-label*=Message i] → [data-conversation] → (structural probe — GĐ3 detector)
-  "reading-pane": ['[role="main"] [aria-label*="Message" i]', "[data-conversation]"],
-  // toolbar trong reading pane → mốc tương đối nhóm Reply (structural — GĐ3)
+  // UAT spike 15/10 (outlook.cloud.microsoft): aria-label*=Message trúng element sai (ribbon) —
+  // giữ đầu chain cho OWA cũ, thêm iframe container (thân email nằm trong iframe cùng origin).
+  "reading-pane": [
+    '[role="main"] [aria-label*="Message" i]',
+    "[data-conversation]",
+    '[role="main"] iframe'
+  ],
+  // UAT spike: [role=toolbar] trúng RIBBON (Home tab) trên OWA mới — KHÔNG phải message toolbar.
+  // Message toolbar thật nằm cạnh pane header (sau khi fix reader nâng container).
   "message-toolbar": ['[role="main"] [role="toolbar"]', '[role="toolbar"]'],
   // aria-label EN "Reply" (loại "Reply all") → label VN "Trả lời"
   "reply-button": [
@@ -34,8 +41,10 @@ export const SELECTOR_CHAINS: Record<FunctionKey, SelectorChain> = {
     '[aria-label*="trả lời" i][role="textbox"]'
   ],
   // list chứa listitem con → container scroll chính (virtualized — chỉ item trong DOM, AF-5 UC-03)
-  "inbox-list": ['[role="list"]'],
-  "inbox-item": ['[role="listitem"]']
+  // UAT spike 15/10 (outlook.cloud.microsoft): danh sách email = listbox chứa option (mỗi option
+  // = 1 email với checkbox + Flag); cây thư mục = treeitem. Giữ [role=list] cho OWA cũ.
+  "inbox-list": ['[role="list"]', '[role="main"] [role="listbox"]', '[role="listbox"]'],
+  "inbox-item": ['[role="listitem"]', '[role="main"] [role="option"]', '[role="option"]', '[role="treeitem"]']
 };
 
 // BR-01 / SR-14 invariant: send-button KHÔNG thuộc FunctionKey — CHỈ phục vụ diagnose đối chiếu
