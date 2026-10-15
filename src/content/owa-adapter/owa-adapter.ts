@@ -9,7 +9,7 @@ import { readEditableText, writeEditableText } from "./editable";
 import { detectView } from "./detector";
 import type { OwaViewInfo } from "./detector";
 import { readEmail } from "./reader";
-import { resolveBySelectors, SelectorTier } from "./selectors";
+import { SelectorTier } from "./selectors";
 import type { FunctionKey, LocatorStrategy } from "./selectors";
 import { SemanticLocator } from "./semantic-locator";
 import {
@@ -103,8 +103,6 @@ export class OwaAdapter {
     return hasFolderChanged(before, (key, question) => this.locate(key, question));
   }
 }
-
-const BUTTON_ID = "aimh-analyze-button";
 
 // UAT-2: TẮT toolbar injection cho đến khi OWA-DOM-SPIKE.md xác minh — chèn DOM node vào
 // container React của OWA có thể phá layout trang (trang bị vỡ, phát hiện UAT 15/10).
