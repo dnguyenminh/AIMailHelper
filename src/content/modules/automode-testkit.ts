@@ -11,7 +11,7 @@ import type { AnalysisResult, AutomationConfig, EmailData, PromptsConfig, QueueI
 
 export const AUTOMATION_ENABLED: AutomationConfig = { enabled: true, rules: [], batchSize: 5, throttleMs: 0, triageCap: 50 };
 export const PROMPTS: PromptsConfig = { customSystemPrompt: null, defaultTone: "chinh-thuc", replyLanguage: "auto" };
-export const EMAIL: EmailData = { messageId: "m1", subject: "INVOICE #123", sender: { name: "Boss", email: "boss@x.com" }, to: [], cc: [], bodyText: "nội dung", detectedView: "reading-pane" };
+export const EMAIL: EmailData = { messageId: "m1", subject: "INVOICE #123", sender: { name: "Boss", email: "boss@x.com" }, to: [], cc: [], hasAttachment: false, bodyText: "nội dung", detectedView: "reading-pane" };
 
 export const analysisOf = (score: number): AnalysisResult =>
   ({ summary: "tổng hợp", importanceScore: score, importanceLabel: score >= 70 ? "cao" : "trung-binh", intent: "hỏi", actions: [], deadline: null, sentiment: "trung lập" });
@@ -140,3 +140,4 @@ export const lastState = (harness: Harness): AutoModeState => harness.states[har
 export const kindsOf = (harness: Harness): string[] => harness.requestSpy.mock.calls.map((call) => call[0] as string);
 export const queueItem = (id: string, createdAt: number, messageId = "m1"): QueueItem =>
   ({ id: id, messageId: messageId, draft: "draft " + id, status: "pending", createdAt: new Date(createdAt).toISOString() });
+

@@ -24,7 +24,7 @@ const EMAIL: EmailData = {
   sender: { name: "An", email: "an@x.vn" },
   to: [{ name: "Bình", email: "binh@y.vn" }],
   cc: [],
-  bodyText: "Cho tôi hỏi giá sản phẩm X?",
+  hasAttachment: false, bodyText: "Cho tôi hỏi giá sản phẩm X?",
   detectedView: "reading-pane"
 };
 
@@ -110,7 +110,7 @@ describe("reply qua Port streaming (UC-02 bước 3-6)", () => {
     await storage.setActiveProvider("openai");
     bootReply();
     const { events, client } = collectEvents();
-    requestReply(client, events, { email: { ...EMAIL, bodyText: "   " } });
+    requestReply(client, events, { email: { ...EMAIL, hasAttachment: false, bodyText: "   " } });
     await vi.waitFor(() => expect(events.some((e) => e.type === "error")).toBe(true));
     expect((events.find((e) => e.type === "error") as Extract<PortEvent, { type: "error" }>).code).toBe("ERR-10");
     client.disconnect();
@@ -137,3 +137,4 @@ describe("reply qua Port streaming (UC-02 bước 3-6)", () => {
     client401.disconnect();
   });
 });
+

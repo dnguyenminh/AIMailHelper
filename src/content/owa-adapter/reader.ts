@@ -63,6 +63,7 @@ export async function readEmail(locate: LocateFn, view: OwaViewInfo): Promise<Em
     to: readRecipients(container, TO_PATTERN),
     cc: readRecipients(container, CC_PATTERN),
     bodyText: bodyText,
+    hasAttachment: detectAttachments(container),
     threadContext: view.view === "conversation" ? buildThreadContext(container) : undefined,
     detectedView: view.view === "unknown" ? "reading-pane" : view.view
   };
@@ -162,12 +163,7 @@ function largestTextChildExcludingToolbars(container: Element): Element | null {
 
 // SR-10 — normalize: bỏ tag (textContent), gộp whitespace trong dòng, giữ xuống dòng đoạn (§3.1.4).
 export function normalizeBody(raw: string): string {
-  return raw
-    .replace(/\r\n?/g, "\n")
-    .split("\n")
-    .map((line) => line.replace(/\s+/g, " ").trim())
-    .filter((line) => line.length > 0)
-    .join("\n");
+  return raw.replace(/\r\n?/g, "\n").split("\n").map((l) => l.replace(/\s+/g, " ").trim()).filter((l) => l.length > 0).join("\n");
 }
 
 // AF-1 UC-01 — thread context khi conversation: các message block TRƯỚC email hiện tại (cũ nhất trước).
@@ -183,4 +179,18 @@ function buildThreadContext(container: Element): EmailData["threadContext"] {
 
 function textOf(el: Element | null): string {
   return el?.textContent?.trim() ?? "";
+}
+
+// UAT — phát hiện đính kèm trong pane: probe aria-label attach/đính kèm + chip tên file có
+// phần mở rộng phổ biến (snapshot OWA mới: option "....xlsx Open 36 KB"). CHỈ đọc — SR-10.
+function detectAttachments(container: Element): boolean {
+  if (container.querySelector('[aria-label*="attach" i], [aria-label*="đính kèm" i], [title*="attach" i]') !== null) {
+    return true;
+  }
+  const filePattern = /\.(xlsx?|docx?|pptx?|pdf|zip|rar|eml|msg|csv)\b/i;
+  for (const el of Array.from(container.querySelectorAll("[aria-label], [title]"))) {
+    const label = el.getAttribute("aria-label") ?? el.getAttribute("title") ?? "";
+    if (filePattern.test(label)) return true;
+  }
+  return false;
 }

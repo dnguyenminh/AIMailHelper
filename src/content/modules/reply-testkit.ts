@@ -13,7 +13,7 @@ export const EMAIL: EmailData = {
   sender: { name: "An", email: "an@x.vn" },
   to: [],
   cc: [],
-  bodyText: "Nội dung",
+  hasAttachment: false, bodyText: "Nội dung",
   detectedView: "reading-pane"
 };
 
@@ -56,3 +56,4 @@ export async function started(harness: Harness): Promise<ReplyController> {
 export function lastEvent(harness: Harness): (event: PortEvent) => void {
   return harness.events[harness.events.length - 1] as (event: PortEvent) => void;
 }
+

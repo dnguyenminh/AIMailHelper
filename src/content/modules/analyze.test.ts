@@ -15,7 +15,7 @@ const EMAIL: EmailData = {
   sender: { name: "a", email: "a@x.vn" },
   to: [],
   cc: [],
-  bodyText: "body",
+  hasAttachment: false, bodyText: "body",
   detectedView: "reading-pane"
 };
 
@@ -154,3 +154,4 @@ describe("AnalyzeController — UC-01 state machine (GĐ3)", () => {
     errSpy.mockRestore();
   });
 });
+

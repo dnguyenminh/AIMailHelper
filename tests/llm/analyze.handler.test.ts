@@ -23,7 +23,7 @@ const EMAIL: EmailData = {
   sender: { name: "An", email: "an@example.com" },
   to: [{ name: "Bình", email: "binh@example.com" }],
   cc: [],
-  bodyText: "Nội dung email cần phân tích đầy đủ.",
+  hasAttachment: false, bodyText: "Nội dung email cần phân tích đầy đủ.",
   detectedView: "reading-pane"
 };
 
@@ -75,7 +75,7 @@ describe("analyze qua Port streaming (UC-01 step 3-6 — GĐ3)", () => {
     const { mock } = stubFetch();
     const events: PortEvent[] = [];
     const client = new PortClient();
-    client.request("analyze", { email: { ...EMAIL, bodyText: "   " } }, (event) => events.push(event));
+    client.request("analyze", { email: { ...EMAIL, hasAttachment: false, bodyText: "   " } }, (event) => events.push(event));
     await vi.waitFor(() => {
       expect(events.some((e) => e.type === "error")).toBe(true);
     });
@@ -137,3 +137,4 @@ describe("analyze qua Port streaming (UC-01 step 3-6 — GĐ3)", () => {
     client.disconnect();
   });
 });
+

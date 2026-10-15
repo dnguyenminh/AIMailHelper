@@ -104,3 +104,4 @@ describe("reader — FR-GD3-02 (đọc EmailData qua locate)", () => {
     expect(fromContainer.bodyText.length).toBeGreaterThan(0);
   });
 });
+

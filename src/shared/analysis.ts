@@ -106,6 +106,7 @@ export function parseEmailPayload(raw: unknown): EmailData {
   }
   return {
     messageId: j["messageId"],
+    hasAttachment: j["hasAttachment"] === true,
     subject: j["subject"],
     sender: sender,
     to: parsePersonList(j["to"]),
@@ -145,3 +146,8 @@ function parsePerson(raw: unknown): { name: string; email: string } | null {
 function badEmail(): AppError {
   return new AppError("ERR-15", "errors.badRequest", { field: "email" });
 }
+
+
+
+
+

@@ -25,6 +25,10 @@ export interface PromptsConfig {
 export interface AutoModeRule {
   senderPattern?: string;
   subjectPattern?: string;
+  bodyPattern?: string; // UAT — từ khóa trong nội dung email (Outlook: "with specific words in the body")
+  toPattern?: string; // UAT — gửi đến ai (email/tên)
+  ccPattern?: string; // UAT — Cc chứa
+  hasAttachment?: boolean; // UAT — chỉ email có đính kèm (true) / bỏ qua điều kiện (undefined)
   minImportance?: number; // 0..100
 }
 
@@ -75,6 +79,7 @@ export interface EmailData {
   to: { name: string; email: string }[];
   cc: { name: string; email: string }[];
   bodyText: string;
+  hasAttachment: boolean; // UAT — phát hiện đính kèm trong pane (rules + triage)
   threadContext?: { subject: string; from: string; excerpt: string }[]; // chỉ khi conversation (AF-1)
   detectedView: "reading-pane" | "popout" | "conversation";
 }
