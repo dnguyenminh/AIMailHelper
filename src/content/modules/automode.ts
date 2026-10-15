@@ -7,6 +7,7 @@ import { toAnalysisResult } from "../../shared/analysis";
 import { AppError } from "../../shared/errors";
 import type { PortEvent } from "../../shared/messaging";
 import type { StreamHandle } from "../../shared/port-client";
+import { toAutoModeError } from "./automode-errors";
 import type { EmailData, QueueItem } from "../../shared/types";
 import type { InsertDecision } from "../owa-adapter/actions";
 import { AutoModeQueue } from "./automode-approve";
@@ -41,7 +42,7 @@ export class AutoModeController {
     if (this.stopped) return;
     const config = await this.deps.getAutomation();
     this.throttleMs = config.throttleMs;
-    if (config.enabled && this.observer === null) await this.startObserver();
+    if (config.enabled && this.observer === null) await this.startObserverSafe();
     if (!config.enabled) this.stopObserver(); // FR-GD6-06 — queue giữ nguyên, không tự hành động
     this.enabled = config.enabled;
     this.patch({ enabled: config.enabled });
@@ -63,6 +64,12 @@ export class AutoModeController {
     }
     this.observer = this.deps.observerFactory(() => this.onMutations());
     this.observer.observe(target); // CHỈ đăng ký khi enabled (BR-02 — sync() là cổng duy nhất)
+  }
+
+  // UAT-1: startObserver fail (ERR-02 snapshot rỗng / ERR-11 chưa cấu hình / ERR-15) —
+  // fail-closed: observer KHÔNG start, queue giữ nguyên, panel hiển thị lastError (TDD §2.4).
+  private startObserverSafe(): Promise<void> {
+    return this.startObserver().catch((error) => this.patch({ lastError: toAutoModeError(error) }));
   }
 
   // TẮT — hủy observer + stream/schedule; KHÔNG đụng queue (FR-GD6-06).
@@ -187,9 +194,4 @@ export class AutoModeController {
     this.state = { ...this.state, ...partial };
     this.deps.onState(this.state);
   }
-
-}function toAutoModeError(error: unknown): { code: string; i18nKey: string; params?: Record<string, string> } {
-  if (error instanceof AppError) return { code: error.code, i18nKey: error.i18nKey, params: error.params };
-  console.error("[AIMH][automode] unexpected error:", error); // KHÔNG log payload email (BR-08)
-  return { code: "ERR-15", i18nKey: "errors.badRequest" };
 }

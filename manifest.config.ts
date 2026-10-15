@@ -10,11 +10,12 @@ export default defineManifest({
   version: "0.1.0",
   // BR-15/BR-04: chrome.storage sync + local — quyền duy nhất của extension (SR-12 least privilege).
   permissions: ["storage"],
-  // BR-05: chỉ 3 domain OWA + 4 LLM cloud (endpoint cố định — §8.3, GĐ2) — content script chỉ inject 3 domain OWA.
+  // BR-05: 4 domain OWA (gồm outlook.cloud.microsoft — OWA mới, phát hiện UAT) + 4 LLM cloud (§8.3, GĐ2).
   host_permissions: [
     "https://outlook.office.com/*",
     "https://outlook.office365.com/*",
     "https://outlook.live.com/*",
+    "https://outlook.cloud.microsoft/*",
     "https://api.openai.com/*",
     "https://*.openai.azure.com/*",
     "https://api.anthropic.com/*",
@@ -30,7 +31,8 @@ export default defineManifest({
       matches: [
         "https://outlook.office.com/*",
         "https://outlook.office365.com/*",
-        "https://outlook.live.com/*"
+        "https://outlook.live.com/*",
+        "https://outlook.cloud.microsoft/*"
       ],
       js: ["src/content/index.tsx"],
       run_at: "document_idle"

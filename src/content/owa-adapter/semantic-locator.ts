@@ -95,6 +95,13 @@ export class SemanticLocator implements LocatorStrategy {
   // §5.3 bước 7-13: snapshot → LOCATOR_RESOLVE → deref → verify (SR-08) → ghi cache selector (#8).
   private async resolveViaLlm(functionKey: FunctionKey, question: string, hash: string): Promise<Element | null> {
     const snapshot = this.deps.index.buildSnapshot();
+    if (snapshot.text.length === 0) {
+      // UAT-2: DOM mới của OWA (outlook.cloud.microsoft) có thể cho snapshot rỗng (a11y walker
+      // chưa đọc được cấu trúc) — gọi RPC sẽ ERR-02 vô ích. T2 thất bại mềm → null → T3/ERR-06
+      // (caller hiển thị "dùng Diagnose"), chờ OWA-DOM-SPIKE.md cập nhật selector/walker.
+      console.info("[AIMH][locator] snapshot rỗng trên DOM hiện tại — T2 bỏ qua (chờ spike OWA-DOM-SPIKE.md)");
+      return null;
+    }
     let refId: string | null = null;
     try {
       const response = await this.deps.resolveRpc({ functionKey: functionKey, question: question, snapshot: snapshot.text });

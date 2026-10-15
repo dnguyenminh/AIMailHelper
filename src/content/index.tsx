@@ -7,7 +7,7 @@ import { Panel } from "./components/Panel/Panel";
 import { adoptStyles, createShadowHost, PANEL_BASE_CSS } from "./components/shadow-root";
 import { owaAdapter } from "./owa-adapter/owa-adapter";
 
-const OWA_HOSTS = new Set(["outlook.office.com", "outlook.office365.com", "outlook.live.com"]);
+const OWA_HOSTS = new Set(["outlook.office.com", "outlook.office365.com", "outlook.live.com", "outlook.cloud.microsoft"]);
 const EXTERNAL_ANALYZE_EVENT = "aimh:analyze";
 
 function isOwaHost(hostname: string): boolean {

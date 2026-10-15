@@ -24,7 +24,8 @@ const cfg = manifest as unknown as ManifestConfig;
 const OWA_HOSTS = [
   "https://outlook.office.com/*",
   "https://outlook.office365.com/*",
-  "https://outlook.live.com/*"
+  "https://outlook.live.com/*",
+  "https://outlook.cloud.microsoft/*"
 ];
 
 const CLOUD_HOSTS = [
