@@ -21,6 +21,14 @@ const EXCERPT_CHARS = 160;
 export async function readEmail(locate: LocateFn, view: OwaViewInfo): Promise<EmailData> {
   let container = view.container ?? (await locate("reading-pane", "vùng đọc email đang mở"));
   if (!container) throw new AppError("ERR-06", "errors.owaNotFound");
+  // UAT — OWA mới (outlook.cloud.microsoft): detector findConversation trả [data-conversation]
+  // ĐẦU TIÊN trong document = hàng trong DANH SÁCH thư (mỗi row là 1 conversation), KHÔNG phải
+  // pane đọc → reader đọc nhầm ribbon/list. Validate: container phải chứa body-like text
+  // (≥300 ký tự); nếu nhỏ hơn → dùng pane lớn hơn từ locate (aria "N messages", len 5768).
+  const located = await locate("reading-pane", "vùng đọc email đang mở").catch(() => null);
+  if (located !== null && (located.textContent ?? "").length > (container.textContent ?? "").length) {
+    container = located;
+  }
   let subject = textOf(container.querySelector(SUBJECT_PROBE));
   if (subject.length === 0) {
     // UAT — OWA mới: heading đầu trong container rỗng; subject nằm ở ô riêng

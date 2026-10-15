@@ -18,10 +18,12 @@ export interface LocatorStrategy {
 export type SelectorChain = readonly string[];
 
 export const SELECTOR_CHAINS: Record<FunctionKey, SelectorChain> = {
-  // [role=main] [aria-label*=Message i] → [data-conversation] → (structural probe — GĐ3 detector)
-  // UAT spike 15/10 (outlook.cloud.microsoft): aria-label*=Message trúng element sai (ribbon) —
-  // giữ đầu chain cho OWA cũ, thêm iframe container (thân email nằm trong iframe cùng origin).
+  // UAT spike 15/10 (outlook.cloud.microsoft): thân email nằm trong region skip-link
+  // #Skip to message-region (landmark a11y của OWA — chứa TOÀN BỘ pane: subject/From/To/body).
+  // Đặt ĐẦU chain; dùng [id="..."] thay # escaping (id chứa khoảng trắng).
+  // UAT spike: aria-label*=Message trúng element sai (ribbon) — giữ đầu chain cho OWA cũ, thêm iframe container.
   "reading-pane": [
+    '[id="Skip to message-region"]',
     '[role="main"] [aria-label*="Message" i]',
     "[data-conversation]",
     '[role="main"] iframe'
