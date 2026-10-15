@@ -21,7 +21,15 @@ const EXCERPT_CHARS = 160;
 export async function readEmail(locate: LocateFn, view: OwaViewInfo): Promise<EmailData> {
   let container = view.container ?? (await locate("reading-pane", "vùng đọc email đang mở"));
   if (!container) throw new AppError("ERR-06", "errors.owaNotFound");
-  const subject = textOf(container.querySelector(SUBJECT_PROBE));
+  let subject = textOf(container.querySelector(SUBJECT_PROBE));
+  if (subject.length === 0) {
+    // UAT — OWA mới: heading đầu trong container rỗng; subject nằm ở ô riêng
+    // ([aria-label*=Subject] / data-testid) — fallback theo thứ tự probe phổ biến.
+    subject =
+      textOf(container.querySelector('[aria-label*="Subject" i]')) ||
+      textOf(container.querySelector("[data-testid*='subject' i]")) ||
+      textOf(container.querySelector('[placeholder*="Subject" i], [placeholder*="Tiêu đề" i]'));
+  }
   const fromRaw = labeledValues(container, FROM_PATTERN)[0] ?? "";
   const sender = parsePerson(fromRaw) ?? { ...EMPTY_PERSON };
   let bodyText = normalizeBody(extractBodyText(container));
@@ -117,19 +125,28 @@ export function parsePerson(raw: string): { name: string; email: string } | null
 }
 
 // Body: probe aria-label *body* → fallback con trực tiếp chứa nhiều text nhất (structural).
+// UAT (outlook.cloud.microsoft): container = conversation root (aria "N messages") — con trực tiếp
+// gồm NHÁNH RIBBON ("Quick steps" + glyph icons, nhiều button) và NHÁNH THÂN EMAIL. largestTextChild
+// cũ chọn nhầm ribbon → loại nhánh có >5 button hoặc chứa chữ "Quick steps" (spike 15/10).
 function extractBodyText(container: Element): string {
-  const bodyNode = container.querySelector(BODY_PROBE) ?? largestTextChild(container);
+  const bodyNode =
+    container.querySelector(BODY_PROBE) ?? largestTextChildExcludingToolbars(container);
   return bodyNode !== null ? bodyNode.textContent ?? "" : container.textContent ?? "";
 }
 
-function largestTextChild(container: Element): Element | null {
+function largestTextChildExcludingToolbars(container: Element): Element | null {
   let best: Element | null = null;
-  let bestLen = 0;
+  let bestScore = 0;
   for (const child of container.children) {
-    const len = (child.textContent ?? "").trim().length;
-    if (len > bestLen) {
+    const text = (child.textContent ?? "").trim();
+    const len = text.length;
+    if (len === 0) continue;
+    const buttonCount = child.querySelectorAll("button, [role='button']").length;
+    const isToolbars = buttonCount > 5 || text.includes("Quick steps"); // ribbon/toolbar nhánh — loại
+    if (isToolbars) continue;
+    if (len > bestScore) {
       best = child;
-      bestLen = len;
+      bestScore = len;
     }
   }
   return best;
