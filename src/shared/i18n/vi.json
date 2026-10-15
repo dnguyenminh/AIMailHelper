@@ -26,6 +26,7 @@
   "options.provider.preset": "Preset",
   "options.provider.preset.ollama": "Ollama (cổng 11434)",
   "options.provider.preset.lmstudio": "LM Studio (cổng 1234)",
+  "options.provider.permissionWarning": "Extension sẽ gửi API key của bạn tới {origin}. Hãy chắc chắn đây là endpoint bạn tin tưởng.",
   "options.provider.save": "Lưu cấu hình provider",
   "options.provider.saving": "Đang lưu…",
   "options.provider.saved": "Đã lưu cấu hình.",

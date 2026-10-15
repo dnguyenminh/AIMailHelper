@@ -97,7 +97,9 @@ function azureFields(draft: LLMConfig, onDraft: (next: LLMConfig) => void): JSX.
   return (
     <>
       <label className="field"><span>{t("options.provider.endpoint")}</span>
-        <input type="url" value={azure.endpoint} onChange={(e) => update({ endpoint: e.target.value })} /></label>
+        <input type="url" value={azure.endpoint} onChange={(e) => update({ endpoint: e.target.value })} />
+        <PermissionWarning draft={draft} /> {/* azure-lạ: endpoint ngoài host tĩnh → origin động (F-01) */}
+      </label>
       <label className="field"><span>{t("options.provider.deployment")}</span>
         <input type="text" value={azure.deployment} onChange={(e) => update({ deployment: e.target.value })} /></label>
       <label className="field"><span>{t("options.provider.apiVersion")}</span>
@@ -109,7 +111,9 @@ function azureFields(draft: LLMConfig, onDraft: (next: LLMConfig) => void): JSX.
 function baseUrlField(draft: LLMConfig, onDraft: (next: LLMConfig) => void): JSX.Element {
   return (
     <label className="field"><span>{t("options.provider.baseUrl")}</span>
-      <input type="url" value={draft.baseUrl ?? ""} onChange={(e) => onDraft({ ...draft, baseUrl: e.target.value })} /></label>
+      <input type="url" value={draft.baseUrl ?? ""} onChange={(e) => onDraft({ ...draft, baseUrl: e.target.value })} />
+      <PermissionWarning draft={draft} />
+    </label>
   );
 }
 
@@ -128,7 +132,18 @@ function localFields(draft: LLMConfig, onDraft: (next: LLMConfig) => void): JSX.
           <option value="lmstudio">{t("options.provider.preset.lmstudio")}</option>
         </select></label>
       <label className="field"><span>{t("options.provider.localUrl")}</span>
-        <input type="url" value={local.url} onChange={(e) => update({ url: e.target.value })} /></label>
+        <input type="url" value={local.url} onChange={(e) => update({ url: e.target.value })} />
+        <PermissionWarning draft={draft} />
+      </label>
     </>
   );
+}
+
+// SR-06/F-01 (P5.7) — disclosure copy TRƯỚC optional permission request: render ngay dưới field URL mang
+// origin (baseUrl/localUrl/endpoint) khi requestOrigin(draft) != null — cùng điều kiện khiến save() gọi
+// chrome.permissions.request; 4 provider cloud có host tĩnh → null → không render.
+function PermissionWarning(props: { draft: LLMConfig }): JSX.Element | null {
+  const origin = requestOrigin(props.draft);
+  if (origin === null) return null;
+  return <small className="hint">{t("options.provider.permissionWarning", { origin })}</small>;
 }

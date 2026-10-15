@@ -85,6 +85,11 @@ jobs:
       - name: Install dependencies (npm ci)
         run: npm ci
 
+      # SR-07/DR-06 (P5.7 F-02) — supply-chain audit trên prod deps; warn-only giai đoạn đầu.
+      - name: Audit production dependencies (npm audit --omit=dev)
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true
+
       - name: Run tests (vitest run)
         run: npm test
 
