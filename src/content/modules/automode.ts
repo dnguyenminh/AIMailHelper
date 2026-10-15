@@ -64,6 +64,7 @@ export class AutoModeController {
     }
     this.observer = this.deps.observerFactory(() => this.onMutations());
     this.observer.observe(target); // CHỈ đăng ký khi enabled (BR-02 — sync() là cổng duy nhất)
+    this.patch({ lastError: null }); // định vị OK → xóa lỗi cũ (tránh banner stale trong QueueView)
   }
 
   // UAT-1: startObserver fail (ERR-02 snapshot rỗng / ERR-11 chưa cấu hình / ERR-15) —
@@ -106,6 +107,7 @@ export class AutoModeController {
     this.patch({ processing: true });
     let messageId: string | null = null;
     try {
+      this.patch({ lastError: null }); // bắt đầu vòng mới → xóa lỗi cũ; lỗi mới (nếu có) sẽ ghi đè bên dưới
       const email = await this.deps.readEmail();
       messageId = email.messageId;
       if (!this.processed.has(email.messageId) && !(await this.isQueued(email.messageId))) {
