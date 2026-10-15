@@ -4,7 +4,6 @@
 // MAX_SNAPSHOT_CHARS 20.000 + MAX_DEPTH 18; refId ổn định trong 1 walk + resolve() deref đúng.
 import { beforeEach, describe, expect, it } from "vitest";
 import {
-  MAX_DEPTH,
   MAX_SNAPSHOT_CHARS,
   a11yLabelOf,
   createA11yIndex,
@@ -98,7 +97,7 @@ describe("a11y-tree — caps + refId map (§3.1.2 / Open Issue #4)", () => {
     expect(text.length).toBeLessThanOrEqual(MAX_SNAPSHOT_CHARS + 200); // biên dòng cuối
   });
 
-  it(`MAX_DEPTH ${MAX_DEPTH} — nút ở depth ≤${MAX_DEPTH} xuất hiện, sâu hơn bị cắt (không treo)`, () => {
+  it("cây sâu 70 tầng — walker đi HẾT cây (không depth limit), budget node là cap duy nhất", () => {
     document.body.textContent = "";
     const root = el("div", { role: "toolbar" });
     let node: HTMLElement = root;
@@ -107,20 +106,25 @@ describe("a11y-tree — caps + refId map (§3.1.2 / Open Issue #4)", () => {
       node.appendChild(child);
       node = child;
     }
-    node.appendChild(el("button", { "aria-label": "Vừa" }, "Vừa")); // depth 11 — trong giới hạn
+    node.appendChild(el("button", { "aria-label": "Vừa" }, "Vừa")); // depth 11
     for (let i = 0; i < 15; i += 1) {
       const child = el("div", {});
       node.appendChild(child);
       node = child;
     }
     node.appendChild(el("button", { "aria-label": "Sâu" }, "Sâu")); // depth 26
+    for (let i = 0; i < 44; i += 1) {
+      const child = el("div", {});
+      node.appendChild(child);
+      node = child;
+    }
+    node.appendChild(el("button", { "aria-label": "Rất sâu" }, "Rất sâu")); // depth 70
     document.body.appendChild(root);
-    const { text } = createA11yIndex().buildSnapshot();
-    // UAT: MAX_DEPTH 60 — depth 26 NÀY được với tới (OWA mới lồng sâu 30-50+ tầng);
-    // test cắt chuyển sang cây sâu hơn MAX_DEPTH (70 tầng).
+    const { text, truncated } = createA11yIndex().buildSnapshot();
     expect(text).toContain('"Vừa"');
     expect(text).toContain('"Sâu"');
-    expect(MAX_DEPTH).toBe(60);
+    expect(text).toContain('"Rất sâu"'); // KHÔNG bị cắt theo depth
+    expect(truncated).toBe(false);
   });
 
   it("refId ổn định trong 1 walk; resolve() deref đúng element; refId lạ → null (SR-01 L3 seam)", () => {

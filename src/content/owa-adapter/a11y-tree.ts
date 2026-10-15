@@ -6,9 +6,10 @@
 //  → snapshot KHÔNG chứa body/subject/sender email (PII §8.4 — chỉ role + label chức năng).
 // Ref ID qua WeakRef map (GLOSSARY): refByElement WeakMap + elementsByRef Map — không chặn GC.
 export const MAX_SNAPSHOT_CHARS = 20_000; // Open Issue #4 chốt (§3.1.2)
-export const MAX_DEPTH = 60; // UAT: OWA mới (cloud.microsoft) lồng sâu 30-50+ tầng — 18 chỉ với tới shell
+export const MAX_VISITS = 12_000; // cap SỐ NODE đi qua — an toàn duy nhất (không depth limit:
+// walker đi đến khi HẾT DOM hoặc hết budget; mục tiêu thiết kế là "tìm thấy thông tin",
+// không phải dừng ở tầng tùy tiện — feedback UAT 15/10)
 export const MAX_LABEL_CHARS = 100;
-export const MAX_VISITS = 12_000; // cap số node đi qua (DOM khổng lồ — chống treo)
 
 export const INTERACTIVE_ROLES: ReadonlySet<string> = new Set([
   "button", "link", "textbox", "searchbox", "combobox", "listbox", "option",
@@ -65,7 +66,7 @@ interface WalkState {
 }
 
 function walk(node: Element, depth: number, counter: { n: number }, state: WalkState): void {
-  if (state.truncated || depth > MAX_DEPTH) return;
+  if (state.truncated) return;
   state.visits += 1;
   if (state.visits > MAX_VISITS) {
     state.truncated = true;
