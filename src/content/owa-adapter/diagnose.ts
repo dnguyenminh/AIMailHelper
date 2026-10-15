@@ -5,10 +5,10 @@
 // EF-1: vượt MAX_REPORT_CHARS → cắt + ghi chú; EF-3: cảnh báo privacy trước khi gửi.
 import { computeLayoutHash } from "./layout-hash";
 import { SEND_BUTTON_SELECTORS } from "./selectors";
-import type { FunctionKey, SelectorChain } from "./selectors";
+import type { FunctionKey } from "./selectors";
 import { SELECTOR_CHAINS } from "./selectors";
 import { createA11yIndex } from "./a11y-tree";
-import { spikeSection } from "./owa-spike";
+import { normalizeLabel, resolveBySelectorsFromChain, spikeSection } from "./owa-spike";
 import { detectView } from "./detector";
 
 export const MAX_REPORT_CHARS = 20_000; // EF-1 UC-09 — snapshot quá lớn → cắt + ghi chú
@@ -41,14 +41,7 @@ const FUNCTIONAL_LABEL_PATTERN =
   /reply|tra loi|forward|chuyen tiep|compose|soan|\bgui\b|delete|xoa|archive|luu|search|\btim\b|new|\bmoi\b|open|\bmo\b|close|\bdong\b|settings|cai dat|more|them|menu|undo|hoan tac|flag|\bco\b/i;
 
 // Bỏ dấu tiếng Việt: NFD → strip combining marks (U+0300..036F) → đ/Đ → d/D → lowercase.
-export function normalizeLabel(label: string): string {
-  return label
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
-    .replace(/Đ/g, "D")
-    .toLowerCase();
-}
+
 
 export function defaultDiagnoseDeps(): DiagnoseDeps {
   const index = createA11yIndex();
@@ -77,11 +70,6 @@ function safeQuery(root: ParentNode, selector: string): Element | null {
   } catch {
     return null; // selector không hợp lệ trên bản build đó — coi như miss
   }
-}
-
-function resolveBySelectorsFromChain(chain: SelectorChain, root: ParentNode = document): Element | null {
-  const found = chain.map((selector) => safeQuery(root, selector)).find((element) => element !== null);
-  return found ?? null;
 }
 
 // Tạo report text — panel hiển thị trong textarea readonly cho user copy (UC-09 bước 3).
@@ -157,4 +145,6 @@ function truncate(text: string): DiagnoseReport {
   const cut = text.slice(0, MAX_REPORT_CHARS) + "\n\n[ĐÃ CẮT BỚT — EF-1: report vượt " + String(MAX_REPORT_CHARS) + " ký tự]";
   return { text: cut, truncated: true };
 }
+
+
 

@@ -1,8 +1,35 @@
 // src/content/owa-adapter/owa-spike.ts — UAT SPIKE (15/10): dữ liệu cấu trúc OWA mới
 // (outlook.cloud.microsoft) cho fix reader/selectors. CHỈ cấu trúc: tag/role/aria + độ dài
-// text + anchor 40 ký tự đầu (user redact khi gửi — EF-3). Tách khỏi diagnose.ts (≤200 dòng).
-// UAT SPIKE (15/10) — dữ liệu cấu trúc OWA mới (outlook.cloud.microsoft) để fix reader/selectors.
-// CHỈ cấu trúc: tag/role/aria + ĐỘ DÀI text + anchor 40 ký tự đầu (user tự redact khi gửi — EF-3).
+// text + anchor 40 ký tự đầu. normalizeLabel + resolveBySelectorsFromChain sống ở đây
+// (diagnose import từ đây — 1 chiều, không circular). Tách khỏi diagnose.ts (≤200 dòng).
+import { SELECTOR_CHAINS, type SelectorChain } from "./selectors";
+
+// Label chức năng giữ lại trong report — pattern ĐÓNG so khớp trên dạng ĐÃ BỎ DẤU (NFD strip +
+// đ→d + lowercase — "Trả lời" → "tra loi"; ký tự Việt precomposed không match được bằng class).
+// Token ngắn có \b 2 phía tránh khớp nhầm trong từ dài (vd "gui" trong "guidance").
+// Label không khớp (subject, tên người, nội dung) → "[redacted-label]".
+export function normalizeLabel(label: string): string {
+  return label
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase();
+}
+
+export function resolveBySelectorsFromChain(chain: SelectorChain, root: ParentNode = document): Element | null {
+  const found = chain.map((selector) => safeQuery(root, selector)).find((element) => element !== null);
+  return found ?? null;
+}
+
+function safeQuery(root: ParentNode, selector: string): Element | null {
+  try {
+    return root.querySelector(selector);
+  } catch {
+    return null; // selector không hợp lệ trên bản build đó — coi như miss
+  }
+}
+
 function spikeAncestorChain(el: Element, levels: number): string {
   const chain: string[] = [];
   let node: Element | null = el;
