@@ -98,7 +98,7 @@ describe("a11y-tree — caps + refId map (§3.1.2 / Open Issue #4)", () => {
     expect(text.length).toBeLessThanOrEqual(MAX_SNAPSHOT_CHARS + 200); // biên dòng cuối
   });
 
-  it("MAX_DEPTH 18 — nút ở depth ≤18 xuất hiện, sâu hơn bị cắt (không treo)", () => {
+  it(`MAX_DEPTH ${MAX_DEPTH} — nút ở depth ≤${MAX_DEPTH} xuất hiện, sâu hơn bị cắt (không treo)`, () => {
     document.body.textContent = "";
     const root = el("div", { role: "toolbar" });
     let node: HTMLElement = root;
@@ -113,12 +113,14 @@ describe("a11y-tree — caps + refId map (§3.1.2 / Open Issue #4)", () => {
       node.appendChild(child);
       node = child;
     }
-    node.appendChild(el("button", { "aria-label": "Sâu" }, "Sâu")); // depth 26 — vượt MAX_DEPTH
+    node.appendChild(el("button", { "aria-label": "Sâu" }, "Sâu")); // depth 26
     document.body.appendChild(root);
     const { text } = createA11yIndex().buildSnapshot();
+    // UAT: MAX_DEPTH 60 — depth 26 NÀY được với tới (OWA mới lồng sâu 30-50+ tầng);
+    // test cắt chuyển sang cây sâu hơn MAX_DEPTH (70 tầng).
     expect(text).toContain('"Vừa"');
-    expect(text).not.toContain('"Sâu"');
-    expect(MAX_DEPTH).toBe(18);
+    expect(text).toContain('"Sâu"');
+    expect(MAX_DEPTH).toBe(60);
   });
 
   it("refId ổn định trong 1 walk; resolve() deref đúng element; refId lạ → null (SR-01 L3 seam)", () => {

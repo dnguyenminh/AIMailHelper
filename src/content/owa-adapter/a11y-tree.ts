@@ -6,8 +6,9 @@
 //  → snapshot KHÔNG chứa body/subject/sender email (PII §8.4 — chỉ role + label chức năng).
 // Ref ID qua WeakRef map (GLOSSARY): refByElement WeakMap + elementsByRef Map — không chặn GC.
 export const MAX_SNAPSHOT_CHARS = 20_000; // Open Issue #4 chốt (§3.1.2)
-export const MAX_DEPTH = 18;
+export const MAX_DEPTH = 60; // UAT: OWA mới (cloud.microsoft) lồng sâu 30-50+ tầng — 18 chỉ với tới shell
 export const MAX_LABEL_CHARS = 100;
+export const MAX_VISITS = 12_000; // cap số node đi qua (DOM khổng lồ — chống treo)
 
 export const INTERACTIVE_ROLES: ReadonlySet<string> = new Set([
   "button", "link", "textbox", "searchbox", "combobox", "listbox", "option",
@@ -47,7 +48,7 @@ export function createA11yIndex(): A11yIndex {
   return {
     buildSnapshot(root: Element = document.body): A11ySnapshot {
       const counter = { n: 0 };
-      const state: WalkState = { lines: [], truncated: false };
+      const state: WalkState = { lines: [], truncated: false, visits: 0 };
       walk(root, 0, counter, state);
       return { text: state.lines.join("\n"), truncated: state.truncated };
     },
@@ -60,10 +61,16 @@ export function createA11yIndex(): A11yIndex {
 interface WalkState {
   lines: string[];
   truncated: boolean;
+  visits: number;
 }
 
 function walk(node: Element, depth: number, counter: { n: number }, state: WalkState): void {
   if (state.truncated || depth > MAX_DEPTH) return;
+  state.visits += 1;
+  if (state.visits > MAX_VISITS) {
+    state.truncated = true;
+    return;
+  }
   if (isHidden(node)) return;
   const role = a11yRoleOf(node);
   if (role !== null && INTERACTIVE_ROLES.has(role)) {
@@ -76,6 +83,16 @@ function walk(node: Element, depth: number, counter: { n: number }, state: WalkS
   for (const child of node.children) walk(child, depth + 1, counter, state);
   if (node.shadowRoot) {
     for (const child of node.shadowRoot.children) walk(child as Element, depth + 1, counter, state);
+  }
+  // UAT — OWA mới: thân email trong <iframe> cùng origin; walker vào trong (cross-origin bị
+  // chặn bởi try/catch — contentDocument null). Reader đọc text từ iframe doc riêng (fix 5).
+  if (node.tagName === "IFRAME") {
+    try {
+      const body = (node as HTMLIFrameElement).contentDocument?.body;
+      if (body) walk(body, depth + 1, counter, state);
+    } catch {
+      /* cross-origin — bỏ qua */
+    }
   }
 }
 
