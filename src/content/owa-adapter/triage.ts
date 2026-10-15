@@ -19,7 +19,6 @@ export interface InboxItem extends TriageItem {
 const SUBJECT_PROBE = '[role="heading"], h1, h2';
 const FROM_PATTERN = /^(From|Từ)\b/i;
 const PREVIEW_CHARS = 160;
-const BADGE_CLASS = "aimh-triage-badge";
 
 // Scan hiện tại — badge lookup theo messageId CHỈ trong lần quét này (không cache DOM element
 // qua phiên — §3.1.6); clear đầu mỗi lần quét.
@@ -88,28 +87,16 @@ export async function hasFolderChanged(before: Element | null, locate: LocateFn)
   return current === null || current !== before;
 }
 
-// FR-GD5-03 — badge màu trên list item (createElement/textContent — SR-10). Màu theo score
-// (FSD UI spec): đỏ ≥70 / cam 40-69 / xanh <40 — khớp badge palette DESIGN-SYSTEM (§3.6).
-// Item không còn trong lần quét hiện tại (re-render/virtualized) → false; quét lại gắn lại badge.
+// FR-GD5-03 — badge màu trên list item. UAT-3 (15/10): TẮT DOM injection — appendChild vào
+// row do React của OWA quản lý làm VỠ layout trang (cùng lớp bug toolbar injection — fix 2).
+// Điểm số vẫn hiển thị trong panel Digest (DigestView — không đụng DOM OWA). Chiến lược
+// overlay shadow-root (không đụng React tree) sẽ thiết kế sau khi spike ổn định.
+
+// UAT-3 — fail-safe: KHÔNG mutate DOM của OWA. Trả false (caller log, không chặn batch).
 export function attachBadge(messageId: string, score: number): boolean {
-  const item = currentScan.get(messageId);
-  if (!item) return false;
-  removeBadge(item); // quét lại → thay badge cũ
-  const badge = document.createElement("span"); // SR-10 — DOM API an toàn
-  badge.className = BADGE_CLASS;
-  badge.textContent = String(score); // SR-10 — textContent, không innerHTML
-  badge.setAttribute("aria-label", "Mức độ quan trọng: " + score + "/100");
-  badge.style.cssText = badgeStyle(score);
-  item.appendChild(badge);
-  return true;
+  void messageId;
+  void score;
+  return false; // spike-pending: badge hiển thị trong Digest panel thay vì trên list row
 }
 
-function badgeStyle(score: number): string {
-  const background = score >= 70 ? "#a4262c" : score >= 40 ? "#8a6116" : "#107c10";
-  return "display:inline-block;margin-left:6px;padding:0 6px;border-radius:999px;font-size:11px;" +
-    "font-weight:600;line-height:16px;color:#fff;background:" + background + ";";
-}
 
-function removeBadge(item: Element): void {
-  for (const old of item.querySelectorAll("." + BADGE_CLASS)) old.remove();
-}

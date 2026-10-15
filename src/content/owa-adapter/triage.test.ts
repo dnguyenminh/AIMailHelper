@@ -97,34 +97,26 @@ describe("collectInboxItems — FR-GD5-01 + BR-07 (chỉ item đang hiển thị
   });
 });
 
-describe("attachBadge — FR-GD5-03 (SR-10 createElement/textContent)", () => {
-  it("badge gắn vào item của lần quét: textContent = score, aria-label, màu đúng bands", async () => {
+describe("attachBadge — UAT-3 fail-safe (KHÔNG mutate DOM OWA — React layout vỡ)", () => {
+  it("LUÔN trả false, không chèn badge nào vào DOM (badge hiển thị trong Digest panel)", async () => {
     const list = buildInbox([
       { idAttr: "hi", subject: "Cao", sender: "a@x.vn" },
       { idAttr: "mid", subject: "Trung bình", sender: "b@x.vn" },
       { idAttr: "lo", subject: "Thấp", sender: "c@x.vn" }
     ]);
     await collectInboxItems(locateFromList(list));
-    expect(attachBadge("hi", 85)).toBe(true); // đỏ ≥70
-    expect(attachBadge("mid", 55)).toBe(true); // cam 40-69
-    expect(attachBadge("lo", 12)).toBe(true); // xanh <40
-    const badges = list.querySelectorAll(".aimh-triage-badge");
-    expect(badges).toHaveLength(3);
-    expect(badges[0]?.textContent).toBe("85"); // SR-10 — textContent, không innerHTML
-    expect(badges[0]?.getAttribute("aria-label")).toBe("Mức độ quan trọng: 85/100");
-    expect(badges[0]?.getAttribute("style")).toContain("rgb(164, 38, 44)"); // đỏ ≥70 (jsdom normalize)
-    expect(badges[1]?.getAttribute("style")).toContain("rgb(138, 97, 22)"); // cam 40-69
-    expect(badges[2]?.getAttribute("style")).toContain("rgb(16, 124, 16)"); // xanh <40
+    expect(attachBadge("hi", 85)).toBe(false); // fail-safe — không đụng DOM OWA
+    expect(attachBadge("mid", 55)).toBe(false);
+    expect(attachBadge("lo", 12)).toBe(false);
+    expect(list.querySelectorAll(".aimh-triage-badge")).toHaveLength(0);
   });
 
-  it("quét lại → badge cũ bị thay (không nhân đôi); id lạ → false", async () => {
+  it("id lạ cũng false — hành vi thống nhất (không phân biệt)", async () => {
     const list = buildInbox([{ idAttr: "m1", subject: "S", sender: "a@x.vn" }]);
     await collectInboxItems(locateFromList(list));
-    attachBadge("m1", 90);
-    attachBadge("m1", 20);
-    expect(list.querySelectorAll(".aimh-triage-badge")).toHaveLength(1);
-    expect(list.querySelector(".aimh-triage-badge")?.textContent).toBe("20");
+    expect(attachBadge("m1", 90)).toBe(false);
     expect(attachBadge("không-tồn-tại", 50)).toBe(false);
+    expect(list.querySelectorAll(".aimh-triage-badge")).toHaveLength(0);
   });
 });
 
