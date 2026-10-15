@@ -16,6 +16,7 @@ import { AnalysisView } from "./AnalysisView";
 import { DiagnoseView } from "./DiagnoseView";
 import { DigestView } from "./DigestView";
 import { ErrorBanner } from "./ErrorBanner";
+import { PanelWindow } from "./PanelWindow";
 import { QueueView } from "./QueueView";
 import { ReplySection } from "./ReplySection";
 
@@ -24,7 +25,7 @@ const EXTERNAL_ANALYZE_EVENT = "aimh:analyze"; // nút toolbar inject (owa-adapt
 
 const isTrue = (value: unknown): true | null => (value === true ? true : null);
 
-export function Panel() {
+export function Panel({ host }: { host: HTMLDivElement | null }) {
   const [state, setState] = useState<AnalysisUiState>({ status: "idle", raw: "", result: null, error: null });
   const [triage, setTriage] = useState<TriageUiState | null>(null);
   const [auto, setAuto] = useState<AutoModeState>(IDLE_AUTO); // GĐ6 — BR-02 false mặc định
@@ -86,8 +87,8 @@ export function Panel() {
   const email = controllerRef.current?.getEmail() ?? null; // UC-02 — email nguồn cho reply
 
   return (
-    <div className="aimh-panel" role="complementary" aria-label="AIMailHelper">
-      <p className="aimh-panel-title">{t("panel.title")}</p>
+    <PanelWindow host={host}>
+      <div className="aimh-panel" role="complementary" aria-label="AIMailHelper">
       <div className="aimh-panel-actions">
         <button type="button" className="aimh-btn aimh-btn-primary" disabled={busy} onClick={analyze}>
           {busy ? t("panel.analyze.running") : t("panel.analyze.button")}
@@ -130,6 +131,7 @@ export function Panel() {
       )}
       {showQueue && <QueueView state={auto} controller={autoRef.current} />} {/* GĐ6 — UC-07 */}
       {showDiagnose && <DiagnoseView onClose={() => setShowDiagnose(false)} />}
-    </div>
+      </div>
+    </PanelWindow>
   );
 }

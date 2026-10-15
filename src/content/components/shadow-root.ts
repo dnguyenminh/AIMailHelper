@@ -90,5 +90,19 @@ export const PANEL_BASE_CSS = [
   ".aimh-digest { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid #e1e1e5;",
   "  padding-top: 8px; }",
   ".aimh-digest-list { max-height: 220px; overflow: auto; display: flex; flex-direction: column;",
-  "  gap: 4px; }"
+  "  gap: 4px; }",
+  // UAT — window chrome: panel như cửa sổ (kéo thả qua titlebar, thu nhỏ/ẩn, resize góc phải dưới)
+  ".aimh-panel { resize: both; overflow: auto; max-height: 80vh; max-width: 480px; min-width: 230px;",
+  "  min-height: 96px; }",
+  ".aimh-titlebar { display: flex; align-items: center; justify-content: space-between;",
+  "  cursor: move; user-select: none; padding-bottom: 6px; }",
+  ".aimh-titlebar .aimh-panel-title { pointer-events: none; }",
+  ".aimh-winbtns { display: flex; gap: 2px; }",
+  ".aimh-winbtns button { border: none; background: transparent; color: #5f6368; cursor: pointer;",
+  "  font-size: 13px; line-height: 1; padding: 2px 5px; border-radius: 4px; font-family: inherit; }",
+  ".aimh-winbtns button:hover { background: #e8eaed; color: #1b1b1f; }",
+  ".aimh-body { display: flex; flex-direction: column; gap: 4px; }",
+  ".aimh-bubble { width: 44px; height: 44px; border-radius: 50%; border: none; cursor: pointer;",
+  "  background: #0f6cbd; color: #ffffff; font-size: 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.24); }",
+  ".aimh-bubble:hover { background: #115ea3; }"
 ].join("\n");

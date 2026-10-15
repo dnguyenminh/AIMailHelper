@@ -15,10 +15,9 @@ function isOwaHost(hostname: string): boolean {
 }
 
 // §2.3 — mount React root trong shadow closed; mọi label qua i18n (FR-GD1-06).
-function bootPanel(): void {
-  const mount = createShadowHost();
+function bootPanel(mount: { host: HTMLDivElement; shadow: ShadowRoot }): void {
   adoptStyles(mount.shadow, PANEL_BASE_CSS);
-  createRoot(mount.shadow).render(<Panel />);
+  createRoot(mount.shadow).render(<Panel host={mount.host} />);
 }
 
 // FR-GD3-04 — inject QUA adapter (biên DOM duy nhất); toolbar chưa thấy được (pre-spike OWA thật)
@@ -30,7 +29,7 @@ function injectToolbar(): void {
 function main(): void {
   if (!isOwaHost(location.hostname)) return; // defense-in-depth ngoài manifest matches (§1.5)
   console.info("[AIMH] content script injected on " + location.hostname);
-  bootPanel();
+  bootPanel(createShadowHost());
   injectToolbar();
 }
 
