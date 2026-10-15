@@ -46,7 +46,7 @@
   },
   "autonomyLevel": "L3",
   "projectPattern": "plugin (browser extension; .kiro/steering/patterns/plugin.md not found — using default plugin pattern emphasis: host interface isolation, capability detection, permission minimization)",
-  "currentPhase": "implementation",
+  "currentPhase": "uat",
   "phases": {
     "requirements": {
       "status": "done",
@@ -141,10 +141,15 @@
       "next": "User chạy UAT-CHECKLIST.md → điền kết quả → fix batch (nếu có) → pentest P6 + UAT close"
     },
     "pentest": {
-      "status": "not_started"
+      "status": "done",
+      "file": "PENTEST-REPORT.md",
+      "completedAt": "2026-10-15T08:30:00Z",
+      "qualityGate": "PASS — SAFE-FOR-UAT: 6 vectors (V1 PARTIAL structural-chặn, V2-V5 BLOCKED, V6 malformed-BLOCKED/collision-Low); 0 C/H/M + 3 Low backlog (PT-01/02/03) + 3 Info; commit 42679d3"
     },
     "uat": {
-      "status": "not_started"
+      "status": "awaiting_user",
+      "checklist": "documents/AIMH-LOCAL/UAT-CHECKLIST.md (118 steps)",
+      "note": "⛔ HUMAN GATE — user chạy UAT-CHECKLIST trên OWA thật (cả 3 domain); PASS = Phase 6.7 → Phase 7"
     },
     "deployment": {
       "status": "not_started"
@@ -161,5 +166,5 @@
     "state": "closed",
     "consecutiveFailures": 0
   },
-  "lastUpdated": "2026-10-15T07:30:00Z"
+  "lastUpdated": "2026-10-15T08:35:00Z"
 }
