@@ -2,7 +2,7 @@
 // attachShadow mode "closed" (FR-GD3-05); CSS cô lập 2 chiều qua adoptedStyleSheets + fallback <style>.
 // SR-10: chỉ createElement/textContent — không đường innerHTML nào trong src/.
 const HOST_ID = "aimh-panel-host";
-const HOST_STYLE = "position:fixed;top:16px;right:16px;z-index:2147483647;all:initial;";
+const HOST_STYLE = "all:initial;display:block;position:fixed;top:16px;right:16px;z-index:2147483647;"; // all:initial ĐỨNG TRƯỚC — nếu đứng sau nó xóa position/tọa độ (UAT bug 15/10)
 
 export interface ShadowMount {
   host: HTMLDivElement;
