@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { t } from "../../shared/i18n";
 import type { ConfigData } from "../useConfigData";
+import { AutomationRules } from "./AutomationRules";
 import type { AutomationConfig } from "../../shared/types";
 
 export function AutomationSettings(props: { config: ConfigData }): JSX.Element {
@@ -65,6 +66,14 @@ export function AutomationSettings(props: { config: ConfigData }): JSX.Element {
       <button type="button" onClick={() => void apply(draft)}>{t("options.automation.save")}</button>
       {status === "saved" && <p className="note ok">{t("options.automation.saved")}</p>}
       {status === "failed" && <p className="warning">{t("options.automation.changeFailed")}</p>}
+      <AutomationRules
+        rules={draft.rules}
+        onChange={(rules) => {
+          const next = { ...draft, rules: rules };
+          setDraft(next);
+          void props.config.setAutomation(next);
+        }}
+      />
     </div>
   );
 }
