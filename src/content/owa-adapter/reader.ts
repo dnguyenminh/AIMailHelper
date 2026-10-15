@@ -19,12 +19,22 @@ const EXCERPT_CHARS = 160;
 
 // UC-01 step 2 — reader qua self-healing locator; ERR-06 khi không thấy vùng đọc (EF-3).
 export async function readEmail(locate: LocateFn, view: OwaViewInfo): Promise<EmailData> {
-  const container = view.container ?? (await locate("reading-pane", "vùng đọc email đang mở"));
+  let container = view.container ?? (await locate("reading-pane", "vùng đọc email đang mở"));
   if (!container) throw new AppError("ERR-06", "errors.owaNotFound");
   const subject = textOf(container.querySelector(SUBJECT_PROBE));
   const fromRaw = labeledValues(container, FROM_PATTERN)[0] ?? "";
   const sender = parsePerson(fromRaw) ?? { ...EMPTY_PERSON };
-  const bodyText = normalizeBody(extractBodyText(container));
+  let bodyText = normalizeBody(extractBodyText(container));
+  if (bodyText.replace(/\s/g, "").length < 40) {
+    // UAT — OWA mới (outlook.cloud.microsoft): container locate được sai (ribbon "Quick steps"),
+    // thân email thật nằm trong <iframe> cùng origin mà querySelector không với tới. Tìm iframe
+    // có body text dài nhất → nâng container lên ancestor chứa header (From/To/subject).
+    const context = findReadingContext();
+    if (context !== null) {
+      container = context.container;
+      bodyText = normalizeBody(context.bodyDoc.body?.textContent ?? "");
+    }
+  }
   if (bodyText.trim().length === 0) {
     throw new AppError("ERR-10", "errors.emptyEmail"); // BR-14 — chặn ở reader, không phải adapter LLM
   }
@@ -40,6 +50,34 @@ export async function readEmail(locate: LocateFn, view: OwaViewInfo): Promise<Em
     threadContext: view.view === "conversation" ? buildThreadContext(container) : undefined,
     detectedView: view.view === "unknown" ? "reading-pane" : view.view
   };
+}
+
+// UAT — OWA mới render thân email trong <iframe> cùng origin: quét iframe, chọn doc có body
+// text dài nhất (>200 ký tự — loại iframe rỗng/ads); container = ancestor gần iframe còn chứa
+// thêm nội dung header (From/To/subject). KHÔNG mutate DOM (SR-10 — chỉ đọc).
+function findReadingContext(): { container: Element; bodyDoc: Document } | null {
+  let best: { frame: HTMLIFrameElement; doc: Document; len: number } | null = null;
+  for (const frame of Array.from(document.querySelectorAll("iframe"))) {
+    try {
+      const doc = frame.contentDocument;
+      const text = (doc?.body?.textContent ?? "").trim();
+      if (doc !== null && doc.body !== null && text.length > 200 && (best === null || text.length > best.len)) {
+        best = { frame: frame, doc: doc, len: text.length };
+      }
+    } catch {
+      /* cross-origin — bỏ qua */
+    }
+  }
+  if (best === null) return null;
+  let container: Element = best.frame;
+  for (let depth = 0; depth < 8; depth += 1) {
+    const parent = container.parentElement;
+    if (parent === null) break;
+    container = parent;
+    const extra = (parent.textContent ?? "").length - best.len;
+    if (extra > 120) break; // ancestor đã chứa thêm header/metadata — đủ làm vùng đọc
+  }
+  return { container: container, bodyDoc: best.doc };
 }
 
 // Header row qua aria-label prefix (EN/VN) — structural attribute, không đoán theo text.
