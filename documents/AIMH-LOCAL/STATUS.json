@@ -129,7 +129,16 @@
       "status": "not_started"
     },
     "testing": {
-      "status": "not_started"
+      "status": "in_progress",
+      "file": "TEST-REPORT.md + TEST-REPORT-AIMH-LOCAL.csv + UAT-CHECKLIST.md",
+      "version": 1,
+      "startedAt": "2026-10-15T07:00:00Z",
+      "automatedRun": "2026-10-15T07:08:00Z — 4 lệnh THẬT: npm test 366/366 (54 files), typecheck 0, lint 0, build 0 (gzip ~95KB)",
+      "csvSummary": "99 TCs: 56 PASS / 15 PASS-PARTIAL / 1 NOT_RUN (TC-212 GET_RUNTIME_STATE — gap Medium) / 27 DEFERRED-TO-UAT (DECISION #63)",
+      "rtm": "Automation 87/97 (89.7%: FR 37/45, BR 17/17, ERR 16/16, US 9/10, UC 8/9); tổng 100% khi UAT manual đóng",
+      "gaps": "2 Critical FIXED trong P6 (port-client.test.ts 7 tests — TC-124/208; manifest.test.ts 7 tests — TC-101/606; 0 code production đổi) + 2 High (fetch-audit, migration-throw) + 5 Medium + 5 Low ghi nhận TEST-REPORT §4",
+      "uatGate": "UAT-CHECKLIST.md v1 — 118 steps (6 chuẩn bị + 45 probes OWA-DOM + 12 luồng chính GĐ1-6 + 45 TC-401..415/501..510 rút gọn + 4 TD-G5-2 + 6 TD-G6-4) — chờ user thực thi",
+      "next": "User chạy UAT-CHECKLIST.md → điền kết quả → fix batch (nếu có) → pentest P6 + UAT close"
     },
     "pentest": {
       "status": "not_started"
@@ -152,5 +161,5 @@
     "state": "closed",
     "consecutiveFailures": 0
   },
-  "lastUpdated": "2026-10-15T04:27:00Z"
+  "lastUpdated": "2026-10-15T07:30:00Z"
 }
