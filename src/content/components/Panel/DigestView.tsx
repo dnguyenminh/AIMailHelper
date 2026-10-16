@@ -14,14 +14,15 @@ export interface DigestViewProps {
   onScanMore: () => void;
   onRescan: () => void;
   onStop: () => void;
+  titleKey?: string; // UAT (mail chưa đọc) — mặc định giữ tiêu đề triage cũ
 }
 
-export function DigestView({ state, onStart, onScanMore, onRescan, onStop }: DigestViewProps) {
+export function DigestView({ state, onStart, onScanMore, onRescan, onStop, titleKey }: DigestViewProps) {
   const running = state.status === "running";
   const empty = !running && state.digest.length === 0 && state.progress.total === 0; // EF-1 UC-04
   return (
     <div className="aimh-digest">
-      <h4 className="aimh-heading">{t("panel.triage.title")}</h4>
+      <h4 className="aimh-heading">{t(titleKey ?? "panel.triage.title")}</h4>
       <div className="aimh-row">
         <button type="button" className="aimh-btn aimh-btn-primary" disabled={running} onClick={onStart}>
           {running

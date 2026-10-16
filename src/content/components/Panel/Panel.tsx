@@ -10,7 +10,7 @@ import type { AutoModeState } from "../../modules/automode-types";
 import { IDLE_AUTO } from "../../modules/automode-types";
 import { createAnalyzeController } from "../../modules/analyze";
 import type { AnalysisUiState } from "../../modules/analyze";
-import { createTriageController } from "../../modules/digest";
+import { createTriageController, createUnreadTriageController } from "../../modules/digest";
 import type { TriageUiState } from "../../modules/digest";
 import { AnalysisView } from "./AnalysisView";
 import { DiagnoseView } from "./DiagnoseView";
@@ -28,17 +28,21 @@ const isTrue = (value: unknown): true | null => (value === true ? true : null);
 export function Panel({ host }: { host: HTMLDivElement | null }) {
   const [state, setState] = useState<AnalysisUiState>({ status: "idle", raw: "", result: null, error: null });
   const [triage, setTriage] = useState<TriageUiState | null>(null);
+  const [unread, setUnread] = useState<TriageUiState | null>(null);
+  const [showUnread, setShowUnread] = useState(false);
   const [auto, setAuto] = useState<AutoModeState>(IDLE_AUTO); // GĐ6 — BR-02 false mặc định
   const [showQueue, setShowQueue] = useState(false);
   const [consentVisible, setConsentVisible] = useState(false);
   const [showDiagnose, setShowDiagnose] = useState(false);
   const controllerRef = useRef<ReturnType<typeof createAnalyzeController> | null>(null);
   const triageRef = useRef<ReturnType<typeof createTriageController> | null>(null);
+  const unreadRef = useRef<ReturnType<typeof createUnreadTriageController> | null>(null);
   const autoRef = useRef<ReturnType<typeof createAutoModeController> | null>(null);
 
   useEffect(() => {
     controllerRef.current = createAnalyzeController(setState);
     triageRef.current = createTriageController(setTriage); // GĐ5 — UC-03/UC-04
+    unreadRef.current = createUnreadTriageController(setUnread); // UAT — list mail chưa đọc (chỉ-đọc DOM)
     autoRef.current = createAutoModeController(setAuto); // GĐ6 — observer CHỈ khi enabled (BR-02)
     void autoRef.current.sync();
     void getCache(CONSENT_KEY, isTrue).then((shown) => setConsentVisible(shown !== true));
@@ -50,6 +54,7 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
       document.removeEventListener(EXTERNAL_ANALYZE_EVENT, onExternal);
       controllerRef.current?.cancel();
       triageRef.current?.cancel();
+      unreadRef.current?.cancel();
       autoRef.current?.stop(); // tắt observer + hủy stream — hàng chờ GIỮ NGUYÊN (FR-GD6-06)
     };
   }, []);
@@ -78,6 +83,22 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
     triageRef.current?.cancel();
   }, []);
 
+  // UAT (mail chưa đọc) — mở list + quét ngay; chỉ-đọc DOM nên không đổi trạng thái mail.
+  const unreadStart = useCallback((): void => {
+    setShowDiagnose(false);
+    setShowUnread(true);
+    void unreadRef.current?.start();
+  }, []);
+  const unreadScanMore = useCallback((): void => {
+    void unreadRef.current?.scanMore();
+  }, []);
+  const unreadRescan = useCallback((): void => {
+    void unreadRef.current?.rescan();
+  }, []);
+  const unreadStop = useCallback((): void => {
+    unreadRef.current?.cancel();
+  }, []);
+
   const ackConsent = useCallback((): void => {
     setConsentVisible(false);
     void setCache(CONSENT_KEY, true); // SR-18 — ghi nhận đã hiển thị; lỗi storage không chặn luồng
@@ -98,6 +119,9 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
         )}
         <button type="button" className="aimh-btn" onClick={() => setShowDiagnose((value) => !value)}>
           {t("panel.diagnose.button")}
+        </button>
+        <button type="button" className="aimh-btn" onClick={unreadStart}>
+          {t("panel.unread.scan")}
         </button>
         {/* GĐ6 — hàng chờ duyệt + badge "N chờ duyệt" (UC-07; chỉ hiện khi auto-mode bật hoặc còn pending) */}
         {(auto.enabled || auto.pendingCount > 0) && (
@@ -128,6 +152,19 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
           onRescan={triageRescan}
           onStop={triageStop}
         />
+      )}
+      {showUnread && unread !== null && (
+        <>
+          <p className="aimh-note">{t("panel.unread.readonly")}</p>
+          <DigestView
+            state={unread}
+            onStart={unreadStart}
+            onScanMore={unreadScanMore}
+            onRescan={unreadRescan}
+            onStop={unreadStop}
+            titleKey="panel.unread.title"
+          />
+        </>
       )}
       {showQueue && <QueueView state={auto} controller={autoRef.current} />} {/* GĐ6 — UC-07 */}
       {showDiagnose && <DiagnoseView onClose={() => setShowDiagnose(false)} />}

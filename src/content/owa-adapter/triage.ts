@@ -39,6 +39,38 @@ export async function collectInboxItems(locate: LocateFn): Promise<InboxItem[]> 
   return items;
 }
 
+// UAT (mail chưa đọc) — CHỈ ĐỌC DOM, không click/mở mail nên KHÔNG đổi trạng thái đã đọc/chưa
+// đọc của mail (yêu cầu bắt buộc). Heuristic signals trên row: (1) aria-label chứa
+// "unread"/"chưa đọc"; (2) nút "Mark as read"/"Đánh dấu đã đọc" (chỉ xuất hiện trên row chưa
+// đọc). Chưa verify trên mọi layout OWA → xem OWA-DOM-SPIKE.md.
+export function isUnreadItem(element: Element): boolean {
+  const own = element.getAttribute("aria-label") ?? "";
+  if (/\bunread\b|chưa đọc/i.test(own)) return true;
+  for (const el of Array.from(element.querySelectorAll("[aria-label]"))) {
+    const label = el.getAttribute("aria-label") ?? "";
+    if (/mark as read|đánh dấu.*đã đọc/i.test(label)) return true;
+  }
+  return false;
+}
+
+// Thu thập CHỈ item chưa đọc đang hiển thị — cùng contract với collectInboxItems (BR-07, ERR-06,
+// ERR-12 lọc). Không click, không dispatch event, không mutate DOM.
+export async function collectUnreadItems(locate: LocateFn): Promise<InboxItem[]> {
+  const all = await collectInboxItems(locate);
+  const elements = new Map<string, Element>(currentScan);
+  currentScan.clear();
+  const unread: InboxItem[] = [];
+  for (const item of all) {
+    const element = elements.get(item.messageId);
+    if (element !== undefined && isUnreadItem(element)) {
+      currentScan.set(item.messageId, element);
+      unread.push(item);
+    }
+  }
+  console.info(`[AIMH][triage] unread: ${unread.length}/${all.length} item chưa đọc (chỉ đọc DOM)`);
+  return unread;
+}
+
 // Đọc 1 list item: subject (heading probe) + sender (aria-label From/Từ) + preview (textContent
 // normalize — SR-10) → messageId chain §7.5. Không đủ dữ liệu → null (caller bỏ qua + log).
 async function readItem(element: Element): Promise<InboxItem | null> {

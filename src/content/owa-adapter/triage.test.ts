@@ -3,7 +3,7 @@
 // badge createElement/textContent (SR-10) màu theo score, folder guard EF-2/EF-4.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "../../shared/errors";
-import { attachBadge, collectInboxItems, hasFolderChanged, readFolderSignature } from "./triage";
+import { attachBadge, collectInboxItems, collectUnreadItems, hasFolderChanged, isUnreadItem, readFolderSignature } from "./triage";
 import type { LocateFn } from "./triage";
 
 function el(tag: string, attrs: Record<string, string>, text?: string): HTMLElement {
@@ -19,6 +19,8 @@ interface RowSpec {
   subject: string;
   sender?: string;
   preview?: string;
+  unreadLabel?: string; // aria-label row: "Unread ..." / "... chưa đọc"
+  markReadButton?: boolean; // nút "Mark as read" — chỉ xuất hiện trên row chưa đọc
 }
 
 function buildInbox(rows: RowSpec[]): HTMLElement {
@@ -26,10 +28,12 @@ function buildInbox(rows: RowSpec[]): HTMLElement {
   for (const row of rows) {
     const item = el("div", { role: "listitem" });
     if (row.idAttr !== undefined) item.setAttribute("data-itemid", row.idAttr);
+    if (row.unreadLabel !== undefined) item.setAttribute("aria-label", row.unreadLabel);
     if (row.href !== undefined) item.appendChild(el("a", { href: row.href }, "mở"));
     item.appendChild(el("h3", { role: "heading" }, row.subject));
     if (row.sender !== undefined) item.appendChild(el("span", { "aria-label": "From: " + row.sender }, ""));
     if (row.preview !== undefined) item.appendChild(el("span", { "aria-label": "preview" }, row.preview));
+    if (row.markReadButton === true) item.appendChild(el("button", { "aria-label": "Mark as read" }, ""));
     list.appendChild(item);
   }
   document.body.appendChild(list);
@@ -117,6 +121,41 @@ describe("attachBadge — UAT-3 fail-safe (KHÔNG mutate DOM OWA — React layou
     expect(attachBadge("m1", 90)).toBe(false);
     expect(attachBadge("không-tồn-tại", 50)).toBe(false);
     expect(list.querySelectorAll(".aimh-triage-badge")).toHaveLength(0);
+  });
+});
+
+describe("collectUnreadItems — UAT (chỉ mail chưa đọc, KHÔNG đổi trạng thái mail)", () => {
+  it("isUnreadItem: aria-label Unread/chưa đọc → true; nút Mark as read → true; row thường → false", () => {
+    const list = buildInbox([
+      { idAttr: "u1", subject: "Mới 1", unreadLabel: "Unread message from A" },
+      { idAttr: "u2", subject: "Mới 2", unreadLabel: "Thư chưa đọc từ B" },
+      { idAttr: "u3", subject: "Mới 3", markReadButton: true },
+      { idAttr: "r1", subject: "Đã đọc" }
+    ]);
+    const rows = Array.from(list.querySelectorAll('[role="listitem"]'));
+    expect(isUnreadItem(rows[0] as Element)).toBe(true);
+    expect(isUnreadItem(rows[1] as Element)).toBe(true);
+    expect(isUnreadItem(rows[2] as Element)).toBe(true);
+    expect(isUnreadItem(rows[3] as Element)).toBe(false);
+  });
+
+  it("collectUnreadItems: chỉ trả item chưa đọc, không click/không mở mail (read-only DOM)", async () => {
+    const list = buildInbox([
+      { idAttr: "u1", subject: "Mới", sender: "a@x.vn", unreadLabel: "Unread" },
+      { idAttr: "r1", subject: "Cũ", sender: "b@x.vn" }
+    ]);
+    const clicks: string[] = [];
+    list.addEventListener("click", () => clicks.push("row"));
+    const items = await collectUnreadItems(locateFromList(list));
+    expect(items.map((item) => item.messageId)).toEqual(["u1"]);
+    expect(clicks).toEqual([]); // không có click nào được dispatch
+    expect(list.querySelectorAll(".aimh-triage-badge")).toHaveLength(0); // không mutate DOM
+  });
+
+  it("không có mail chưa đọc → mảng rỗng (panel hiện empty, không lỗi)", async () => {
+    const list = buildInbox([{ idAttr: "r1", subject: "Cũ", sender: "b@x.vn" }]);
+    const items = await collectUnreadItems(locateFromList(list));
+    expect(items).toEqual([]);
   });
 });
 

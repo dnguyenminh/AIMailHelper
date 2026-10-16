@@ -61,3 +61,10 @@ locate("reading-pane") → [id="Skip to message-region"] HIT
 - [ ] Conversation grouping: layout "conversation" — thread context buildThreadContext cần verify
 - [ ] Đa tab/popout: [role="dialog"] probe — chưa gặp trên OWA mới
 - [ ] Badge triage trên option rows: `attachBadge` cần verify hiển thị đúng
+
+## 6. Mail chưa đọc (unread heuristic — UAT 15/10)
+
+- Row chưa đọc nhận diện bằng: aria-label chứa "unread"/"chưa đọc", hoặc nút con
+  "Mark as read"/"Đánh dấu đã đọc" (chỉ xuất hiện trên row chưa đọc).
+- Thu thập CHỈ ĐỌC DOM (không click/mở mail) nên KHÔNG đổi trạng thái đã đọc.
+- ⚠️ Chưa verify trên mọi layout OWA — nếu miss row, bổ sung signal tại `isUnreadItem`.

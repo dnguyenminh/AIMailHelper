@@ -80,7 +80,7 @@
     }
   },
   "mcp": { 
-    "code-intelligence": {
+    "code-intell": {
       "type": "remote",
       "url": "http://127.0.0.1:9481/mcp", 
       "enabled": true
