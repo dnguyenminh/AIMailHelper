@@ -27,8 +27,8 @@ function renderView(state: TriageUiState): HTMLElement {
 describe("DigestView — UC-04 (FR-GD5-04/05; EF-1/EF-5)", () => {
   it("EF-1: cache trống + idle → hướng dẫn 'Chạy Triage inbox trước' + nút bấm nhanh UC-03", () => {
     const host = renderView(base);
-    expect(host.textContent).toContain("Chưa có kết quả Triage");
-    expect(host.textContent).toContain("Chạy Triage inbox");
+    expect(host.textContent).toContain("Chưa có kết quả sàng lọc");
+    expect(host.textContent).toContain("Sàng lọc hộp thư");
     expect(host.querySelectorAll("button").length).toBeGreaterThanOrEqual(2); // nút chính + nút EF-1
   });
 
