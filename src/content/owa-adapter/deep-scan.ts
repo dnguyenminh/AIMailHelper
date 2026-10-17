@@ -8,8 +8,9 @@ import { AppError } from "../../shared/errors";
 import type { InboxItem, LocateFn } from "./triage";
 
 const ITEM_SELECTOR = '[role="option"], [role="listitem"]';
-const GROW_TIMEOUT_MS = 1500; // chờ tối đa sau mỗi lần cuộn để OWA render thêm row
-const GROW_POLL_MS = 200;
+const LIST_CONTAINER = '[role="listbox"], [role="list"]';
+const GROW_TIMEOUT_MS = 2500; // chờ tối đa sau mỗi lần cuộn (OWA có thể fetch server thêm page)
+const GROW_POLL_MS = 250;
 const NO_GROWTH_STOP = 2; // hết row mới N round liên tiếp → coi như đã hết folder
 
 export interface DeepScanOptions {
@@ -31,38 +32,66 @@ interface RoundResult {
   elements: Map<string, Element>; // element CÒN KẾT NỐI của item mới (caller check unread ngay)
 }
 
-// Tìm ancestor cuộn được (overflow auto/scroll) để lưu + phục hồi vị trí cuộn cuối lần quét.
+// Tìm ancestor cuộn được (overflow auto/scroll, còn dư nội dung) — BẮT ĐẦU từ chính list
+// (listbox của OWA có thể là scroller), đi lên ancestor. Không thấy → caller dùng fallback.
 function findScrollContainer(list: Element): HTMLElement | null {
-  let node: HTMLElement | null = null;
+  let node: HTMLElement | null = list instanceof HTMLElement ? list : null;
   try {
-    node = list.parentElement;
     while (node !== null && node !== document.body) {
       const style = window.getComputedStyle(node);
-      if (/(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight) return node;
+      if (/(auto|scroll)/.test(style.overflowY) && node.scrollHeight - node.clientHeight > 20) return node;
       node = node.parentElement;
     }
   } catch {
-    return null; // jsdom / môi trường hạn chế — bỏ qua phục hồi cuộn
+    return null; // jsdom / môi trường hạn chế — bỏ qua cuộn trực tiếp
   }
   return null;
 }
 
-// Cuộn row CUỐI vào viewport → OWA virtualize render thêm. scrollIntoView KHÔNG click/không
-// dispatch event → không đổi trạng thái mail. Chờ đến khi số row tăng hoặc hết timeout.
-async function loadMoreByScroll(list: Element): Promise<boolean> {
-  const rows = list.querySelectorAll(ITEM_SELECTOR);
-  const before = rows.length;
-  const last = rows[rows.length - 1];
-  if (last === undefined) return false;
+// Container mail list CÓ THỂ bị OWA thay thế sau khi cuộn (React re-render) — LUÔN tra lại
+// trong document: chọn container có NHIỀU row nhất (mail list luôn thắng attachment strip).
+function liveMailList(): Element | null {
+  let best: Element | null = null;
+  let bestCount = 0;
+  for (const box of Array.from(document.querySelectorAll(LIST_CONTAINER))) {
+    const count = box.querySelectorAll(ITEM_SELECTOR).length;
+    if (count > bestCount) { best = box; bestCount = count; }
+  }
+  return best;
+}
+
+// Nhảy ĐÁY container cuộn — gán scrollTop kích hoạt native scroll event (virtualizer Fluent
+// nghe scroll), kèm wheel event fallback. KHÔNG click mail, KHÔNG dispatch MouseEvent → không
+// đổi trạng thái đã đọc.
+function jumpToBottom(scroller: HTMLElement): void {
   try {
-    (last as HTMLElement).scrollIntoView({ block: "end" });
+    scroller.scrollTop = scroller.scrollHeight;
+    scroller.dispatchEvent(new WheelEvent("wheel", { deltaY: 1200, bubbles: true, cancelable: true }));
   } catch {
-    /* jsdom không có scrollIntoView — bỏ qua, vòng lặp vẫn chạy với loadMore giả trong test */
+    /* jsdom không có WheelEvent — bỏ qua, vòng lặp test vẫn chạy với loadMore giả */
+  }
+}
+
+// Cuộn để OWA render thêm row. Cuộn container CUỘN THẬT (tra lại trong document — list truyền
+// vào có thể đã bị thay thế); scrollIntoView chỉ là fallback khi không tìm thấy scroller.
+// Chờ row mới tối đa GROW_TIMEOUT_MS (OWA có thể fetch server page tiếp theo).
+async function loadMoreByScroll(_list: Element): Promise<boolean> {
+  const list = liveMailList() ?? _list;
+  const before = list.querySelectorAll(ITEM_SELECTOR).length;
+  const scroller = findScrollContainer(list);
+  if (scroller === null) {
+    const rows = list.querySelectorAll(ITEM_SELECTOR);
+    const last = rows[rows.length - 1];
+    try { if (last !== undefined) (last as HTMLElement).scrollIntoView({ block: "end" }); } catch { /* jsdom */ }
+  } else {
+    jumpToBottom(scroller);
   }
   for (let waited = 0; waited < GROW_TIMEOUT_MS; waited += GROW_POLL_MS) {
     await new Promise((resolve) => setTimeout(resolve, GROW_POLL_MS));
-    if (list.querySelectorAll(ITEM_SELECTOR).length > before) return true;
+    const fresh = liveMailList();
+    if (fresh !== null && fresh.querySelectorAll(ITEM_SELECTOR).length > before) return true;
   }
+  console.info(`[AIMH][deep-scan] cuộn không thêm row — scroller: ${scroller === null ? "KHÔNG tìm thấy" : `${scroller.tagName} ${scroller.scrollTop}/${scroller.scrollHeight}`}, rows ${before}`);
   return false;
 }
 
@@ -121,6 +150,7 @@ export async function deepScanCollect(
   if (list === null) throw new AppError("ERR-06", "errors.owaNotFound"); // ERR-06 — panel gợi ý Diagnose
   const scroller = findScrollContainer(list);
   const savedTop = scroller?.scrollTop ?? 0;
+  console.info(`[AIMH][deep-scan] scroll container: ${scroller === null ? "KHÔNG thấy (dùng fallback scrollIntoView)" : `${scroller.tagName} cuộn ${scroller.scrollHeight}/${scroller.clientHeight}px`}`);
   const merged = new Map<string, InboxItem>();
   try {
     await scanRounds(locate, visitRound, opts, deps, list, merged);
