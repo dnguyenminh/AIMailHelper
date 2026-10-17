@@ -13,6 +13,7 @@ import type { AnalysisUiState } from "../../modules/analyze";
 import { owaAdapter } from "../../owa-adapter/owa-adapter";
 import { createTriageController, createUnreadTriageController } from "../../modules/digest";
 import type { TriageUiState } from "../../modules/digest";
+const IDLE_SCAN: TriageUiState = { status: "running", progress: { done: 0, total: 0, failed: 0 }, cachedSkipped: 0, cap: 0, overflow: 0, folderStopped: false, userStopped: false, error: null, digest: [] };
 import { AnalysisView } from "./AnalysisView";
 import { DiagnoseView } from "./DiagnoseView";
 import { DigestView } from "./DigestView";
@@ -31,6 +32,7 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
   const [triage, setTriage] = useState<TriageUiState | null>(null);
   const [unread, setUnread] = useState<TriageUiState | null>(null);
   const [showUnread, setShowUnread] = useState(false);
+  const [showTriage, setShowTriage] = useState(false);
   const [auto, setAuto] = useState<AutoModeState>(IDLE_AUTO); // GĐ6 — BR-02 false mặc định
   const [showQueue, setShowQueue] = useState(false);
   const [consentVisible, setConsentVisible] = useState(false);
@@ -84,29 +86,22 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
     triageRef.current?.cancel();
   }, []);
 
-  // UAT (mail chưa đọc) — mở list + quét ngay; chỉ-đọc DOM nên không đổi trạng thái mail.
+  // UAT (mail chưa đọc + sàng lọc) — callbacks gọn; set state NGAY để spinner hiện.
   const unreadStart = useCallback((): void => {
-    setShowDiagnose(false);
-    setShowUnread(true);
+    setShowDiagnose(false); setShowUnread(true); setShowTriage(false);
+    if (unread?.status !== "running") setUnread(IDLE_SCAN);
     void unreadRef.current?.start();
-  }, []);
-  const unreadScanMore = useCallback((): void => {
-    void unreadRef.current?.scanMore();
-  }, []);
-  const unreadRescan = useCallback((): void => {
-    void unreadRef.current?.rescan();
-  }, []);
-  const unreadStop = useCallback((): void => {
-    unreadRef.current?.cancel();
-  }, []);
-
-  // UAT — cuộn đến mail (không mở, không đổi trạng thái) / mở mail (đổi thành đã đọc).
-  const scrollToUnread = useCallback(async (messageId: string): Promise<void> => {
-    if (!owaAdapter.scrollToItem(messageId)) console.warn("[AIMH] item không còn trong DOM (virtualize)");
-  }, []);
-  const openUnread = useCallback(async (messageId: string): Promise<void> => {
-    if (!owaAdapter.openItem(messageId)) console.warn("[AIMH] item không còn trong DOM (virtualize)");
-  }, []);
+  }, [unread]);
+  const unreadScanMore = useCallback((): void => { void unreadRef.current?.scanMore(); }, []);
+  const unreadRescan = useCallback((): void => { void unreadRef.current?.rescan(); }, []);
+  const unreadStop = useCallback((): void => { unreadRef.current?.cancel(); }, []);
+  const triageStartFromPanel = useCallback((): void => {
+    setShowDiagnose(false); setShowUnread(false); setShowTriage(true);
+    if (triage?.status !== "running") setTriage(IDLE_SCAN);
+    void triageRef.current?.start();
+  }, [triage]);
+  const scrollToUnread = useCallback(async (id: string): Promise<void> => { void owaAdapter.scrollToItem(id); }, []);
+  const openUnread = useCallback(async (id: string): Promise<void> => { void owaAdapter.openItem(id); }, []);
 
   const ackConsent = useCallback((): void => {
     setConsentVisible(false);
@@ -115,6 +110,7 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
 
   const busy = state.status === "reading" || state.status === "streaming";
   const unreadRunning = unread?.status === "running";
+  const triageRunning = triage?.status === "running";
   const email = controllerRef.current?.getEmail() ?? null; // UC-02 — email nguồn cho reply
 
   return (
@@ -130,8 +126,11 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
         <button type="button" className="aimh-btn" onClick={() => setShowDiagnose((value) => !value)}>
           {t("panel.diagnose.button")}
         </button>
-        <button type="button" className={"aimh-btn" + (unreadRunning ? " aimh-btn-loading" : "")} disabled={busy || unreadRunning} onClick={unreadStart}>
+        <button type="button" className={"aimh-btn" + (unreadRunning ? " aimh-btn-loading" : "")} disabled={busy || unreadRunning || triageRunning} onClick={unreadStart}>
           {t("panel.unread.scan")}
+        </button>
+        <button type="button" className={"aimh-btn" + (triageRunning ? " aimh-btn-loading" : "")} disabled={busy || unreadRunning || triageRunning} onClick={triageStartFromPanel}>
+          {t("panel.triage.button")}
         </button>
         {/* GĐ6 — hàng chờ duyệt + badge "N chờ duyệt" (UC-07; chỉ hiện khi auto-mode bật hoặc còn pending) */}
         {(auto.enabled || auto.pendingCount > 0) && (
@@ -177,6 +176,18 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
             onOpenItem={(id) => void openUnread(id)}
           />
         </>
+      )}
+      {showTriage && triage !== null && (
+        <DigestView
+          state={triage}
+          onStart={triageStartFromPanel}
+          onScanMore={triageScanMore}
+          onRescan={triageRescan}
+          onStop={triageStop}
+          titleKey="panel.triage.title"
+          onScrollToItem={(id) => void scrollToUnread(id)}
+          onOpenItem={(id) => void openUnread(id)}
+        />
       )}
       {showQueue && <QueueView state={auto} controller={autoRef.current} />} {/* GĐ6 — UC-07 */}
       {showDiagnose && <DiagnoseView onClose={() => setShowDiagnose(false)} />}
