@@ -51,18 +51,12 @@ export function isUnreadItem(element: Element): boolean {
     const label = el.getAttribute("aria-label") ?? "";
     if (/mark as read|đánh dấu.*đã đọc/i.test(label)) return true;
   }
-  // UAT (17/10): OWA hiển thị mail chưa đọc bằng chữ đậm — check computed style
+  // UAT (17/10): OWA hiển thị mail chưa đọc bằng chữ đậm — check computed style.
+  // KHÔNG check h1/h2/h3 (heading mặc định bold trong HTML — false positive trên mọi row).
   try {
     const style = window.getComputedStyle(element);
     const weight = style.getPropertyValue("font-weight");
     if (weight === "bold" || weight === "700" || weight === "600") return true;
-    // Một số layout OWA để bold trên heading/subject bên trong
-    const heading = element.querySelector("h1, h2, h3, [role='heading'], [role='heading'] span, span[class*='bold']");
-    if (heading !== null) {
-      const hs = window.getComputedStyle(heading);
-      const hw = hs.getPropertyValue("font-weight");
-      if (hw === "bold" || hw === "700" || hw === "600") return true;
-    }
   } catch {
     /* jsdom / restricted — bỏ qua computed style check */
   }
