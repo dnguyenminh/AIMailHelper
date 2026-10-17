@@ -114,7 +114,6 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
   }, []);
 
   const busy = state.status === "reading" || state.status === "streaming";
-  const triageRunning = triage?.status === "running";
   const unreadRunning = unread?.status === "running";
   const email = controllerRef.current?.getEmail() ?? null; // UC-02 — email nguồn cho reply
 
