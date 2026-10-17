@@ -16,6 +16,7 @@
 | Anchor | Vai trò |
 |---|---|
 | `#Skip to message-region` | ✅ **Vùng đọc email** — chứa TOÀN BỘ pane: subject + From/To + body (id có khoảng trắng → selector `[id="Skip to message-region"]`) |
+| `#Skip to message list-region` | ✅ **Vùng danh sách mail CÓ THỂ CUỘN** (user cung cấp 18/10) — list-scroller.ts BFS tìm scroller bên trong region này |
 | `#MainModule` | ✅ Root app OWA — cha của folders list + email list + reading pane |
 
 ## 3. Cấu trúc các vùng chính
@@ -27,7 +28,9 @@
 ### 3.2 Danh sách email (inbox list)
 - ✅ `role="listbox"` chứa `role="option"` — **mỗi option = 1 email** (checkbox + "Flag this message" + sender/subject/preview)
 - ✅ Đã HIT trên OWA thật: `inbox-list: [role="listbox"]`, `inbox-item: [role="option"]`
-- Chain: `[role="main"] [role="listbox"]` → `[role="listbox"]` (dư scope an toàn)
+- ✅ UAT 18/10: option CHƯA ĐỌC có aria-label **bắt đầu bằng "unread"** (Diagnose: `aria:unread pegasystems your disput...`) — khớp `isUnreadItem` signal 1
+- ⚠️ Option KHÔNG chứa heading (Diagnose HEADINGS=1, chỉ heading trong folder tree) — subject extract qua SUBJECT_PROBE có thể rỗng trên OWA mới → cần parse từ aria-label (backlog)
+- Chain: `[id="Skip to message list-region"] [role="listbox"]` (mới, 18/10) → `[role="main"] [role="listbox"]` → `[role="listbox"]` → `[role="list"]` (OWA cũ fallback)
 - User cung cấp thêm CSS path (class hash — KHÔNG dùng vì gãy khi MS rebuild):
   `#MainModule > div > div > div.q9iRC.css-243 > div > div > div.rRhzD.css-242.wzILN`
 
