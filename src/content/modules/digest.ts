@@ -6,7 +6,8 @@ import type { AutomationConfig } from "../../shared/types";
 import { PortClient } from "../../shared/port-client";
 import { storage } from "../../shared/storage";
 import type { InboxItem, LocateFn } from "../owa-adapter/triage";
-import { collectUnreadItems, hasFolderChanged as folderChangedFn, readFolderSignature } from "../owa-adapter/triage";
+import { collectUnreadItemsDeep } from "../owa-adapter/deep-triage";
+import { hasFolderChanged as folderChangedFn, readFolderSignature } from "../owa-adapter/triage";
 import { getTriageMany, setTriageMany } from "../owa-adapter/triage-cache";
 import { owaAdapter } from "../owa-adapter/owa-adapter";
 import type { BatchError } from "./digest-batch";
@@ -175,8 +176,7 @@ export class TriageController {
   }
 }
 
-// Deps dùng chung — PortClient riêng + adapter + cache GĐ5; locate KHÔNG opt-in vision (BR-03).
-// UAT (mail chưa đọc): collect = collectUnreadItems (chỉ-đọc DOM, không đổi trạng thái mail).
+// Deps dùng chung (PortClient + adapter + cache GĐ5; vision opt-out BR-03) — UAT 17/10: cả 2 controller dùng quét SÂU (cuộn dần ảo hóa, KHÔNG đổi trạng thái đã đọc).
 function baseDeps(collect: (locate: LocateFn) => Promise<InboxItem[]>, onState: (state: TriageUiState) => void): TriageDeps {
   const client = new PortClient();
   const locate = (key: Parameters<typeof owaAdapter.locate>[0], question: string) => owaAdapter.locate(key, question);
@@ -192,8 +192,8 @@ function baseDeps(collect: (locate: LocateFn) => Promise<InboxItem[]>, onState: 
 }
 
 export function createTriageController(onState: (state: TriageUiState) => void): TriageController {
-  return new TriageController(baseDeps(() => owaAdapter.collectInboxItems(), onState));
+  return new TriageController(baseDeps(() => owaAdapter.collectInboxItemsDeep(), onState));
 }
 export function createUnreadTriageController(onState: (state: TriageUiState) => void): TriageController {
-  return new TriageController(baseDeps((locate) => collectUnreadItems(locate), onState));
+  return new TriageController(baseDeps((locate) => collectUnreadItemsDeep(locate), onState));
 }

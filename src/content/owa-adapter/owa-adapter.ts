@@ -12,6 +12,7 @@ import { readEmail } from "./reader";
 import { SelectorTier } from "./selectors";
 import type { FunctionKey, LocatorStrategy } from "./selectors";
 import { SemanticLocator } from "./semantic-locator";
+import { collectInboxItemsDeep as collectItemsDeep } from "./deep-triage";
 import {
   attachBadge as attachTriageBadge,
   collectInboxItems as collectItems,
@@ -88,6 +89,12 @@ export class OwaAdapter {
   // locate KHÔNG opt-in vision (allowVision mặc định false — triage không cần T3, BR-03).
   collectInboxItems(): Promise<InboxItem[]> {
     return collectItems((key, question) => this.locate(key, question));
+  }
+
+  // UAT (17/10) — quét SÂU: cuộn dần danh sách ảo hóa để thu thập TOÀN BỘ mail folder.
+  // Cuộn không đổi trạng thái đã đọc; LLM vẫn bị triageCap chặn ở tầng digest (EF-5).
+  collectInboxItemsDeep(): Promise<InboxItem[]> {
+    return collectItemsDeep((key, question) => this.locate(key, question));
   }
 
   // FR-GD5-03 — badge màu trên list item qua adapter (SR-10; màu theo score — FSD UI spec).

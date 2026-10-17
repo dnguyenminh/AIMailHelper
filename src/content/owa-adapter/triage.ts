@@ -153,6 +153,13 @@ export function findItemElement(messageId: string): Element | null {
   return currentScan.get(messageId) ?? null;
 }
 
+// Deep-triage (quét sâu) thay currentScan bằng bộ element của lần quét đó — 👁/↗ tra theo
+// lần quét mới nhất. currentScan là state private của triage — mọi writer đi qua hàm này.
+export function replaceCurrentScan(entries: Map<string, Element>): void {
+  currentScan.clear();
+  for (const [id, element] of entries) currentScan.set(id, element);
+}
+
 // FR-GD5-03 — badge màu trên list item. UAT-3: TẮT DOM injection — appendChild vào
 // row do React của OWA quản lý làm VỠ layout trang (cùng lớp bug toolbar injection — fix 2).
 // Điểm số vẫn hiển thị trong panel Digest (DigestView — không đụng DOM OWA).
