@@ -41,20 +41,37 @@ export async function collectInboxItems(locate: LocateFn): Promise<InboxItem[]> 
 
 // UAT (mail chưa đọc) — CHỈ ĐỌC DOM, không click/mở mail nên KHÔNG đổi trạng thái đã đọc/chưa
 // đọc của mail (yêu cầu bắt buộc). Heuristic signals trên row: (1) aria-label chứa
-// "unread"/"chưa đọc"; (2) nút "Mark as read"/"Đánh dấu đã đọc" (chỉ xuất hiện trên row chưa
-// đọc). Chưa verify trên mọi layout OWA → xem OWA-DOM-SPIKE.md.
+// "unread"/"chưa đọc"; (2) nút "Mark as read"/"Đánh dấu đã đọc" trong row; (3) font-weight
+// bold (OWA hiển thị mail chưa đọc chữ đậm); (4) aria-label bắt đầu bằng "Unread" (OWA EN).
 export function isUnreadItem(element: Element): boolean {
   const own = element.getAttribute("aria-label") ?? "";
   if (/\bunread\b|chưa đọc/i.test(own)) return true;
+  if (/^unread/i.test(own.trim())) return true; // OWA EN: "Unread message from..."
   for (const el of Array.from(element.querySelectorAll("[aria-label]"))) {
     const label = el.getAttribute("aria-label") ?? "";
     if (/mark as read|đánh dấu.*đã đọc/i.test(label)) return true;
+  }
+  // UAT (17/10): OWA hiển thị mail chưa đọc bằng chữ đậm — check computed style
+  try {
+    const style = window.getComputedStyle(element);
+    const weight = style.getPropertyValue("font-weight");
+    if (weight === "bold" || weight === "700" || weight === "600") return true;
+    // Một số layout OWA để bold trên heading/subject bên trong
+    const heading = element.querySelector("h1, h2, h3, [role='heading'], [role='heading'] span, span[class*='bold']");
+    if (heading !== null) {
+      const hs = window.getComputedStyle(heading);
+      const hw = hs.getPropertyValue("font-weight");
+      if (hw === "bold" || hw === "700" || hw === "600") return true;
+    }
+  } catch {
+    /* jsdom / restricted — bỏ qua computed style check */
   }
   return false;
 }
 
 // Thu thập CHỈ item chưa đọc đang hiển thị — cùng contract với collectInboxItems (BR-07, ERR-06,
 // ERR-12 lọc). Không click, không dispatch event, không mutate DOM.
+// UAT (17/10): nếu 0 unread nhưng có items → log chi tiết để debug heuristic.
 export async function collectUnreadItems(locate: LocateFn): Promise<InboxItem[]> {
   const all = await collectInboxItems(locate);
   const elements = new Map<string, Element>(currentScan);
@@ -67,7 +84,19 @@ export async function collectUnreadItems(locate: LocateFn): Promise<InboxItem[]>
       unread.push(item);
     }
   }
-  console.info(`[AIMH][triage] unread: ${unread.length}/${all.length} item chưa đọc (chỉ đọc DOM)`);
+  if (unread.length === 0 && all.length > 0) {
+    // Diagnostic: log 3 item đầu để xem tại sao isUnreadItem trả false
+    const sample = all.slice(0, 3).map((item) => {
+      const el = elements.get(item.messageId);
+      return el !== undefined
+        ? { subject: item.subject.slice(0, 30), aria: (el.getAttribute("aria-label") ?? "").slice(0, 40),
+            fontWeight: (() => { try { return window.getComputedStyle(el).getPropertyValue("font-weight"); } catch { return "?"; } })() }
+        : { subject: item.subject.slice(0, 30), aria: "(no element)" };
+    });
+    console.warn(`[AIMH][triage] 0 unread / ${all.length} items — heuristic signals (first 3):`, JSON.stringify(sample, null, 2));
+  } else {
+    console.info(`[AIMH][triage] unread: ${unread.length}/${all.length} item chưa đọc (chỉ đọc DOM)`);
+  }
   return unread;
 }
 

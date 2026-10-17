@@ -51,7 +51,9 @@ export const SELECTOR_CHAINS: Record<FunctionKey, SelectorChain> = {
   // list chứa listitem con → container scroll chính (virtualized — chỉ item trong DOM, AF-5 UC-03)
   // UAT spike 15/10 (outlook.cloud.microsoft): danh sách email = listbox chứa option (mỗi option
   // = 1 email với checkbox + Flag); cây thư mục = treeitem. Giữ [role=list] cho OWA cũ.
-  "inbox-list": ['[role="list"]', '[role="main"] [role="listbox"]', '[role="listbox"]'],
+  // UAT spike: [role="list"] trúng container NHỎ (1 mail) trên OWA mới → đổi thứ tự:
+  // listbox TRONG [role=main] (chính xác nhất) → listbox → list (OWA cũ fallback).
+  "inbox-list": ['[role="main"] [role="listbox"]', '[role="listbox"]', '[role="main"] [role="list"]', '[role="list"]'],
   "inbox-item": ['[role="listitem"]', '[role="main"] [role="option"]', '[role="option"]', '[role="treeitem"]']
 };
 
