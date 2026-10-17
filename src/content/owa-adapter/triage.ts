@@ -149,25 +149,23 @@ export async function hasFolderChanged(before: Element | null, locate: LocateFn)
 // listbox đính kèm file trong reading pane (diagnostic: 1 item "Screenshot...png").
 // CHỈ ĐỌC — không click, không mutate.
 export async function locateInboxList(locate: LocateFn): Promise<Element | null> {
-  // Thử locate thường trước (selector chain)
+  // Thử locate thường trước — nếu element có children giống inbox item thì dùng
   const hit = await locate("inbox-list", "danh sách email inbox");
-  if (hit !== null && hit.querySelectorAll('[role="option"]').length >= 3) return hit;
-  // Fallback: quét tất cả listbox trong main, chọn cái nhiều option nhất
+  if (hit !== null) {
+    const itemChildren = hit.querySelectorAll(SELECTOR_CHAINS["inbox-item"].join(",")).length;
+    if (itemChildren > 0) return hit; // đủ điều kiện — có inbox item bên trong
+  }
+  // Fallback: locate thường miss hoặc element rỗng → quét tất cả listbox trong main
   const main = document.querySelector('[role="main"]');
-  if (main === null) return null;
+  if (main === null) return hit; // không có main → trả hit cũ (có thể null)
   let best: Element | null = null;
   let bestCount = 0;
-  for (const box of Array.from(main.querySelectorAll('[role="listbox"]'))) {
-    const options = box.querySelectorAll('[role="option"]').length;
-    // Ưu tiên listbox có option chứa heading (email subject) — loại attachment listbox
-    const hasHeadings = box.querySelectorAll('[role="option"] [role="heading"], [role="option"] h1, [role="option"] h2, [role="option"] h3').length > 0;
-    if (options > bestCount && hasHeadings) {
-      best = box;
-      bestCount = options;
-    }
+  for (const box of Array.from(main.querySelectorAll('[role="listbox"], [role="list"]'))) {
+    const children = box.querySelectorAll(SELECTOR_CHAINS["inbox-item"].join(",")).length;
+    if (children > bestCount) { best = box; bestCount = children; }
   }
-  if (best !== null) console.info(`[AIMH][triage] inbox-list fallback: listbox với ${bestCount} options (bỏ qua listbox đính kèm)`);
-  return best;
+  if (best !== null && bestCount > 0) console.info(`[AIMH][triage] inbox-list fallback: ${bestCount} items`);
+  return best ?? hit;
 }
 
 // UAT — tìm Element của 1 item theo messageId trong lần quét hiện tại (currentScan). Trả null
