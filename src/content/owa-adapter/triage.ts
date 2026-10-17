@@ -5,6 +5,7 @@
 // (SR-10 createElement/textContent, không innerHTML) — components không tự đụng DOM OWA (§1.4 #2).
 import { AppError } from "../../shared/errors";
 import type { TriageItem } from "../../shared/types";
+import { locateInboxList } from "./inbox-list-locator";
 import { resolveMessageId } from "./message-id";
 import { normalizeBody, parsePerson } from "./reader";
 import type { FunctionKey } from "./selectors";
@@ -133,39 +134,17 @@ function firstLabeled(container: Element, pattern: RegExp): string {
 
 // EF-2/EF-4 UC-03 — folder signature lightweight: identity container list (đổi folder → container
 // mới). digest.ts check TRƯỚC MỖI batch (TDD §3.1.6). Hạn chế container-reuse ghi ở OWA-DOM-SPIKE #44.
+// UAT (17/10): dùng locateInboxList (đúng container như collectInboxItems) — tránh so signature
+// container ĐÍNH KÈM rồi check inbox thật → false-positive "folder changed" giữa batch.
 export async function readFolderSignature(locate: LocateFn): Promise<Element | null> {
-  return locate("inbox-list", "danh sách inbox hiện tại");
+  return locateInboxList(locate);
 }
 
 export async function hasFolderChanged(before: Element | null, locate: LocateFn): Promise<boolean> {
   if (before === null) return false; // scan bắt đầu không thấy list → không có mốc để so
   if (!before.isConnected) return true; // container bị tháo khỏi DOM → folder đã đổi
-  const current = await locate("inbox-list", "danh sách inbox hiện tại");
+  const current = await locateInboxList(locate);
   return current === null || current !== before;
-}
-
-// UAT (17/10) — tìm inbox listbox ĐÚNG: quét tất cả [role=listbox] trong [role=main],
-// chọn cái có nhiều option nhất + option có heading (subject mail). Tránh bắt nhầm
-// listbox đính kèm file trong reading pane (diagnostic: 1 item "Screenshot...png").
-// CHỈ ĐỌC — không click, không mutate.
-export async function locateInboxList(locate: LocateFn): Promise<Element | null> {
-  // Thử locate thường trước — nếu element có children giống inbox item thì dùng
-  const hit = await locate("inbox-list", "danh sách email inbox");
-  if (hit !== null) {
-    const itemChildren = hit.querySelectorAll(SELECTOR_CHAINS["inbox-item"].join(",")).length;
-    if (itemChildren > 0) return hit; // đủ điều kiện — có inbox item bên trong
-  }
-  // Fallback: locate thường miss hoặc element rỗng → quét tất cả listbox trong main
-  const main = document.querySelector('[role="main"]');
-  if (main === null) return hit; // không có main → trả hit cũ (có thể null)
-  let best: Element | null = null;
-  let bestCount = 0;
-  for (const box of Array.from(main.querySelectorAll('[role="listbox"], [role="list"]'))) {
-    const children = box.querySelectorAll(SELECTOR_CHAINS["inbox-item"].join(",")).length;
-    if (children > bestCount) { best = box; bestCount = children; }
-  }
-  if (best !== null && bestCount > 0) console.info(`[AIMH][triage] inbox-list fallback: ${bestCount} items`);
-  return best ?? hit;
 }
 
 // UAT — tìm Element của 1 item theo messageId trong lần quét hiện tại (currentScan). Trả null
