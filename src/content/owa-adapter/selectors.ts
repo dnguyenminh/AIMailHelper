@@ -37,10 +37,16 @@ export const SELECTOR_CHAINS: Record<FunctionKey, SelectorChain> = {
     '[aria-label*="Trả lời" i]:not([aria-label*="Tất cả" i])'
   ],
   // textbox multiline → aria-label chứa "Compose" / "trả lời"
+  // UAT (15/10) — OWA mới: compose box là contenteditable div KHÔNG có role=textbox, KHÔNG
+  // có aria-multiline. Giữ chain cũ (OWA cũ), thêm [contenteditable=true] + [role=textbox]
+  // trong [role=dialog] (reply compose OWA mới mở dưới dạng dialog/full-pane).
   "compose-box": [
+    '[role="dialog"] [contenteditable="true"]',
+    '[role="dialog"] [role="textbox"]',
     '[role="textbox"][aria-multiline="true"]',
     '[aria-label*="Compose" i][role="textbox"]',
-    '[aria-label*="trả lời" i][role="textbox"]'
+    '[aria-label*="trả lời" i][role="textbox"]',
+    'div[contenteditable="true"]'
   ],
   // list chứa listitem con → container scroll chính (virtualized — chỉ item trong DOM, AF-5 UC-03)
   // UAT spike 15/10 (outlook.cloud.microsoft): danh sách email = listbox chứa option (mỗi option

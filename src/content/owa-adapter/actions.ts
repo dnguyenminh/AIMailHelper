@@ -35,28 +35,22 @@ export async function openReplyBox(deps: ActionsDeps): Promise<boolean> {
 }
 
 // UC-02 bước 8 — FR-GD4-03: định vị compose → gate BR-10/AF-5 → điền draft qua editable.ts.
+// UAT (15/10): KHÔNG TỰ ĐỘNG mở reply box — người dùng phải tự bấm Reply trước. Tự bấm Reply
+// qua dispatchEvent gây tạo reply email mới ngoài ý muốn (bug UAT). Compose chưa mở → trả
+// compose-not-found, panel hiển thị hướng dẫn "bấm Reply trước".
 export async function insertDraft(
   draft: string,
   decision: InsertDecision | undefined,
   deps: ActionsDeps
 ): Promise<InsertOutcome> {
   if (draft.trim().length === 0) return { kind: "blocked-empty" }; // BR-10 — chặn trước DOM
-  const box = await locateComposeBox(deps);
-  if (!box) return { kind: "compose-not-found" }; // EF-2 — kể cả sau khi đã thử mở reply box
+  const box = await deps.locate("compose-box", COMPOSE_QUESTION);
+  if (!box) return { kind: "compose-not-found" }; // KHÔNG auto-open — user bấm Reply trước
   const existing = deps.readText(box);
   if (existing.trim().length > 0 && decision === undefined) {
     return { kind: "needs-confirm", existing: existing }; // AF-5 — hỏi xác nhận ở panel
   }
   return deps.writeText(box, draft, decision ?? "replace")
     ? { kind: "inserted" }
-    : { kind: "write-failed" }; // ERR-09 khi write-failed
-}
-
-// AF-2 UC-02 — T1+T2 (chain qua deps.locate) fail → thử mở reply box rồi locate lại compose.
-async function locateComposeBox(deps: ActionsDeps): Promise<Element | null> {
-  const direct = await deps.locate("compose-box", COMPOSE_QUESTION);
-  if (direct) return direct;
-  const opened = await openReplyBox(deps);
-  if (!opened) return null;
-  return deps.locate("compose-box", COMPOSE_QUESTION);
+    : { kind: "write-failed" };
 }

@@ -101,11 +101,12 @@ describe("insertDraft — UC-02 bước 8 (BR-10 / AF-5 / AF-1 / ERR-09)", () =>
     expect(append.writes[0]?.mode).toBe("append");
   });
 
-  it("AF-1/AF-2: compose miss → mở reply box → locate lại compose → inserted (BR-12 chain)", async () => {
+  it("UAT (15/10): compose miss → KHÔNG auto-open reply box — trả compose-not-found (user tự bấm Reply trước)", async () => {
     const harness = makeHarness({ composeFirst: null, composeSecond: el(), replyButton: el() });
     const outcome = await insertDraft("Draft", undefined, harness.deps);
-    expect(outcome).toEqual({ kind: "inserted" });
-    expect(harness.locateKeys).toEqual(["compose-box", "reply-button", "compose-box"]);
+    expect(outcome).toEqual({ kind: "compose-not-found" });
+    expect(harness.locateKeys).toEqual(["compose-box"]); // KHÔNG gọi reply-button
+    expect(harness.writes).toHaveLength(0);
   });
 
   it("EF-2: compose miss + mở reply box cũng fail → compose-not-found (caller ERR-09 + copy tay)", async () => {
