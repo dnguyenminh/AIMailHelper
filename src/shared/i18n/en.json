@@ -126,6 +126,8 @@
   "panel.reply.cancel": "Cancel",
   "panel.reply.mismatch": "This draft belongs to a different email — NOT inserting automatically.",
   "panel.reply.insertAnyway": "Insert anyway",
+    "panel.digest.scrollTo": "Scroll to mail (no open)",
+    "panel.digest.open": "Open mail (marks as read)",
     "panel.unread.scan": "Scan unread mail",
     "panel.unread.title": "Unread mail — analysis",
     "panel.unread.readonly": "Reads only visible content without opening mail, so read/unread state is unchanged.",

@@ -126,6 +126,8 @@
   "panel.reply.cancel": "Hủy",
   "panel.reply.mismatch": "Draft này thuộc email khác — KHÔNG chèn tự động.",
   "panel.reply.insertAnyway": "Vẫn chèn",
+    "panel.digest.scrollTo": "Cuộn đến mail (không mở)",
+    "panel.digest.open": "Mở mail (đánh dấu đã đọc)",
     "panel.unread.scan": "Quét mail chưa đọc",
     "panel.unread.title": "Mail chưa đọc — phân tích",
     "panel.unread.readonly": "Chỉ đọc nội dung hiển thị, không mở mail nên không đổi trạng thái đã đọc/chưa đọc.",

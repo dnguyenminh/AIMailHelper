@@ -14,10 +14,12 @@ export interface DigestViewProps {
   onScanMore: () => void;
   onRescan: () => void;
   onStop: () => void;
-  titleKey?: string; // UAT (mail chưa đọc) — mặc định giữ tiêu đề triage cũ
+  titleKey?: string;
+  onScrollToItem?: (messageId: string) => void; // UAT — cuộn đến mail (không mở, không đổi trạng thái)
+  onOpenItem?: (messageId: string) => void; // UAT — mở mail (Outlook đánh dấu đã đọc)
 }
 
-export function DigestView({ state, onStart, onScanMore, onRescan, onStop, titleKey }: DigestViewProps) {
+export function DigestView({ state, onStart, onScanMore, onRescan, onStop, titleKey, onScrollToItem, onOpenItem }: DigestViewProps) {
   const running = state.status === "running";
   const empty = !running && state.digest.length === 0 && state.progress.total === 0; // EF-1 UC-04
   return (
@@ -68,6 +70,12 @@ export function DigestView({ state, onStart, onScanMore, onRescan, onStop, title
               <span className={"aimh-badge " + badgeClassOf(entry.score)}>{entry.score}</span>
               <span className="aimh-text"> {entry.subject}</span>
               <span className="aimh-note"> — {entry.reason}</span> {/* FR-GD5-04 — lý do */}
+              {onScrollToItem !== undefined && (
+                <button type="button" className="aimh-btn" aria-label={t("panel.digest.scrollTo")} onClick={() => onScrollToItem(entry.messageId)}>👁</button>
+              )}
+              {onOpenItem !== undefined && (
+                <button type="button" className="aimh-btn" aria-label={t("panel.digest.open")} onClick={() => onOpenItem(entry.messageId)}>↗</button>
+              )}
             </li>
           ))}
         </ul>

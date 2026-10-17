@@ -15,6 +15,7 @@ import { SemanticLocator } from "./semantic-locator";
 import {
   attachBadge as attachTriageBadge,
   collectInboxItems as collectItems,
+  findItemElement,
   hasFolderChanged,
   readFolderSignature
 } from "./triage";
@@ -101,6 +102,23 @@ export class OwaAdapter {
 
   hasFolderChanged(before: Element | null): Promise<boolean> {
     return hasFolderChanged(before, (key, question) => this.locate(key, question));
+  }
+
+  // UAT — cuộn đến mail trong danh sách (KHÔNG mở mail, KHÔNG đổi trạng thái đã đọc).
+  // scrollIntoView chỉ đổi scroll position — không tương tác React OWA.
+  scrollToItem(messageId: string): boolean {
+    const element = findItemElement(messageId);
+    if (element === null || !element.isConnected) return false;
+    element.scrollIntoView({ block: "center", behavior: "smooth" });
+    return true;
+  }
+
+  // UAT — MỞ mail (click) → Outlook đánh dấu "đã đọc". Người dùng chủ động chọn.
+  openItem(messageId: string): boolean {
+    const element = findItemElement(messageId);
+    if (element === null || !element.isConnected) return false;
+    element.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    return true;
   }
 }
 

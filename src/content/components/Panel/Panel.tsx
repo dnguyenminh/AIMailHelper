@@ -10,6 +10,7 @@ import type { AutoModeState } from "../../modules/automode-types";
 import { IDLE_AUTO } from "../../modules/automode-types";
 import { createAnalyzeController } from "../../modules/analyze";
 import type { AnalysisUiState } from "../../modules/analyze";
+import { owaAdapter } from "../../owa-adapter/owa-adapter";
 import { createTriageController, createUnreadTriageController } from "../../modules/digest";
 import type { TriageUiState } from "../../modules/digest";
 import { AnalysisView } from "./AnalysisView";
@@ -99,6 +100,14 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
     unreadRef.current?.cancel();
   }, []);
 
+  // UAT — cuộn đến mail (không mở, không đổi trạng thái) / mở mail (đổi thành đã đọc).
+  const scrollToUnread = useCallback(async (messageId: string): Promise<void> => {
+    if (!owaAdapter.scrollToItem(messageId)) console.warn("[AIMH] item không còn trong DOM (virtualize)");
+  }, []);
+  const openUnread = useCallback(async (messageId: string): Promise<void> => {
+    if (!owaAdapter.openItem(messageId)) console.warn("[AIMH] item không còn trong DOM (virtualize)");
+  }, []);
+
   const ackConsent = useCallback((): void => {
     setConsentVisible(false);
     void setCache(CONSENT_KEY, true); // SR-18 — ghi nhận đã hiển thị; lỗi storage không chặn luồng
@@ -163,6 +172,8 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
             onRescan={unreadRescan}
             onStop={unreadStop}
             titleKey="panel.unread.title"
+            onScrollToItem={(id) => void scrollToUnread(id)}
+            onOpenItem={(id) => void openUnread(id)}
           />
         </>
       )}

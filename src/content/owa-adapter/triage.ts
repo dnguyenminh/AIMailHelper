@@ -119,10 +119,15 @@ export async function hasFolderChanged(before: Element | null, locate: LocateFn)
   return current === null || current !== before;
 }
 
-// FR-GD5-03 — badge màu trên list item. UAT-3 (15/10): TẮT DOM injection — appendChild vào
+// UAT — tìm Element của 1 item theo messageId trong lần quét hiện tại (currentScan). Trả null
+// nếu item đã bị OWA virtualize khỏi DOM. CHỈ ĐỌC — không click, không mutate.
+export function findItemElement(messageId: string): Element | null {
+  return currentScan.get(messageId) ?? null;
+}
+
+// FR-GD5-03 — badge màu trên list item. UAT-3: TẮT DOM injection — appendChild vào
 // row do React của OWA quản lý làm VỠ layout trang (cùng lớp bug toolbar injection — fix 2).
-// Điểm số vẫn hiển thị trong panel Digest (DigestView — không đụng DOM OWA). Chiến lược
-// overlay shadow-root (không đụng React tree) sẽ thiết kế sau khi spike ổn định.
+// Điểm số vẫn hiển thị trong panel Digest (DigestView — không đụng DOM OWA).
 
 // UAT-3 — fail-safe: KHÔNG mutate DOM của OWA. Trả false (caller log, không chặn batch).
 export function attachBadge(messageId: string, score: number): boolean {
