@@ -25,8 +25,10 @@ const PREVIEW_CHARS = 160;
 const currentScan = new Map<string, Element>();
 
 // UC-03 bước 2 — thu thập {messageId, subject, sender, snippet} từng item ĐANG HIỂN THỊ (BR-07).
+// UAT (17/10): dùng locateInboxList (fallback quét tất cả listbox, chọn cái nhiều option nhất)
+// thay vì locate thường — tránh bắt nhầm listbox đính kèm file trong reading pane.
 export async function collectInboxItems(locate: LocateFn): Promise<InboxItem[]> {
-  const list = await locate("inbox-list", "danh sách email inbox đang hiển thị");
+  const list = await locateInboxList(locate);
   if (!list) throw new AppError("ERR-06", "errors.owaNotFound"); // ERR-06 — panel gợi ý Diagnose
   currentScan.clear();
   const items: InboxItem[] = [];
@@ -140,6 +142,32 @@ export async function hasFolderChanged(before: Element | null, locate: LocateFn)
   if (!before.isConnected) return true; // container bị tháo khỏi DOM → folder đã đổi
   const current = await locate("inbox-list", "danh sách inbox hiện tại");
   return current === null || current !== before;
+}
+
+// UAT (17/10) — tìm inbox listbox ĐÚNG: quét tất cả [role=listbox] trong [role=main],
+// chọn cái có nhiều option nhất + option có heading (subject mail). Tránh bắt nhầm
+// listbox đính kèm file trong reading pane (diagnostic: 1 item "Screenshot...png").
+// CHỈ ĐỌC — không click, không mutate.
+export async function locateInboxList(locate: LocateFn): Promise<Element | null> {
+  // Thử locate thường trước (selector chain)
+  const hit = await locate("inbox-list", "danh sách email inbox");
+  if (hit !== null && hit.querySelectorAll('[role="option"]').length >= 3) return hit;
+  // Fallback: quét tất cả listbox trong main, chọn cái nhiều option nhất
+  const main = document.querySelector('[role="main"]');
+  if (main === null) return null;
+  let best: Element | null = null;
+  let bestCount = 0;
+  for (const box of Array.from(main.querySelectorAll('[role="listbox"]'))) {
+    const options = box.querySelectorAll('[role="option"]').length;
+    // Ưu tiên listbox có option chứa heading (email subject) — loại attachment listbox
+    const hasHeadings = box.querySelectorAll('[role="option"] [role="heading"], [role="option"] h1, [role="option"] h2, [role="option"] h3').length > 0;
+    if (options > bestCount && hasHeadings) {
+      best = box;
+      bestCount = options;
+    }
+  }
+  if (best !== null) console.info(`[AIMH][triage] inbox-list fallback: listbox với ${bestCount} options (bỏ qua listbox đính kèm)`);
+  return best;
 }
 
 // UAT — tìm Element của 1 item theo messageId trong lần quét hiện tại (currentScan). Trả null
