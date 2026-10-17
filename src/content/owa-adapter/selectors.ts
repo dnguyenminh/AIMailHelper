@@ -53,7 +53,15 @@ export const SELECTOR_CHAINS: Record<FunctionKey, SelectorChain> = {
   // = 1 email với checkbox + Flag); cây thư mục = treeitem. Giữ [role=list] cho OWA cũ.
   // UAT spike: [role="list"] trúng container NHỎ (1 mail) trên OWA mới → đổi thứ tự:
   // listbox TRONG [role=main] (chính xác nhất) → listbox → list (OWA cũ fallback).
-  "inbox-list": ['[role="main"] [role="listbox"]', '[role="listbox"]', '[role="main"] [role="list"]', '[role="list"]'],
+  // UAT 18/10 (user cung cấp anchor): #Skip to message list-region = vùng danh sách CÓ THỂ
+  // CUỘN — skip-link landmark id ổn định → đặt ĐẦU chain (listbox bên trong region).
+  "inbox-list": [
+    '[id="Skip to message list-region"] [role="listbox"]',
+    '[role="main"] [role="listbox"]',
+    '[role="listbox"]',
+    '[role="main"] [role="list"]',
+    '[role="list"]'
+  ],
   "inbox-item": ['[role="listitem"]', '[role="main"] [role="option"]', '[role="option"]', '[role="treeitem"]']
 };
 
