@@ -49,6 +49,10 @@ export const PANEL_BASE_CSS = [
   "  background: #ffffff; color: #1b1b1f; font: inherit; cursor: pointer; }",
   ".aimh-btn:disabled { opacity: 0.55; cursor: not-allowed; }",
   ".aimh-btn-primary { background: #0f6cbd; border-color: #0f6cbd; color: #ffffff; }",
+  // UAT — loading feedback: spinner khi async đang chạy + disabled chống double-click
+  ".aimh-btn-loading { position: relative; pointer-events: none; opacity: 0.7; }",
+  ".aimh-btn-loading::after { content: ''; position: absolute; right: 6px; top: 50%; width: 10px; height: 10px; margin-top: -5px; border-radius: 50%; border: 2px solid rgba(0,0,0,0.2); border-top-color: currentColor; animation: aimh-spin 0.7s linear infinite; }",
+  "@keyframes aimh-spin { to { transform: rotate(360deg); } }",
   ".aimh-consent { padding: 8px; border-radius: 6px; background: #fff4ce; display: flex;",
   "  flex-direction: column; gap: 6px; }",
   ".aimh-note { margin: 0; color: #5f6368; font-size: 12px; }",

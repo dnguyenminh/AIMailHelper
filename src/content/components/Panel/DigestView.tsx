@@ -26,7 +26,7 @@ export function DigestView({ state, onStart, onScanMore, onRescan, onStop, title
     <div className="aimh-digest">
       <h4 className="aimh-heading">{t(titleKey ?? "panel.triage.title")}</h4>
       <div className="aimh-row">
-        <button type="button" className="aimh-btn aimh-btn-primary" disabled={running} onClick={onStart}>
+        <button type="button" className={"aimh-btn aimh-btn-primary" + (running ? " aimh-btn-loading" : "")} disabled={running} onClick={onStart}>
           {running
             ? t("panel.triage.running", { done: state.progress.done, total: state.progress.total })
             : t("panel.triage.button")}

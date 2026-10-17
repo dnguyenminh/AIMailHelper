@@ -114,13 +114,15 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
   }, []);
 
   const busy = state.status === "reading" || state.status === "streaming";
+  const triageRunning = triage?.status === "running";
+  const unreadRunning = unread?.status === "running";
   const email = controllerRef.current?.getEmail() ?? null; // UC-02 — email nguồn cho reply
 
   return (
     <PanelWindow host={host}>
       <div className="aimh-panel" role="complementary" aria-label="AIMailHelper">
       <div className="aimh-panel-actions">
-        <button type="button" className="aimh-btn aimh-btn-primary" disabled={busy} onClick={analyze}>
+        <button type="button" className={"aimh-btn aimh-btn-primary" + (busy ? " aimh-btn-loading" : "")} disabled={busy} onClick={analyze}>
           {busy ? t("panel.analyze.running") : t("panel.analyze.button")}
         </button>
         {state.status === "streaming" && (
@@ -129,7 +131,7 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
         <button type="button" className="aimh-btn" onClick={() => setShowDiagnose((value) => !value)}>
           {t("panel.diagnose.button")}
         </button>
-        <button type="button" className="aimh-btn" onClick={unreadStart}>
+        <button type="button" className={"aimh-btn" + (unreadRunning ? " aimh-btn-loading" : "")} disabled={busy || unreadRunning} onClick={unreadStart}>
           {t("panel.unread.scan")}
         </button>
         {/* GĐ6 — hàng chờ duyệt + badge "N chờ duyệt" (UC-07; chỉ hiện khi auto-mode bật hoặc còn pending) */}
