@@ -11,7 +11,12 @@ const ITEM_SELECTOR = '[role="option"], [role="listitem"]';
 const LIST_CONTAINER = '[role="listbox"], [role="list"]';
 const GROW_TIMEOUT_MS = 2500; // chờ tối đa sau mỗi lần cuộn (OWA có thể fetch server thêm page)
 const GROW_POLL_MS = 250;
-const NO_GROWTH_STOP = 2; // hết row mới N round liên tiếp → coi như đã hết folder
+const NO_GROWTH_STOP = 3; // hết row mới N round liên tiếp → coi như đã hết folder
+// UAT 18/10 (log user): overflowY "auto|scroll" KHÔNG trúng ancestor nào trên OWA thật →
+// thêm "overlay" (Fluent UI hay dùng) + fallback ancestor delta lớn nhất (scroller ẩn —
+// overflow:hidden vẫn cuộn được bằng code).
+const SCROLL_OVERFLOW = /(auto|scroll|overlay)/;
+const MIN_SCROLL_DELTA = 20;
 
 export interface DeepScanOptions {
   maxItems?: number; // cap an toàn — mặc định 500 (khớp triageCap tối đa ở Options), chặn giữa các round
@@ -32,20 +37,25 @@ interface RoundResult {
   elements: Map<string, Element>; // element CÒN KẾT NỐI của item mới (caller check unread ngay)
 }
 
-// Tìm ancestor cuộn được (overflow auto/scroll, còn dư nội dung) — BẮT ĐẦU từ chính list
-// (listbox của OWA có thể là scroller), đi lên ancestor. Không thấy → caller dùng fallback.
+// Tìm element cuộn được cho danh sách mail — 2 lớp:
+// (1) ancestor có overflow auto/scroll/overlay + còn dư nội dung (scroller chuẩn) — trả ngay;
+// (2) fallback: ancestor có delta (scrollHeight - clientHeight) lớn nhất >100px — scroller ẩn
+//     (overflow:hidden VẪN cuộn được bằng code scrollTop) hoặc giá trị overflow không chuẩn.
 function findScrollContainer(list: Element): HTMLElement | null {
-  let node: HTMLElement | null = list instanceof HTMLElement ? list : null;
+  let best: HTMLElement | null = null;
+  let bestDelta = 0;
   try {
-    while (node !== null && node !== document.body) {
-      const style = window.getComputedStyle(node);
-      if (/(auto|scroll)/.test(style.overflowY) && node.scrollHeight - node.clientHeight > 20) return node;
+    let node: HTMLElement | null = list instanceof HTMLElement ? list : null;
+    while (node !== null) {
+      const delta = node.scrollHeight - node.clientHeight;
+      if (SCROLL_OVERFLOW.test(window.getComputedStyle(node).overflowY) && delta > MIN_SCROLL_DELTA) return node;
+      if (delta > bestDelta) { bestDelta = delta; best = node; }
       node = node.parentElement;
     }
   } catch {
     return null; // jsdom / môi trường hạn chế — bỏ qua cuộn trực tiếp
   }
-  return null;
+  return bestDelta > 100 ? best : null;
 }
 
 // Container mail list CÓ THỂ bị OWA thay thế sau khi cuộn (React re-render) — LUÔN tra lại
@@ -61,37 +71,57 @@ function liveMailList(): Element | null {
 }
 
 // Nhảy ĐÁY container cuộn — gán scrollTop kích hoạt native scroll event (virtualizer Fluent
-// nghe scroll), kèm wheel event fallback. KHÔNG click mail, KHÔNG dispatch MouseEvent → không
-// đổi trạng thái đã đọc.
+// nghe scroll), kèm wheel burst. KHÔNG click mail, KHÔNG dispatch MouseEvent → không đổi
+// trạng thái đã đọc.
 function jumpToBottom(scroller: HTMLElement): void {
   try {
     scroller.scrollTop = scroller.scrollHeight;
-    scroller.dispatchEvent(new WheelEvent("wheel", { deltaY: 1200, bubbles: true, cancelable: true }));
+    for (let tick = 0; tick < 3; tick += 1) {
+      scroller.dispatchEvent(new WheelEvent("wheel", { deltaY: 1000, bubbles: true, cancelable: true }));
+    }
   } catch {
     /* jsdom không có WheelEvent — bỏ qua, vòng lặp test vẫn chạy với loadMore giả */
   }
 }
 
-// Cuộn để OWA render thêm row. Cuộn container CUỘN THẬT (tra lại trong document — list truyền
-// vào có thể đã bị thay thế); scrollIntoView chỉ là fallback khi không tìm thấy scroller.
-// Chờ row mới tối đa GROW_TIMEOUT_MS (OWA có thể fetch server page tiếp theo).
+// Fallback cũ — cuộn row cuối vào viewport (dùng khi không tìm thấy scroller nào).
+function scrollIntoViewLast(list: Element): void {
+  const rows = list.querySelectorAll(ITEM_SELECTOR);
+  const last = rows[rows.length - 1];
+  if (last === undefined) return;
+  try { (last as HTMLElement).scrollIntoView({ block: "end" }); } catch { /* jsdom */ }
+}
+
+// Log chẩn đoán khi cuộn thất bại: 8 tầng ancestor với overflow + delta — chỉ chính xác chỗ
+// scroller thật nằm đâu trên OWA của user để tinh chỉnh lần sau.
+function logScrollDiagnostics(list: Element, scroller: HTMLElement | null, before: number): void {
+  const chain: string[] = [];
+  try {
+    let node: HTMLElement | null = list instanceof HTMLElement ? list : null;
+    for (let depth = 0; node !== null && depth < 8; depth += 1) {
+      chain.push(`${node.tagName}(ov=${window.getComputedStyle(node).overflowY},d=${node.scrollHeight - node.clientHeight})`);
+      node = node.parentElement;
+    }
+  } catch {
+    /* jsdom — bỏ qua */
+  }
+  console.info(`[AIMH][deep-scan] cuộn không thêm row — scroller: ${scroller === null ? "KHÔNG thấy" : scroller.tagName}, rows ${before}; chain: ${chain.join(" > ")}`);
+}
+
+// Cuộn để OWA render thêm row: nhảy đáy scroller (tra lại container MỚI trong document — list
+// truyền vào có thể đã bị React thay thế) + wheel burst + fallback scrollIntoView. Chờ row mới.
 async function loadMoreByScroll(_list: Element): Promise<boolean> {
   const list = liveMailList() ?? _list;
   const before = list.querySelectorAll(ITEM_SELECTOR).length;
   const scroller = findScrollContainer(list);
-  if (scroller === null) {
-    const rows = list.querySelectorAll(ITEM_SELECTOR);
-    const last = rows[rows.length - 1];
-    try { if (last !== undefined) (last as HTMLElement).scrollIntoView({ block: "end" }); } catch { /* jsdom */ }
-  } else {
-    jumpToBottom(scroller);
-  }
+  if (scroller === null) scrollIntoViewLast(list);
+  else jumpToBottom(scroller);
   for (let waited = 0; waited < GROW_TIMEOUT_MS; waited += GROW_POLL_MS) {
     await new Promise((resolve) => setTimeout(resolve, GROW_POLL_MS));
     const fresh = liveMailList();
     if (fresh !== null && fresh.querySelectorAll(ITEM_SELECTOR).length > before) return true;
   }
-  console.info(`[AIMH][deep-scan] cuộn không thêm row — scroller: ${scroller === null ? "KHÔNG tìm thấy" : `${scroller.tagName} ${scroller.scrollTop}/${scroller.scrollHeight}`}, rows ${before}`);
+  logScrollDiagnostics(list, scroller, before);
   return false;
 }
 
