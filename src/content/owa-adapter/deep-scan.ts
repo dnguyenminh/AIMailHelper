@@ -14,7 +14,7 @@ const GROW_POLL_MS = 250;
 const NO_GROWTH_STOP = 2; // hết row mới N round liên tiếp → coi như đã hết folder
 
 export interface DeepScanOptions {
-  maxItems?: number; // cap an toàn — mặc định 300 ("mấy trăm mail"), chặn giữa các round
+  maxItems?: number; // cap an toàn — mặc định 500 (khớp triageCap tối đa ở Options), chặn giữa các round
   maxRounds?: number;
 }
 
@@ -25,7 +25,7 @@ export interface DeepScanDeps {
   loadMore?: (list: Element) => Promise<boolean>; // mặc định: cuộn xuống đáy + chờ row mới
 }
 
-const DEFAULTS: Required<DeepScanOptions> = { maxItems: 300, maxRounds: 150 };
+const DEFAULTS: Required<DeepScanOptions> = { maxItems: 500, maxRounds: 150 };
 
 interface RoundResult {
   items: InboxItem[]; // item MỚI round này (chưa từng thấy)

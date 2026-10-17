@@ -65,6 +65,7 @@
   "options.automation.confirmYes": "Enable auto-mode",
   "options.automation.confirmNo": "Keep off",
   "options.automation.batchSize": "Emails per batch",
+  "options.automation.triageCap": "LLM analysis limit per scan (1–500)",
   "options.automation.throttle": "Pause between batches (ms)",
   "options.automation.save": "Save automation settings",
   "options.automation.saved": "Automation settings saved.",

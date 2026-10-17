@@ -57,6 +57,13 @@ export function AutomationSettings(props: { config: ConfigData }): JSX.Element {
         />
       </label>
       <label className="field">
+        <span>{t("options.automation.triageCap")}</span>
+        <input
+          type="number" min={1} max={500} value={draft.triageCap}
+          onChange={(event) => setDraft({ ...draft, triageCap: clampInt(event.target.value, 1, 500, draft.triageCap) })}
+        />
+      </label>
+      <label className="field">
         <span>{t("options.automation.throttle")}</span>
         <input
           type="number" min={0} max={60000} step={100} value={draft.throttleMs}

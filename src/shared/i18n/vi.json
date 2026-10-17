@@ -65,6 +65,7 @@
   "options.automation.confirmYes": "Bật auto-mode",
   "options.automation.confirmNo": "Để tắt",
   "options.automation.batchSize": "Số email mỗi batch",
+  "options.automation.triageCap": "Giới hạn phân tích LLM mỗi lần quét (1–500)",
   "options.automation.throttle": "Nghỉ giữa các batch (ms)",
   "options.automation.save": "Lưu cài đặt tự động hóa",
   "options.automation.saved": "Đã lưu cài đặt tự động hóa.",
