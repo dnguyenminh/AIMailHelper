@@ -98,6 +98,13 @@ function serializeFields(email: EmailData): string {
     email.threadContext.forEach((item, index) => lines.push("  [" + (index + 1) + "] " + item.from + ": " + item.excerpt));
   }
   lines.push("BODY:", email.bodyText);
+  // UAT 18/10 Plan A — nội dung attachment đã trích xuất (AI phân tích cả file đính kèm).
+  if (email.attachments && email.attachments.length > 0) {
+    lines.push("ATTACHMENTS (nội dung file đính kèm đã trích xuất):");
+    for (const attachment of email.attachments) {
+      lines.push("--- FILE: " + attachment.name + " ---", attachment.text);
+    }
+  }
   return lines.join("\n");
 }
 

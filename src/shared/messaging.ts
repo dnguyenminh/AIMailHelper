@@ -17,7 +17,10 @@ export type RpcKind =
   | "QUEUE_UPDATE"
   | "GET_RUNTIME_STATE"
   | "DEBUGGER_SCROLL"
-  | "DEBUGGER_DETACH";
+  | "DEBUGGER_DETACH"
+  | "ATTACHMENT_CAPTURE_START"
+  | "ATTACHMENT_CAPTURE_COLLECT"
+  | "ATTACHMENT_EXTRACT";
 
 export const RPC_KINDS: readonly RpcKind[] = [
   "CONFIG_GET",
@@ -32,7 +35,10 @@ export const RPC_KINDS: readonly RpcKind[] = [
   "QUEUE_UPDATE",
   "GET_RUNTIME_STATE",
   "DEBUGGER_SCROLL",
-  "DEBUGGER_DETACH"
+  "DEBUGGER_DETACH",
+  "ATTACHMENT_CAPTURE_START",
+  "ATTACHMENT_CAPTURE_COLLECT",
+  "ATTACHMENT_EXTRACT"
 ];
 
 export function isRpcKind(value: unknown): value is RpcKind {

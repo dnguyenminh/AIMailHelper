@@ -4,6 +4,7 @@
 import { AppError } from "../../shared/errors";
 import type { EmailData } from "../../shared/types";
 import type { OwaViewInfo } from "./detector";
+import { withAttachmentTexts } from "./attachment-reader";
 import { resolveMessageId } from "./message-id";
 import type { FunctionKey } from "./selectors";
 
@@ -56,7 +57,7 @@ export async function readEmail(locate: LocateFn, view: OwaViewInfo): Promise<Em
   }
   const id = await resolveMessageId(container, subject, sender.email, bodyText);
   if (!id) throw new AppError("ERR-12", "errors.missingMessageId"); // fallback cứng §7.5
-  return {
+  const email: EmailData = {
     messageId: id.messageId,
     subject: subject,
     sender: sender,
@@ -67,6 +68,7 @@ export async function readEmail(locate: LocateFn, view: OwaViewInfo): Promise<Em
     threadContext: view.view === "conversation" ? buildThreadContext(container) : undefined,
     detectedView: view.view === "unknown" ? "reading-pane" : view.view
   };
+  return withAttachmentTexts(email); // UAT 18/10 Plan A — text attachment (KHÔNG chặn khi lỗi)
 }
 
 // UAT — OWA mới render thân email trong <iframe> cùng origin: quét iframe, chọn doc có body

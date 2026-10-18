@@ -80,6 +80,7 @@ export interface EmailData {
   cc: { name: string; email: string }[];
   bodyText: string;
   hasAttachment: boolean; // UAT — phát hiện đính kèm trong pane (rules + triage)
+  attachments?: { name: string; text: string }[]; // UAT 18/10 Plan A — text trích xuất (max 3 file, 20K ký tự)
   threadContext?: { subject: string; from: string; excerpt: string }[]; // chỉ khi conversation (AF-1)
   detectedView: "reading-pane" | "popout" | "conversation";
 }

@@ -66,6 +66,9 @@ async function ensureAttached(tabId: number, tabUrl: string | undefined): Promis
   return target;
 }
 
+// Dùng chung cho attachment-capture (cùng session debugger — 1 infobar cho cả scroll + capture).
+export const ensureAttachedShared = ensureAttached;
+
 export async function detachTab(tabId: number): Promise<void> {
   const session = attached.get(tabId);
   if (!session) return;
