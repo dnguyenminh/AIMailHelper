@@ -27,7 +27,6 @@ async function captureAllPages(): Promise<string[]> {
   const pages: string[] = [];
   let lastPageCount = 0;
   let stagnantCount = 0;
-  const maxScrolls = 50; // an toàn
 
   // Scroll về đầu trước
   const dialog = document.querySelector('[role="dialog"]');
@@ -39,7 +38,7 @@ async function captureAllPages(): Promise<string[]> {
     }
   }
 
-  for (let scroll = 0; scroll < 50; scroll += 1) {
+  for (let scroll = 0; ; scroll += 1) {
     const shot = await sendMessage<{ dataUrl: string }>("VISION_CAPTURE", {});
     if (shot?.dataUrl) pages.push(shot.dataUrl);
 
@@ -81,7 +80,7 @@ function splitIntoChunks<T>(arr: T[], chunkSize: number, overlap: number): T[][]
 // ChunkSummary và VisionSynthesisResult đã khai báo ở trên
 // Implementation đầy đủ sẽ ở attachment.handler.ts
 export async function readFullDocumentVision(
-  fileName: string,
+  _fileName: string,
   onProgress?: (phase: string, current: number, total: number) => void
 ): Promise<{ synthesis: any; chunks: any[] }> {
   // 1. Capture TẤT CẢ trang
