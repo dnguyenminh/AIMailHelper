@@ -6,7 +6,7 @@
 import { sendMessage } from "../../shared/messaging";
 
 const MAX_ATTACHMENTS = 3;
-const PREVIEW_RENDER_MS = 4500; // chờ Word/Excel Online render text trong iframe (app nặng)
+const PREVIEW_RENDER_MS = 8000; // chờ Word/Excel Online render text trong iframe (app nặng)
 // doc/xls (Word/Excel CŨ) nằm trong danh sách: AI ít nhất được báo CÓ file — nếu bytes
 // không trích được (OLE binary, Office Online render) → placeholder thay text (xử lý dưới).
 const SUPPORTED_EXT = ["txt", "csv", "md", "log", "doc", "xls", "docx", "xlsx", "pdf"];

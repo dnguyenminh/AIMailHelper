@@ -89,7 +89,7 @@ In OpenCode, tools are described in the system prompt and available directly by 
 ### Key Tools by Category
 - **Project Tracker (Jira)**: `jira_jira_*` tools — get issue, search, transition, comment, attach
 - **Knowledge Base**: `mem_search`, `mem_ingest` — semantic search and data ingestion
-- **Document Export**: `export_docx`, `embed_images` — DOCX conversion
+- **Document Export**: `export_docx`, `embed_image` — DOCX conversion
 - **Sub-agents**: `task` tool — delegate work to specialized agents
 - **Skills**: `skill` tool — load contextual instructions
 
@@ -104,7 +104,7 @@ When MCP tools are NOT exposed in the session (or a call fails with "tool not fo
 **PowerShell (Windows):**
 ```powershell
 $body = '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"opencode-agent","version":"1.0"}},"id":1}'
-Invoke-WebRequest -Uri "http://127.0.0.1:9481/mcp" -Method POST -ContentType "application/json" -Body $body -TimeoutSec 10
+Invoke-WebRequest -Uri "http://127.0.0.1:9181/mcp" -Method POST -ContentType "application/json" -Body $body -TimeoutSec 10
 ```
 
 **Linux/Mac (curl):**

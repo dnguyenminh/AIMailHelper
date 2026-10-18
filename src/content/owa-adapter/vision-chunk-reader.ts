@@ -30,7 +30,7 @@ async function captureAllPages(): Promise<string[]> {
     const firstPage = dialog.querySelector('[role="option"], [role="listitem"]');
     if (firstPage) {
       (firstPage as HTMLElement).scrollIntoView({ block: "start" });
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 1500)); // Tăng thời gian chờ render
     }
   }
 
@@ -55,7 +55,7 @@ async function captureAllPages(): Promise<string[]> {
       deltaY: 1200,
       times: 2
     });
-    await new Promise((r) => setTimeout(r, 800));
+    await new Promise((r) => setTimeout(r, 1500)); // Tăng thời gian chờ giữa các lần cuộn
   }
   return pages;
 }
