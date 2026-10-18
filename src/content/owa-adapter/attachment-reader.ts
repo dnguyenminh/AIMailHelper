@@ -129,6 +129,22 @@ export async function extractAttachmentsForEmail(): Promise<AttachmentText[]> {
     }
   }
   // visionTexts đã được điền
+  // Vòng 2 — bytes đã capture: extract (PDF canvas không có text DOM → cần pdf.js từ bytes).
+  const collected = await sendMessage<{ files: { url: string; base64: string }[] }>("ATTACHMENT_CAPTURE_COLLECT", {});
+  const payload = options.map((option, index) => ({
+    name: option.name,
+    base64: collected.files[index]?.base64 ?? collected.files.find((f) => f.url.toLowerCase().includes(option.name.split(".").pop() ?? ""))?.base64 ?? ""
+  })).filter((item) => item.base64.length > 0);
+  let extracted = new Map<string, string>();
+  if (payload.length > 0) {
+    const response = await sendMessage<{ results: { name: string; text?: string }[] }>("ATTACHMENT_EXTRACT", { files: payload });
+    extracted = new Map(response.results.filter((r) => typeof r.text === "string").map((r) => [r.name, r.text as string]));
+  }
+  // Ghép: text RENDER → Vision OCR → bytes extract → placeholder.
+  return options.map((option, index) => ({
+    name: option.name,
+    text: pickAttachmentText(option.name, rendered[index] ?? "", extracted, visionTexts)
+  }));
 }
 
 function pickAttachmentText(name: string, rendered: string, extracted: Map<string, string>, visionTexts: Map<string, string>): string {
