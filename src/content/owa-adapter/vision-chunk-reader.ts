@@ -4,10 +4,6 @@
 
 import { sendMessage } from "../../shared/messaging";
 
-const CHUNK_PAGES = 10;           // số trang / chunk (mặc định 10 trang)
-const CHUNK_OVERLAP = 1;          // trang chồng giữa chunks (đảm bảo không mất context biên)
-const MAX_CHUNKS = 4;             // tối đa 4 chunks (40 trang)
-
 export interface ChunkSummary {
   chunkIndex: number;
   summary: string;
@@ -64,41 +60,38 @@ async function captureAllPages(): Promise<string[]> {
   return pages;
 }
 
-// Chia mảng pages thành các chunks (có overlap)
-function splitIntoChunks<T>(arr: T[], chunkSize: number, overlap: number): T[][] {
-  const chunks: T[][] = [];
-  let start = 0;
-  while (start < arr.length) {
-    const end = Math.min(start + chunkSize, arr.length);
-    chunks.push(arr.slice(start, end));
-    if (end === arr.length) break;
-    start = end - overlap;
-  }
-  return chunks;
-}
-
-// ChunkSummary và VisionSynthesisResult đã khai báo ở trên
-// Implementation đầy đủ sẽ ở attachment.handler.ts
 export async function readFullDocumentVision(
   _fileName: string,
   onProgress?: (phase: string, current: number, total: number) => void
-): Promise<{ synthesis: any; chunks: any[] }> {
+): Promise<{ synthesis: VisionSynthesisResult; chunks: ChunkSummary[] }> {
   // 1. Capture TẤT CẢ trang
   const allPages = await captureAllPages();
   if (allPages.length === 0) throw new Error("Không capture được trang nào");
 
-  // 2. Chia chunks (có overlap)
-  const chunks = splitIntoChunks(allPages, CHUNK_PAGES, CHUNK_OVERLAP).slice(0, MAX_CHUNKS);
-
-  // 2. Tóm tắt từng chunk (sequential)
-  const chunkSummaries: any[] = [];
-  for (let i = 0; i < chunks.length; i += 1) {
-    onProgress?.("summarize-chunk", i + 1, chunks.length);
-    // TODO: call LLM summarizeChunk(chunks[i], i, chunks.length)
-    chunkSummaries.push({ chunkIndex: i, summary: "", keyPoints: [], pageRange: { from: i * 10, to: Math.min((i + 1) * 10, 40) } });
+  // 2. Gửi TẤT CẢ pages đến handler để OCR + chunked summarization + synthesis
+  onProgress?.("vision-ocr", 0, allPages.length);
+  const visionJobs = [{ name: "document", pages: allPages }];
+  const visionResponse = await sendMessage<{ results: { name: string; text?: string; error?: string }[] }>("ATTACHMENT_VISION_TEXT", { files: visionJobs });
+  
+  if (visionResponse.results[0]?.error === "no-vision-model") {
+    throw new Error("no-vision-model");
   }
-
-  // 4. Tổng hợp
-  // TODO: call LLM synthesizeChunks
-  return { synthesis: { overview: "", details: "", conclusions: "", actionItems: [] }, chunks: chunkSummaries };
+  if (visionResponse.results[0]?.error) {
+    throw new Error("vision-failed");
+  }
+  
+  const visionText = visionResponse.results[0]?.text ?? "";
+  
+  // Parse the returned text into synthesis structure
+  const synthesis: VisionSynthesisResult = {
+    overview: visionText,
+    details: "",
+    conclusions: "",
+    actionItems: []
+  };
+  
+  return { 
+    synthesis, 
+    chunks: [{ chunkIndex: 0, summary: visionText, keyPoints: [], pageRange: { from: 1, to: allPages.length } }]
+  };
 }
