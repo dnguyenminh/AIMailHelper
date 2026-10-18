@@ -21,7 +21,8 @@ export type RpcKind =
   | "ATTACHMENT_CAPTURE_START"
   | "ATTACHMENT_CAPTURE_COLLECT"
   | "ATTACHMENT_EXTRACT"
-  | "ATTACHMENT_READ_PREVIEW";;
+  | "ATTACHMENT_READ_PREVIEW"
+  | "ATTACHMENT_VISION_TEXT";;;
 
 export const RPC_KINDS: readonly RpcKind[] = [
   "CONFIG_GET",
@@ -40,7 +41,8 @@ export const RPC_KINDS: readonly RpcKind[] = [
   "ATTACHMENT_CAPTURE_START",
   "ATTACHMENT_CAPTURE_COLLECT",
   "ATTACHMENT_EXTRACT",
-  "ATTACHMENT_READ_PREVIEW"
+  "ATTACHMENT_READ_PREVIEW",
+  "ATTACHMENT_VISION_TEXT"
 ];
 
 export function isRpcKind(value: unknown): value is RpcKind {

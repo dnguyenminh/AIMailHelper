@@ -148,7 +148,11 @@ export function validateAutomation(value: unknown): AutomationConfig {
 
 export function validateVision(value: unknown): VisionConfig {
   const raw = requireObject(value, "vision");
-  return { enabled: requireBool(raw["enabled"] ?? DEFAULT_VISION.enabled, "vision.enabled") };
+  const vision: VisionConfig = { enabled: requireBool(raw["enabled"] ?? DEFAULT_VISION.enabled, "vision.enabled") };
+  if (typeof raw["model"] === "string" && raw["model"].trim().length > 0) {
+    vision.model = raw["model"].trim().slice(0, 120); // model VL riêng (UAT 18/10)
+  }
+  return vision;
 }
 
 // §8.8 — LLMConfig per-provider: key bắt buộc 4 cloud; baseUrl cho compatible (SR-06);

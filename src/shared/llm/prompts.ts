@@ -86,6 +86,15 @@ function joinList(list: { name: string; email: string }[]): string {
 }
 
 // Serialize từng trường theo format FSD 5.2.0 (thread CHỈ khi conversation — AF-1 UC-01).
+// UAT 18/10 — tối ưu context: bodyText cap 30K ký tự (mail dài cắt CÓ ĐÁNH DẤU cho AI biết).
+const MAX_BODY_CHARS = 30_000;
+
+function capBody(text: string): string {
+  return text.length > MAX_BODY_CHARS
+    ? text.slice(0, MAX_BODY_CHARS) + "\n…[email dài — nội dung sau đây bị cắt để vừa context]"
+    : text;
+}
+
 function serializeFields(email: EmailData): string {
   const lines = [
     "SUBJECT: " + email.subject,
@@ -97,7 +106,7 @@ function serializeFields(email: EmailData): string {
     lines.push("THREAD (các email trước, cũ nhất trước):");
     email.threadContext.forEach((item, index) => lines.push("  [" + (index + 1) + "] " + item.from + ": " + item.excerpt));
   }
-  lines.push("BODY:", email.bodyText);
+  lines.push("BODY:", capBody(email.bodyText));
   // UAT 18/10 Plan A — nội dung attachment đã trích xuất (AI phân tích cả file đính kèm).
   if (email.attachments && email.attachments.length > 0) {
     lines.push("ATTACHMENTS (nội dung file đính kèm đã trích xuất):");

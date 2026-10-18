@@ -39,6 +39,26 @@ export function visionElementDescription(functionKey: string, language: VisionPr
   return language === "en" ? "the requested element: " + functionKey : "phần tử được yêu cầu: " + functionKey;
 }
 
+// UAT 18/10 — Vision-read attachment (Word/Excel preview render ẢNH TRANG): OCR 1 trang/call.
+// Trả TOÀN BỘ text hiển thị — không tóm tắt, không bình luận (text thô để ghép vào phân tích).
+const OCR_SYSTEM_VI =
+  "Bạn đọc ảnh chụp màn hình của trang tài liệu (Word/Excel). Trích TOÀN BỘ text hiển thị " +
+  "trong ảnh, giữ nguyên thứ tự. Chỉ trả về text — KHÔNG giải thích, KHÔNG nhận xét, KHÔNG thêm tiêu đề.";
+const OCR_SYSTEM_EN =
+  "You are reading a screenshot of a document page (Word/Excel). Extract ALL visible text " +
+  "in order. Return only the text — no explanations, no commentary, no headings.";
+
+export function buildVisionOcrMessages(pageIndex: number, totalPages: number): ChatMessage[] {
+  const user =
+    totalPages > 1
+      ? `Trang ${pageIndex + 1}/${totalPages}. Trích toàn bộ text trong ảnh.`
+      : "Trích toàn bộ text trong ảnh.";
+  return [
+    { role: "system", content: OCR_SYSTEM_VI + "\n\n" + ANTI_INJECTION_CLAUSE },
+    { role: "user", content: user }
+  ];
+}
+
 // Prompt T3 — question do caller cung cấp (tiếng theo caller); ảnh đi qua ChatOptions.visionImage.
 export function buildVisionMessages(request: VisionLocateRequest, language: VisionPromptLanguage = "vi"): ChatMessage[] {
   const system = (language === "en" ? SYSTEM_EN : SYSTEM_VI) + "\n\n" + ANTI_INJECTION_CLAUSE;

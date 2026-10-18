@@ -10,7 +10,12 @@ const PREVIEW_RENDER_MS = 4500; // chờ Word/Excel Online render text trong ifr
 // doc/xls (Word/Excel CŨ) nằm trong danh sách: AI ít nhất được báo CÓ file — nếu bytes
 // không trích được (OLE binary, Office Online render) → placeholder thay text (xử lý dưới).
 const SUPPORTED_EXT = ["txt", "csv", "md", "log", "doc", "xls", "docx", "xlsx", "pdf"];
-const MIN_RENDERED_CHARS = 200; // text render ít hơn → coi là chưa render đủ → fallback bytes
+const MIN_RENDERED_CHARS = 200; // text render ít hơn → coi là chưa render đủ → fallback
+// Preview các loại này render ẢNH TRANG (verify 18/10: DOM/AX không có text) → Vision-read.
+const IMAGE_RENDERED_EXT = ["doc", "xls", "docx", "xlsx"];
+const VISION_PAGES = 4;
+const VISION_SCROLL_DELTA = 1200;
+const VISION_PAGE_WAIT_MS = 1800;
 
 export interface AttachmentText {
   name: string;
@@ -59,6 +64,30 @@ async function closePreview(): Promise<void> {
   }
 }
 
+// Vision fallback: preview đang MỞ (gọi giữa open—close) → chụp VISION_PAGES trang,
+// cuộn xuống giữa các lần bằng trusted-scroll (DEBUGGER_SCROLL — RPC có sẵn) trên vùng dialog.
+async function captureVisionPages(name: string): Promise<{ name: string; pages: string[] } | null> {
+  const pages: string[] = [];
+  try {
+    for (let page = 0; page < VISION_PAGES; page += 1) {
+      const shot = await sendMessage<{ dataUrl: string }>("VISION_CAPTURE", {});
+      pages.push(shot.dataUrl);
+      if (page === VISION_PAGES - 1) break;
+      const dialog = document.querySelector('[role="dialog"]');
+      if (dialog === null) break; // preview đóng bất ngờ
+      const rect = dialog.getBoundingClientRect();
+      await sendMessage("DEBUGGER_SCROLL", {
+        x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + rect.height / 2),
+        deltaY: VISION_SCROLL_DELTA, times: 2
+      });
+      await new Promise((resolve) => setTimeout(resolve, VISION_PAGE_WAIT_MS));
+    }
+  } catch (error) {
+    console.warn("[AIMH][attachment] vision capture lỗi:", name.slice(0, 50), String(error).slice(0, 120));
+  }
+  return pages.length > 0 ? { name: name, pages: pages } : null;
+}
+
 export async function extractAttachmentsForEmail(): Promise<AttachmentText[]> {
   const options = findAttachmentOptions().slice(0, MAX_ATTACHMENTS);
   if (options.length === 0) return [];
@@ -70,13 +99,22 @@ export async function extractAttachmentsForEmail(): Promise<AttachmentText[]> {
   }
   // Vòng 1 — mở preview TỪNG file: đọc TEXT RENDER (Word/Excel Online iframe — UAT 18/10,
   // đúng cách user nhìn thấy) + capture bytes song song (PDF/txt fallback).
+  // Text render thiếu + file render ẢNH (Word/Excel — verify: DOM/AX không có text) → Vision-read.
   const rendered: string[] = [];
+  const visionJobs: { name: string; pages: string[] }[] = [];
   for (const option of options) {
     try {
       clickCenter(option.element);
       await new Promise((resolve) => setTimeout(resolve, PREVIEW_RENDER_MS));
       const preview = await sendMessage<{ text: string }>("ATTACHMENT_READ_PREVIEW", {});
-      rendered.push(preview.text);
+      const ext = option.name.split(".").pop()?.toLowerCase() ?? "";
+      if (preview.text.trim().length < MIN_RENDERED_CHARS && IMAGE_RENDERED_EXT.includes(ext)) {
+        const job = await captureVisionPages(option.name);
+        if (job !== null) visionJobs.push(job);
+        rendered.push(""); // text DOM là JS/CSS rác — không dùng làm attachment text
+      } else {
+        rendered.push(preview.text);
+      }
       await closePreview();
     } catch (error) {
       console.warn("[AIMH][attachment] mở/đóng preview lỗi:", option.name.slice(0, 60), String(error).slice(0, 120));
@@ -94,15 +132,31 @@ export async function extractAttachmentsForEmail(): Promise<AttachmentText[]> {
     const response = await sendMessage<{ results: { name: string; text?: string }[] }>("ATTACHMENT_EXTRACT", { files: payload });
     extracted = new Map(response.results.filter((r) => typeof r.text === "string").map((r) => [r.name, r.text as string]));
   }
-  // Ghép: text RENDER ưu tiên (≥ MIN_RENDERED_CHARS) → bytes extract → placeholder.
+  // Vòng 3 — Vision OCR cho file render ảnh (model theo rule user: VL riêng → model text
+  // nếu hỗ trợ VL → KHÔNG model VL nào → bỏ qua + ghi chú).
+  let visionTexts = new Map<string, string>();
+  if (visionJobs.length > 0) {
+    try {
+      const visionResponse = await sendMessage<{ results: { name: string; text?: string; error?: string }[] }>("ATTACHMENT_VISION_TEXT", { files: visionJobs });
+      visionTexts = new Map(visionResponse.results.filter((r) => typeof r.text === "string").map((r) => [r.name, r.text as string]));
+      if (visionResponse.results.some((r) => r.error === "no-vision-model")) {
+        console.warn("[AIMH][attachment] KHÔNG có model VL — cấu hình model VL trong Cài đặt (hoặc model chính phải hỗ trợ VL vd gpt-4o)");
+      }
+    } catch (error) {
+      console.warn("[AIMH][attachment] vision OCR lỗi:", String(error).slice(0, 120));
+    }
+  }
+  // Ghép: text RENDER → Vision OCR → bytes extract → placeholder.
   return options.map((option, index) => ({
     name: option.name,
-    text: pickAttachmentText(option.name, rendered[index] ?? "", extracted)
+    text: pickAttachmentText(option.name, rendered[index] ?? "", extracted, visionTexts)
   }));
 }
 
-function pickAttachmentText(name: string, rendered: string, extracted: Map<string, string>): string {
+function pickAttachmentText(name: string, rendered: string, extracted: Map<string, string>, visionTexts: Map<string, string>): string {
   if (rendered.trim().length >= MIN_RENDERED_CHARS) return rendered;
+  const fromVision = visionTexts.get(name);
+  if (fromVision !== undefined && fromVision.trim().length > 0) return fromVision;
   const fromBytes = extracted.get(name);
   if (fromBytes !== undefined && fromBytes.length > 0) return fromBytes;
   return "(Không trích được nội dung — file nhị phân hoặc preview chưa render xong. Hãy ghi rõ trong phân tích rằng người dùng cần mở file đính kèm để xem nội dung.)";
