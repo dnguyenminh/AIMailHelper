@@ -11,15 +11,8 @@ import type { OwaViewInfo } from "./detector";
 import { readEmail } from "./reader";
 import { SelectorTier } from "./selectors";
 import type { FunctionKey, LocatorStrategy } from "./selectors";
-import { SemanticLocator } from "./semantic-locator";
 import { collectInboxItemsDeep as collectItemsDeep } from "./deep-triage";
-import {
-  attachBadge as attachTriageBadge,
-  collectInboxItems as collectItems,
-  findItemElement,
-  hasFolderChanged,
-  readFolderSignature
-} from "./triage";
+import { findItemElement } from "./triage";
 import type { InboxItem } from "./triage";
 import { VisionFallback } from "./vision-fallback";
 import type { VisionLocator } from "./vision-fallback";
@@ -27,8 +20,14 @@ import type { VisionLocator } from "./vision-fallback";
 export type { FunctionKey, LocatorStrategy } from "./selectors";
 export type { InsertDecision, InsertOutcome } from "./actions";
 export type { InboxItem } from "./triage";
-export type { VisionLocator } from "./vision-fallback";
 export { SelectorTier };
+
+// UAT-2: TẮT toolbar injection cho đến khi OWA-DOM-SPIKE.md xác minh — chèn DOM node vào
+// container React của OWA có thể phá layout trang (cùng lớp bug toolbar injection — fix 2).
+// Nút "AI phân tích" VẪN dùng được trong panel (panel-only mode — quyết định GĐ3 giữ nguyên).
+function injectToolbarButton(_onClick: () => void): HTMLElement | null {
+  return null; // spike-pending: không mutate DOM của OWA
+}
 
 export class OwaAdapter {
   private readonly chain: LocatorStrategy;
@@ -37,7 +36,7 @@ export class OwaAdapter {
   // Mặc định: SemanticLocator (T1→cache→T2) + VisionFallback T3 (tự opt-out khi vision tắt — BR-03).
   // Test inject tiers/vision thay thế; vision = null → tắt hẳn T3 (GĐ5 triage không cần).
   constructor(tiers: readonly LocatorStrategy[] = [], vision: VisionLocator | null = new VisionFallback()) {
-    this.chain = tiers[0] ?? new SemanticLocator();
+    this.chain = tiers[0] ?? new SelectorTier();
     this.vision = vision;
   }
 
@@ -61,8 +60,8 @@ export class OwaAdapter {
   }
 
   // FR-GD3-04 — inject nút "AI phân tích" vào toolbar email QUA adapter (components không tự bấm DOM).
-  injectAnalyzeButton(onClick: () => void): HTMLElement | null {
-    return injectToolbarButton(onClick);
+  injectAnalyzeButton(_onClick: () => void): HTMLElement | null {
+    return injectToolbarButton(_onClick);
   }
 
   // UC-02 AF-1 — compose chưa mở → mở reply box qua chuỗi locator (actions.ts tự verify SR-08).
@@ -73,42 +72,6 @@ export class OwaAdapter {
   // UC-02 bước 8 — FR-GD4-03; outcome {inserted | needs-confirm | blocked-empty | compose-not-found | write-failed}.
   async insertDraft(draft: string, decision?: InsertDecision): Promise<InsertOutcome> {
     return insertDraft(draft, decision, this.actionDeps());
-  }
-
-  // Chuỗi locate ĐẦY ĐỦ (T1→T2→T3) đưa vào actions — BR-12 giữ nguyên ở mọi tầng; allowVision=true
-  // vì đây là hành động người dùng chủ động (per-call opt-in BR-03 — config check nằm ở T3/SW).
-  private actionDeps(): ActionsDeps {
-    return {
-      locate: (functionKey, question) => this.locate(functionKey, question, true),
-      writeText: writeEditableText,
-      readText: readEditableText
-    };
-  }
-
-  // §3.1.6 triage (GĐ5 — BR-07): items ĐANG HIỂN THỊ; thiếu message-id → bỏ qua + log (FR-GD5-06).
-  // locate KHÔNG opt-in vision (allowVision mặc định false — triage không cần T3, BR-03).
-  collectInboxItems(): Promise<InboxItem[]> {
-    return collectItems((key, question) => this.locate(key, question));
-  }
-
-  // UAT (17/10) — quét SÂU: cuộn dần danh sách ảo hóa để thu thập TOÀN BỘ mail folder.
-  // Cuộn không đổi trạng thái đã đọc; LLM vẫn bị triageCap chặn ở tầng digest (EF-5).
-  collectInboxItemsDeep(): Promise<InboxItem[]> {
-    return collectItemsDeep((key, question) => this.locate(key, question));
-  }
-
-  // FR-GD5-03 — badge màu trên list item qua adapter (SR-10; màu theo score — FSD UI spec).
-  attachBadge(messageId: string, score: number): boolean {
-    return attachTriageBadge(messageId, score);
-  }
-
-  // EF-2/EF-4 UC-03 — folder guard: signature trước scan, check lại trước mỗi batch (§3.1.6).
-  readFolderSignature(): Promise<Element | null> {
-    return readFolderSignature((key, question) => this.locate(key, question));
-  }
-
-  hasFolderChanged(before: Element | null): Promise<boolean> {
-    return hasFolderChanged(before, (key, question) => this.locate(key, question));
   }
 
   // UAT — cuộn đến mail trong danh sách (KHÔNG mở mail, KHÔNG đổi trạng thái đã đọc).
@@ -127,13 +90,33 @@ export class OwaAdapter {
     element.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
     return true;
   }
+
+  // FR-GD5-03 — badge màu trên list item. UAT-3: TẮT DOM injection — appendChild vào
+  // row do React của OWA quản lý làm VỠ layout trang (cùng lớp bug toolbar injection — fix 2).
+  // Điểm số vẫn hiển thị trong panel Digest (DigestView — không đụng DOM OWA).
+  // UAT-3 — fail-safe: KHÔNG mutate DOM của OWA. Trả false (caller log, không chặn batch).
+  attachBadge(messageId: string, score: number): boolean {
+    void messageId;
+    void score;
+    return false; // spike-pending: badge hiển thị trong Digest panel thay vì trên list row
+  }
+
+  // §3.1.6 triage (GĐ5 — BR-07): items ĐANG HIỂN THỊ; thiếu message-id → bỏ qua + log (FR-GD5-06).
+  // locate KHÔNG opt-in vision (allowVision mặc định false — triage không cần T3, BR-03).
+  collectInboxItemsDeep(): Promise<InboxItem[]> {
+    return collectItemsDeep((key, question) => this.locate(key, question));
+  }
+
+  // Chuỗi locate ĐẦY ĐỦ (T1→T2→T3) đưa vào actions — BR-12 giữ nguyên ở mọi tầng; allowVision=true
+  // vì đây là hành động người dùng chủ động (per-call opt-in BR-03 — config check nằm ở T3/SW).
+  private actionDeps(): ActionsDeps {
+    return {
+      locate: (functionKey, question) => this.locate(functionKey, question, true),
+      writeText: writeEditableText,
+      readText: readEditableText
+    };
+  }
 }
 
-// UAT-2: TẮT toolbar injection cho đến khi OWA-DOM-SPIKE.md xác minh — chèn DOM node vào
-// container React của OWA có thể phá layout trang (trang bị vỡ, phát hiện UAT 15/10).
-// Nút "AI phân tích" VẪN dùng được trong panel (panel-only mode — quyết định GĐ3 giữ nguyên).
-function injectToolbarButton(_onClick: () => void): HTMLElement | null {
-  return null; // spike-pending: không mutate DOM của OWA
-}
-
-export const owaAdapter = new OwaAdapter(); // instance dùng chung content script
+// Instance dùng chung content script
+export const owaAdapter = new OwaAdapter();

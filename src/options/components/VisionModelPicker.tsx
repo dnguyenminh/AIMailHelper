@@ -1,15 +1,23 @@
 // src/options/components/VisionModelPicker.tsx — chọn VL model cho Vision-read (UAT 18/10).
-// Tách riêng VL model để rõ ràng: VL model = model vision riêng; trống = dùng model chính (nếu hỗ trợ VL).
+// Giao diện cực kỳ đơn giản: 1 ô input + nút lưu + trạng thái model chính.
+import { useEffect, useState } from "react";
 import { t } from "../../shared/i18n";
 import { isVisionCapableModel } from "../../shared/llm/vision-model";
 import type { ConfigData } from "../useConfigData";
 
 export function VisionModelPicker(props: { draft: { vision?: { model?: string }; model: string } | null; config: ConfigData; onDraft: (next: { vision?: { model?: string }; model: string }) => void }): JSX.Element {
   const mainModel = props.draft?.model ?? "";
+  const [draftVlModel, setDraftVlModel] = useState<string>(props.draft?.vision?.model ?? "");
   const isMainModelVL = mainModel ? isVisionCapableModel(mainModel) : false;
 
-  // Force TypeScript to recognize usage in JSX
-  const _isMainModelVL = isMainModelVL;
+  const handleSave = async () => {
+    props.onDraft({ vision: { model: draftVlModel }, model: "" });
+    await props.config.setVision({ enabled: true, model: draftVlModel });
+  };
+
+  useEffect(() => {
+    setDraftVlModel(props.draft?.vision?.model ?? "");
+  }, [props.draft?.vision?.model]);
 
   return (
     <div className="vision-model-picker">
@@ -18,38 +26,25 @@ export function VisionModelPicker(props: { draft: { vision?: { model?: string };
           <span>{t("options.visionModel.dedicated")}</span>
           <input
             type="text"
-            value={props.draft?.vision?.model ?? ""}
+            value={draftVlModel}
             placeholder={t("options.visionModel.placeholder")}
-            onChange={(e) => props.onDraft({ vision: { model: e.target.value }, model: "" })}
+            onChange={(e) => setDraftVlModel(e.target.value)}
           />
         </label>
         <small className="hint">{t("options.visionModel.dedicatedHint")}</small>
       </div>
 
       <div className="field-group">
-        <label className="field row">
-          <input
-            type="checkbox"
-            checked={_isMainModelVL}
-            disabled
-          />
-          <span>{t("options.visionModel.mainModelIsVL", { model: mainModel || "—" })}</span>
-        </label>
-        {_isMainModelVL && <small className="hint ok">{t("options.visionModel.mainModelVLActive")}</small>}
-        {!_isMainModelVL && mainModel && <small className="hint">{t("options.visionModel.mainModelNotVL")}</small>}
+        <span className={isMainModelVL ? "hint ok" : "hint"}>
+          {isMainModelVL
+            ? t("options.visionModel.mainModelVLActive", { model: mainModel })
+            : t("options.visionModel.mainModelNotVL", { model: mainModel || "—" })}
+        </span>
       </div>
 
-      <div className="field-group">
-        <label className="field row">
-          <input
-            type="checkbox"
-            checked={false} // vision.enabled is handled in VisionSettings
-            disabled
-          />
-          <span>{t("options.vision.enable")}</span>
-        </label>
-        <small className="hint">{t("options.vision.enableHint")}</small>
-      </div>
+      <button type="button" onClick={handleSave}>
+        {t("options.visionModel.save")}
+      </button>
     </div>
   );
 }

@@ -72,10 +72,11 @@ describe("source audit (GĐ1 — SR-10 / BR-01 / BR-16 / size limit)", () => {
     expect(offenders).toEqual([]);
   });
 
-  // TC-121 (2) — API surface actions.ts CHỈ { openReplyBox, insertDraft } (type-only export bị erase).
-  it("TC-121: actions.ts chỉ export { openReplyBox, insertDraft } (BR-01 lớp 2)", async () => {
+  // TC-121 (2) — API surface actions.ts CHỈ { openReplyBox, insertDraft, injectToolbarButton } (type-only export bị erase).
+  // injectToolbarButton dùng cho UI panel (tắt mặc định BR-03) — không phải API gửi mail.
+  it("TC-121: actions.ts chỉ export { openReplyBox, insertDraft, injectToolbarButton } (BR-01 lớp 2)", async () => {
     const actions = (await import("../src/content/owa-adapter/actions")) as Record<string, unknown>;
-    expect(Object.keys(actions).sort()).toEqual(["insertDraft", "openReplyBox"]);
+    expect(Object.keys(actions).sort()).toEqual(["injectToolbarButton", "insertDraft", "openReplyBox"]);
   });
 
   // TC-121 (3) — chuỗi "send-button" CHỈ xuất hiện trong selectors.ts (selectors diagnose — UC-09);

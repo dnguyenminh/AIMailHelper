@@ -9,6 +9,12 @@ import type { FunctionKey } from "./selectors";
 
 export type InsertDecision = "replace" | "append";
 
+// UAT-2: Inject nút "AI phân tích" vào toolbar email (tắt mặc định — BR-03/SPIKE).
+export function injectToolbarButton(_onClick: () => void): HTMLElement | null {
+  // Tạm thời trả về null — UI panel dùng nút riêng, toolbar injection bị tắt do phá layout OWA
+  return null;
+}
+
 export type InsertOutcome =
   | { kind: "inserted" }
   | { kind: "needs-confirm"; existing: string } // AF-5 — compose đã có nội dung sẵn
