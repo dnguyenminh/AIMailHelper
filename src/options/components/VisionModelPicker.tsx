@@ -1,5 +1,5 @@
 // src/options/components/VisionModelPicker.tsx — chọn VL model cho Vision-read (UAT 18/10).
-// Giao diện cực kỳ đơn giản: 1 ô input + nút lưu + trạng thái model chính.
+// Giao diện đơn giản: 1 ô input VL model + thông báo trạng thái model chính.
 import { useEffect, useState } from "react";
 import { t } from "../../shared/i18n";
 import { isVisionCapableModel } from "../../shared/llm/vision-model";
@@ -35,11 +35,16 @@ export function VisionModelPicker(props: { draft: { vision?: { model?: string };
       </div>
 
       <div className="field-group">
-        <span className={isMainModelVL ? "hint ok" : "hint"}>
-          {isMainModelVL
-            ? t("options.visionModel.mainModelVLActive", { model: mainModel })
-            : t("options.visionModel.mainModelNotVL", { model: mainModel || "—" })}
-        </span>
+        <label className="field row">
+          <input
+            type="checkbox"
+            checked={isMainModelVL}
+            disabled
+          />
+          <span>{t("options.visionModel.mainModelIsVL", { model: mainModel || "—" })}</span>
+        </label>
+        {isMainModelVL && <small className="hint ok">{t("options.visionModel.mainModelVLActive")}</small>}
+        {!isVisionCapableModel(mainModel) && mainModel && <small className="hint">{t("options.visionModel.mainModelNotVL")}</small>}
       </div>
 
       <button type="button" onClick={handleSave}>
