@@ -65,9 +65,40 @@ locate("reading-pane") → [id="Skip to message-region"] HIT
 - [ ] Đa tab/popout: [role="dialog"] probe — chưa gặp trên OWA mới
 - [ ] Badge triage trên option rows: `attachBadge` cần verify hiển thị đúng
 
+## 7. KẾT QUẢ SPIKE BROWSER-HARNESS (CDP thật — 18/10/2026)
+
+> Cấu hình: Edge 155, outlook.cloud.microsoft, layout CONVERSATION, tab Focused.
+> **Inbox: 1385 mail chưa đọc** (folder tree badge) — yêu cầu user "quét tất cả" là hợp lý.
+
+### 7.1 Cơ chế virtualizer của OWA mới (quan trọng nhất)
+- Danh sách mail chỉ render **~10-12 row** trong DOM; virtualizer **TÁI SỬ DỤNG node + gán lại
+  aria-label** khi cửa sổ trượt → đếm row KHÔNG thay đổi, chỉ NỘI DUNG đổi.
+- Scroller thật: `DIV.customScrollBar` — **SIBLING của listbox** (KHÔNG phải ancestor!), nằm
+  trong `#Skip to message list-region`. Cold-start: `scrollHeight == clientHeight` (không có
+  scroll space) — OWA **materialize không gian ảo LAZY** sau wheel tin cậy đầu tiên (sh 830 → 14129).
+- **OWA CHỈ phản ứng với input TIN CẬY (isTrusted)**: `Input.synthesizeScrollGesture` (CDP) →
+  window trượt ✓ (user xác nhận nhìn thấy); synthetic WheelEvent (untrusted) → BỎ TRỪ; gán
+  `scrollTop` thuần code → st đổi nhưng window KHÔNG trượt ✗.
+- Kết luận: **content script KHÔNG THỂ tự cuộn** — cần chrome.debugger (CDP Input = trusted).
+
+### 7.2 API nội bộ của OWA (mimic theo yêu cầu user)
+- Nạp list: `POST /owa/service.svc?action=FindItem&app=Mail` — gọi ĐÚNG 1 LẦN lúc bootstrap
+  (toàn bộ items vào bộ nhớ; cuộn sau đó KHÔNG gọi thêm FindItem).
+- FindFolder: body ĐẦY ĐỦ nằm trong header **`x-owa-urlpostdata`** (URL-encoded JSON) + POST rỗng;
+  protocol EWS-JSON: `FindFolderJsonRequest:#Exchange` / `IndexedPageView` / `FolderId:#Exchange`.
+- Replay KHÔNG có `authorization: Bearer` → **server TREO** (không 401). Bearer đến từ MSAL
+  (`msal.cache.encryption` cookie) — reverse-engineer token flow = dễ vỡ + rủi ro bảo mật cao.
+- ⟶ **Kết luận: mimic API KHÔNG khả thi** (Bearer MSAL). Chọn chrome.debugger trusted-scroll.
+
+### 7.3 Hành động an toàn đã xác minh
+- Wheel/gesture cuộn **KHÔNG mở mail, KHÔNG đổi trạng thái đã đọc** (logger event: chỉ
+  wheel/scroll; không click, không keydown) ✓ giữ nguyên BR cứng.
+- Click TAB (Focused/Khác) = đổi view, không mở mail — an toàn.
+
 ## 6. Mail chưa đọc (unread heuristic — UAT 15/10)
 
 - Row chưa đọc nhận diện bằng: aria-label chứa "unread"/"chưa đọc", hoặc nút con
   "Mark as read"/"Đánh dấu đã đọc" (chỉ xuất hiện trên row chưa đọc).
+  ✅ Xác nhận thêm (Diagnose 18/10): row chưa đọc có aria-label BẮT ĐẦU bằng "unread".
 - Thu thập CHỈ ĐỌC DOM (không click/mở mail) nên KHÔNG đổi trạng thái đã đọc.
 - ⚠️ Chưa verify trên mọi layout OWA — nếu miss row, bổ sung signal tại `isUnreadItem`.
