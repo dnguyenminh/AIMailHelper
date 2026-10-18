@@ -46,7 +46,7 @@ export function App() {
       <section className="card">
         <h2>{t("options.section.visionModel")}</h2>
         <VisionModelPicker
-          draft={draft}
+          draft={{ vision: config.data?.vision ?? { enabled: false, model: "" }, model: draft?.model ?? "" }}
           config={config}
           onDraft={(next) => setDraft((prev) => prev ? { ...prev, vision: next.vision } : null)} />
       </section>

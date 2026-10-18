@@ -8,11 +8,11 @@ import type { VisionConfig } from "../../shared/types";
 
 export function VisionSettings(props: { config: ConfigData }): JSX.Element {
   const stored = props.config.data?.vision ?? null;
-  const [draft, setDraft] = useState<VisionConfig>({ enabled: false });
+  const [draft, setDraft] = useState<VisionConfig>({ enabled: false, model: "" });
   const [status, setStatus] = useState<"idle" | "saved" | "failed">("idle");
 
   useEffect(() => {
-    if (stored) setDraft(stored); // reload sau save → sync lại từ SW
+    if (stored) setDraft({ enabled: stored.enabled, model: stored.model ?? "" }); // reload sau save → sync lại từ SW
   }, [stored]);
 
   const save = async (next: VisionConfig): Promise<void> => {
@@ -31,7 +31,7 @@ export function VisionSettings(props: { config: ConfigData }): JSX.Element {
           type="checkbox"
           checked={draft.enabled}
           onChange={(event) => {
-            const next = { enabled: event.target.checked };
+            const next = { enabled: event.target.checked, model: draft.model };
             setDraft(next);
             void save(next);
           }}
