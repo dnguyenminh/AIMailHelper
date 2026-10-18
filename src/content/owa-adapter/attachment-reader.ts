@@ -17,6 +17,9 @@ const VISION_PAGES = 4;
 const VISION_SCROLL_DELTA = 1200;
 const VISION_PAGE_WAIT_MS = 1800;
 
+// Chunked vision-read cho tài liệu dài (UAT 18/10): đọc chunk → tóm tắt → lưu → tổng hợp
+import { readFullDocumentVision, VisionSynthesisResult } from "./vision-chunk-reader";
+
 export interface AttachmentText {
   name: string;
   text: string;
@@ -100,57 +103,32 @@ export async function extractAttachmentsForEmail(): Promise<AttachmentText[]> {
   // Vòng 1 — mở preview TỪNG file: đọc TEXT RENDER (Word/Excel Online iframe — UAT 18/10,
   // đúng cách user nhìn thấy) + capture bytes song song (PDF/txt fallback).
   // Text render thiếu + file render ẢNH (Word/Excel — verify: DOM/AX không có text) → Vision-read.
-  const rendered: string[] = [];
-  const visionJobs: { name: string; pages: string[] }[] = [];
-  for (const option of options) {
-    try {
-      clickCenter(option.element);
-      await new Promise((resolve) => setTimeout(resolve, PREVIEW_RENDER_MS));
-      const preview = await sendMessage<{ text: string }>("ATTACHMENT_READ_PREVIEW", {});
-      const ext = option.name.split(".").pop()?.toLowerCase() ?? "";
-      if (preview.text.trim().length < MIN_RENDERED_CHARS && IMAGE_RENDERED_EXT.includes(ext)) {
-        const job = await captureVisionPages(option.name);
-        if (job !== null) visionJobs.push(job);
-        rendered.push(""); // text DOM là JS/CSS rác — không dùng làm attachment text
-      } else {
-        rendered.push(preview.text);
-      }
-      await closePreview();
-    } catch (error) {
-      console.warn("[AIMH][attachment] mở/đóng preview lỗi:", option.name.slice(0, 60), String(error).slice(0, 120));
-      rendered.push("");
-    }
-  }
-  // Vòng 2 — bytes đã capture: extract (PDF canvas không có text DOM → cần pdf.js từ bytes).
-  const collected = await sendMessage<{ files: { url: string; base64: string }[] }>("ATTACHMENT_CAPTURE_COLLECT", {});
-  const payload = options.map((option, index) => ({
-    name: option.name,
-    base64: collected.files[index]?.base64 ?? collected.files.find((f) => f.url.toLowerCase().includes(option.name.split(".").pop() ?? ""))?.base64 ?? ""
-  })).filter((item) => item.base64.length > 0);
-  let extracted = new Map<string, string>();
-  if (payload.length > 0) {
-    const response = await sendMessage<{ results: { name: string; text?: string }[] }>("ATTACHMENT_EXTRACT", { files: payload });
-    extracted = new Map(response.results.filter((r) => typeof r.text === "string").map((r) => [r.name, r.text as string]));
-  }
-  // Vòng 3 — Vision OCR cho file render ảnh (model theo rule user: VL riêng → model text
-  // nếu hỗ trợ VL → KHÔNG model VL nào → bỏ qua + ghi chú).
+  // Vòng 3 — Vision-read chunked cho file render ảnh (Word/Excel dài).
+  // Mỗi file: mở preview → đọc toàn bộ theo chunk (10 trang/chunk, max 4 chunks)
+  // → tóm tắt từng chunk → tổng hợp cuối.
   let visionTexts = new Map<string, string>();
-  if (visionJobs.length > 0) {
-    try {
-      const visionResponse = await sendMessage<{ results: { name: string; text?: string; error?: string }[] }>("ATTACHMENT_VISION_TEXT", { files: visionJobs });
-      visionTexts = new Map(visionResponse.results.filter((r) => typeof r.text === "string").map((r) => [r.name, r.text as string]));
-      if (visionResponse.results.some((r) => r.error === "no-vision-model")) {
-        console.warn("[AIMH][attachment] KHÔNG có model VL — cấu hình model VL trong Cài đặt (hoặc model chính phải hỗ trợ VL vd gpt-4o)");
+  for (const option of options) {
+    const ext = option.name.split(".").pop()?.toLowerCase() ?? "";
+    if (IMAGE_RENDERED_EXT.includes(ext)) {
+      try {
+        clickCenter(option.element);
+        await new Promise((resolve) => setTimeout(resolve, PREVIEW_RENDER_MS));
+        // Dùng chunked reader thay vì captureVisionPages cố định 4 trang
+        const result = await readFullDocumentVision(option.name, (phase, current, total) => {
+          console.log(`[AIMH][attachment] ${phase}: ${current}/${total} - ${option.name}`);
+        });
+        const visionText = result.synthesis?.overview + "\n" + result.synthesis?.details + "\n" + result.synthesis?.conclusions;
+        if (visionText && visionText.trim().length > 0) {
+          visionTexts.set(option.name, visionText.trim());
+        }
+        await closePreview();
+      } catch (error) {
+        console.warn("[AIMH][attachment] chunked vision-read lỗi:", option.name.slice(0, 60), String(error).slice(0, 120));
+        await closePreview();
       }
-    } catch (error) {
-      console.warn("[AIMH][attachment] vision OCR lỗi:", String(error).slice(0, 120));
     }
   }
-  // Ghép: text RENDER → Vision OCR → bytes extract → placeholder.
-  return options.map((option, index) => ({
-    name: option.name,
-    text: pickAttachmentText(option.name, rendered[index] ?? "", extracted, visionTexts)
-  }));
+  // visionTexts đã được điền
 }
 
 function pickAttachmentText(name: string, rendered: string, extracted: Map<string, string>, visionTexts: Map<string, string>): string {

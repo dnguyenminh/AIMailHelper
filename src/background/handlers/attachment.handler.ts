@@ -107,20 +107,27 @@ function base64FromDataUrl(dataUrl: string): string {
   return index >= 0 ? dataUrl.slice(index + marker.length) : dataUrl;
 }
 
+// Chunked vision-read handler (UAT 18/10): nhận TẤT CẢ pages base64 của 1 file,
+// chia chunks (10 trang/chunk, max 4 chunks), OCR → tóm tắt chunk → tổng hợp.
 const visionTextHandler: RpcHandler = async (payload) => {
   const files = parseVisionFiles(payload);
   const vision = await storage.getVision();
   const active = await resolveActive(); // ERR-11 khi chưa cấu hình provider
   const model = resolveVisionModel({ model: active.config.model, vision: vision });
   if (model === null) {
-    // KHÔNG có model VL (user rule bước 3) — báo từng file để AI ghi chú "không đọc được".
     return { results: files.map((f) => ({ name: f.name, error: "no-vision-model" })) };
   }
   await ensureHostPermission(active.config); // BR-05
   const vlConfig = { ...active.config, model: model }; // gọi model VL, cùng provider/key
-  const results: { name: string; text?: string }[] = [];
+
+  const CHUNK_PAGES = 10;
+  const MAX_CHUNKS = 4;
+  const CHUNK_OVERLAP = 1;
+
+  const results: { name: string; text?: string; error?: string }[] = [];
   for (const file of files) {
     try {
+      // 1. OCR từng trang
       const pageTexts: string[] = [];
       for (let page = 0; page < file.pages.length; page += 1) {
         const response = await active.adapter.chat(vlConfig, buildVisionOcrMessages(page, file.pages.length), {
@@ -130,11 +137,64 @@ const visionTextHandler: RpcHandler = async (payload) => {
         });
         pageTexts.push(response.text.trim());
       }
-      const text = pageTexts.join("\n").slice(0, 20_000); // cap như extract thường
-      const note = file.pages.length >= MAX_VISION_PAGES ? "\n[tài liệu dài — chỉ đọc 4 trang đầu]" : "";
-      results.push({ name: file.name, text: text + note });
+
+      // 2. Chia thành chunks (có overlap)
+      const chunks: string[][] = [];
+      for (let start = 0; start < pageTexts.length; ) {
+        const end = Math.min(start + 10, pageTexts.length);
+        chunks.push(pageTexts.slice(start, end));
+        if (end === pageTexts.length) break;
+        start = end - 1; // overlap 1 trang
+      }
+      if (chunks.length > 4) chunks.splice(4); // max 4 chunks
+
+      // 3. Tóm tắt từng chunk (sequential)
+      const chunkSummaries: { summary: string; keyPoints: string[] }[] = [];
+      for (let i = 0; i < chunks.length; i += 1) {
+        const chunkText = chunks[i].join("\n\n---PAGE BREAK---\n\n");
+        const summaryResponse = await active.adapter.chat(vlConfig, buildVisionChunkSummaryMessages(i, chunks.length), {
+          temperature: 0,
+          maxTokens: 2_000,
+          visionImage: undefined, // text-only summarization
+        });
+        // Parse JSON response
+        let summary: string, keyPoints: string[];
+        try {
+          const parsed = JSON.parse(summaryResponse.text.trim());
+          summary = parsed.summary ?? "";
+          keyPoints = Array.isArray(parsed.keyPoints) ? parsed.keyPoints : [];
+        } catch {
+          summary = summaryResponse.text.trim().slice(0, 1000);
+          keyPoints = [];
+        }
+        chunkSummaries.push({ summary, keyPoints });
+      }
+
+      // 4. Tổng hợp cuối cùng
+      const synthesisPrompt = buildVisionSynthesisMessages(chunks.length);
+      const synthesisResponse = await active.adapter.chat(vlConfig, synthesisPrompt, {
+        temperature: 0,
+        maxTokens: 3_000,
+        visionImage: undefined,
+      });
+      let synthesis: any = { overview: "", details: "", conclusions: "", actionItems: [] };
+      try {
+        synthesis = JSON.parse(synthesisResponse.text.trim());
+      } catch {
+        synthesis = { overview: synthesisResponse.text.trim().slice(0, 2000) };
+      }
+
+      const finalText = [
+        synthesis.overview,
+        synthesis.details,
+        synthesis.conclusions,
+        synthesis.actionItems?.join("\n")
+      ].filter(Boolean).join("\n\n").slice(0, 30_000);
+
+      const note = file.pages.length > 10 ? "\n[tài liệu dài — chunked vision-read: " + chunks.length + " chunks]" : "";
+      results.push({ name: file.name, text: finalText + note });
     } catch (error) {
-      console.warn("[AIMH][attachment] vision OCR fail:", file.name.slice(0, 60), String(error).slice(0, 120));
+      console.warn("[AIMH][attachment] chunked vision-read lỗi:", file.name.slice(0, 60), String(error).slice(0, 120));
       results.push({ name: file.name, error: "vision-failed" });
     }
   }

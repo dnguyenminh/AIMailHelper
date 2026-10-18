@@ -2,13 +2,9 @@
 // Payload validation logic tests (unit tests). Integration tests require full LLM runtime mocking.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createChromeMock } from "../mocks/chrome";
-import type { ChromeMock } from "../mocks/chrome";
 import { MessageRouter } from "../../src/background/router";
 import { registerAttachmentHandlers } from "../../src/background/handlers/attachment.handler";
 import { resetSessionsForTests } from "../../src/background/debugger-scroll";
-import type { RpcResponse } from "../../src/shared/messaging";
-
-type Chrome = { chrome: ChromeMock & { debugger: any } };
 
 const OWA_TAB = { id: 7, url: "https://outlook.cloud.microsoft/mail/inbox" };
 
