@@ -7,7 +7,9 @@ import { readZipEntries } from "./zip";
 export const MAX_ATTACHMENT_CHARS = 20_000;
 const MAX_PDF_PAGES = 40;
 const MAX_XLSX_ROWS = 2_000;
-const SUPPORTED = ["txt", "csv", "md", "log", "docx", "xlsx", "pdf"];
+// doc/xls (Word/Excel CŨ — OLE binary) nằm trong danh sách để AI ít nhất được BÁO CÓ file:
+// OWA render qua Office Online (iframe cross-origin) — bytes không lấy được → placeholder.
+const SUPPORTED = ["txt", "csv", "md", "log", "doc", "xls", "docx", "xlsx", "pdf"];
 
 export function isSupportedAttachment(name: string): boolean {
   const ext = name.split(".").pop()?.toLowerCase() ?? "";
@@ -103,20 +105,24 @@ function bytesFromBase64(base64: string): Uint8Array {
   return bytes;
 }
 
-// Entry point — ném Error nếu định dạng không hỗ trợ / hỏng (caller bỏ qua file đó + log).
+// Entry point — sniff MAGIC BYTES trước (server có thể convert .doc → PDF): %PDF → pdf;
+// PK\x03\x04 → ZIP (docx/xlsx); còn lại → text utf-8 (txt/csv); OLE binary (.doc/.xls cũ,
+// signature D0 CF 11 E0) → throw "định dạng cũ" (caller ghi placeholder cho AI biết).
 export async function extractAttachmentText(name: string, base64: string): Promise<string> {
   const ext = name.split(".").pop()?.toLowerCase() ?? "";
   if (!SUPPORTED.includes(ext)) throw new Error("attachment: định dạng không hỗ trợ ." + ext);
   const bytes = bytesFromBase64(base64);
-  if (ext === "pdf") return cap(await (await pdfExtractor()).extract(bytes));
-  if (ext === "docx" || ext === "xlsx") {
+  const magic = String.fromCharCode(bytes[0] ?? 0, bytes[1] ?? 0, bytes[2] ?? 0, bytes[3] ?? 0);
+  if (magic === "%PDF") return cap(await (await pdfExtractor()).extract(bytes));
+  if (magic === "PK\x03\x04") {
     const entries = await readZipEntries(bytes);
-    if (ext === "docx") {
-      const xml = entries.get("word/document.xml");
-      if (!xml) throw new Error("docx: thiếu word/document.xml");
-      return cap(docxToText(new TextDecoder().decode(xml)));
+    if (entries.has("word/document.xml")) {
+      return cap(docxToText(new TextDecoder().decode(entries.get("word/document.xml") as Uint8Array)));
     }
     return cap(xlsxToText(entries));
+  }
+  if (bytes[0] === 0xd0 && bytes[1] === 0xcf) {
+    throw new Error("attachment: Word/Excel cũ (OLE binary) — Office Online render, không trích được text");
   }
   return cap(new TextDecoder().decode(bytes));
 }

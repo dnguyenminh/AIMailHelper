@@ -7,7 +7,9 @@ import { sendMessage } from "../../shared/messaging";
 
 const MAX_ATTACHMENTS = 3;
 const PREVIEW_LOAD_MS = 3000; // chờ OWA fetch binary sau khi mở preview
-const SUPPORTED_EXT = ["txt", "csv", "md", "log", "docx", "xlsx", "pdf"];
+// doc/xls (Word/Excel CŨ) nằm trong danh sách: AI ít nhất được báo CÓ file — nếu bytes
+// không trích được (OLE binary, Office Online render) → placeholder thay text (xử lý dưới).
+const SUPPORTED_EXT = ["txt", "csv", "md", "log", "doc", "xls", "docx", "xlsx", "pdf"];
 
 export interface AttachmentText {
   name: string;
@@ -81,8 +83,13 @@ export async function extractAttachmentsForEmail(): Promise<AttachmentText[]> {
   })).filter((item) => item.base64.length > 0);
   if (payload.length === 0) return [];
   const extracted = await sendMessage<{ results: { name: string; text?: string }[] }>("ATTACHMENT_EXTRACT", { files: payload });
-  return extracted.results.filter((r) => typeof r.text === "string" && r.text.length > 0)
-    .map((r) => ({ name: r.name, text: r.text as string }));
+  // Lỗi extract KHÔNG bỏ im — placeholder để AI biết CÓ file (kể cả khi không đọc được nội dung).
+  return extracted.results.map((r) => ({
+    name: r.name,
+    text: typeof r.text === "string" && r.text.length > 0
+      ? r.text
+      : "(Không trích được nội dung — định dạng Word/Excel cũ (.doc/.xls) được render qua Office Online, hoặc file nhị phân. Hãy ghi rõ trong phân tích rằng người dùng cần mở file đính kèm để xem nội dung.)"
+  }));
 }
 
 // Hook cho reader.readEmail — email CÓ đính kèm mới đọc (tiết kiệm); LỖI không bao giờ chặn

@@ -44,6 +44,21 @@ function b64(buffer: Buffer | Uint8Array): string {
   return Buffer.from(buffer).toString("base64");
 }
 
+// pdf.js mock dùng chung — state đổi được per-test (vi.mock hoisted nên factory chạy 1 lần).
+const pdfMockState = vi.hoisted(() => ({ pages: ["Trang 1 noi dung", "Trang 2 noi dung"] }));
+vi.mock("pdfjs-dist/legacy/build/pdf.mjs", () => ({
+  GlobalWorkerOptions: { workerSrc: "" },
+  getDocument: () => ({
+    promise: Promise.resolve({
+      numPages: pdfMockState.pages.length,
+      getPage: async (n: number) => ({
+        getTextContent: async () => ({ items: [{ str: pdfMockState.pages[n - 1] ?? "" }] })
+      }),
+      destroy: async () => undefined
+    })
+  })
+}));
+
 const DOCX_XML = `<?xml version="1.0"?><w:document><w:body>` +
   `<w:p><w:r><w:t>Quyết định: phê duyệt ngân sách</w:t></w:r></w:p>` +
   `<w:p><w:r><w:t>Số tiền < 500 triệu</w:t></w:r></w:p>` +
@@ -111,21 +126,20 @@ describe("extractAttachmentText — dispatch theo extension", () => {
   });
 
   it("pdf: dispatch sang pdfjs (mock) — text từng trang join", async () => {
-    vi.mock("pdfjs-dist/legacy/build/pdf.mjs", () => ({
-      GlobalWorkerOptions: { workerSrc: "" },
-      getDocument: () => ({
-        promise: Promise.resolve({
-          numPages: 2,
-          getPage: async (n: number) => ({
-            getTextContent: async () => ({ items: [{ str: "Trang " + n + " noi dung" }] })
-          }),
-          destroy: async () => undefined
-        })
-      })
-    }));
+    pdfMockState.pages = ["Trang 1 noi dung", "Trang 2 noi dung"];
     const text = await extractAttachmentText("hop-dong.pdf", b64(Buffer.from("%PDF-1.4 fake")));
     expect(text).toContain("Trang 1 noi dung");
     expect(text).toContain("Trang 2 noi dung");
-    vi.doUnmock("pdfjs-dist/legacy/build/pdf.mjs");
+  });
+
+  it(".doc nhưng bytes là PDF (server convert) → sniff magic trích đúng text", async () => {
+    pdfMockState.pages = ["noi dung converted"];
+    const text = await extractAttachmentText("HD_DV_102026.doc", b64(Buffer.from("%PDF-1.7 converted")));
+    expect(text).toContain("noi dung converted");
+  });
+
+  it(".doc OLE binary thật (D0 CF 11 E0) → throw 'Word/Excel cũ' (caller ghi placeholder)", async () => {
+    const ole = Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1, 0, 1]);
+    await expect(extractAttachmentText("HD_DV_102026.doc", b64(ole))).rejects.toThrow("Word/Excel cũ");
   });
 });
