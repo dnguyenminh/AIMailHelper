@@ -13,12 +13,9 @@ const SUPPORTED_EXT = ["txt", "csv", "md", "log", "doc", "xls", "docx", "xlsx", 
 const MIN_RENDERED_CHARS = 200; // text render ít hơn → coi là chưa render đủ → fallback
 // Preview các loại này render ẢNH TRANG (verify 18/10: DOM/AX không có text) → Vision-read.
 const IMAGE_RENDERED_EXT = ["doc", "xls", "docx", "xlsx"];
-const VISION_PAGES = 4;
-const VISION_SCROLL_DELTA = 1200;
-const VISION_PAGE_WAIT_MS = 1800;
 
 // Chunked vision-read cho tài liệu dài (UAT 18/10): đọc chunk → tóm tắt → lưu → tổng hợp
-import { readFullDocumentVision, VisionSynthesisResult } from "./vision-chunk-reader";
+import { readFullDocumentVision } from "./vision-chunk-reader";
 
 export interface AttachmentText {
   name: string;
@@ -67,30 +64,6 @@ async function closePreview(): Promise<void> {
   }
 }
 
-// Vision fallback: preview đang MỞ (gọi giữa open—close) → chụp VISION_PAGES trang,
-// cuộn xuống giữa các lần bằng trusted-scroll (DEBUGGER_SCROLL — RPC có sẵn) trên vùng dialog.
-async function captureVisionPages(name: string): Promise<{ name: string; pages: string[] } | null> {
-  const pages: string[] = [];
-  try {
-    for (let page = 0; page < VISION_PAGES; page += 1) {
-      const shot = await sendMessage<{ dataUrl: string }>("VISION_CAPTURE", {});
-      pages.push(shot.dataUrl);
-      if (page === VISION_PAGES - 1) break;
-      const dialog = document.querySelector('[role="dialog"]');
-      if (dialog === null) break; // preview đóng bất ngờ
-      const rect = dialog.getBoundingClientRect();
-      await sendMessage("DEBUGGER_SCROLL", {
-        x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + rect.height / 2),
-        deltaY: VISION_SCROLL_DELTA, times: 2
-      });
-      await new Promise((resolve) => setTimeout(resolve, VISION_PAGE_WAIT_MS));
-    }
-  } catch (error) {
-    console.warn("[AIMH][attachment] vision capture lỗi:", name.slice(0, 50), String(error).slice(0, 120));
-  }
-  return pages.length > 0 ? { name: name, pages: pages } : null;
-}
-
 export async function extractAttachmentsForEmail(): Promise<AttachmentText[]> {
   const options = findAttachmentOptions().slice(0, MAX_ATTACHMENTS);
   if (options.length === 0) return [];
@@ -102,18 +75,18 @@ export async function extractAttachmentsForEmail(): Promise<AttachmentText[]> {
   }
   // Vòng 1 — mở preview TỪNG file: đọc TEXT RENDER (Word/Excel Online iframe — UAT 18/10,
   // đúng cách user nhìn thấy) + capture bytes song song (PDF/txt fallback).
-  // Text render thiếu + file render ẢNH (Word/Excel — verify: DOM/AX không có text) → Vision-read.
-  // Vòng 3 — Vision-read chunked cho file render ảnh (Word/Excel dài).
-  // Mỗi file: mở preview → đọc toàn bộ theo chunk (10 trang/chunk, max 4 chunks)
-  // → tóm tắt từng chunk → tổng hợp cuối.
-  let visionTexts = new Map<string, string>();
+  // Text render đủ → dùng text render (txt/csv/pdf).
+  // Text render thiếu + file render ẢNH (Word/Excel — verify: DOM/AX không có text) → Vision-read chunked.
+  const rendered: string[] = [];
+  const visionTexts = new Map<string, string>();
   for (const option of options) {
-    const ext = option.name.split(".").pop()?.toLowerCase() ?? "";
-    if (IMAGE_RENDERED_EXT.includes(ext)) {
-      try {
-        clickCenter(option.element);
-        await new Promise((resolve) => setTimeout(resolve, PREVIEW_RENDER_MS));
-        // Dùng chunked reader thay vì captureVisionPages cố định 4 trang
+    try {
+      clickCenter(option.element);
+      await new Promise((resolve) => setTimeout(resolve, PREVIEW_RENDER_MS));
+      const preview = await sendMessage<{ text: string }>("ATTACHMENT_READ_PREVIEW", {});
+      const ext = option.name.split(".").pop()?.toLowerCase() ?? "";
+      if (preview.text.trim().length < MIN_RENDERED_CHARS && IMAGE_RENDERED_EXT.includes(ext)) {
+        // File render ẢNH (Word/Excel) → Vision-read chunked
         const result = await readFullDocumentVision(option.name, (phase, current, total) => {
           console.log(`[AIMH][attachment] ${phase}: ${current}/${total} - ${option.name}`);
         });
@@ -121,14 +94,19 @@ export async function extractAttachmentsForEmail(): Promise<AttachmentText[]> {
         if (visionText && visionText.trim().length > 0) {
           visionTexts.set(option.name, visionText.trim());
         }
+        rendered.push(""); // text DOM là JS/CSS rác — không dùng làm attachment text
         await closePreview();
-      } catch (error) {
-        console.warn("[AIMH][attachment] chunked vision-read lỗi:", option.name.slice(0, 60), String(error).slice(0, 120));
+      } else {
+        // File render text (txt/csv/pdf) → dùng text render
+        rendered.push(preview.text);
         await closePreview();
       }
+    } catch (error) {
+      console.warn("[AIMH][attachment] mở/đóng preview lỗi:", option.name.slice(0, 60), String(error).slice(0, 120));
+      rendered.push("");
+      try { await closePreview(); } catch {}
     }
   }
-  // visionTexts đã được điền
   // Vòng 2 — bytes đã capture: extract (PDF canvas không có text DOM → cần pdf.js từ bytes).
   const collected = await sendMessage<{ files: { url: string; base64: string }[] }>("ATTACHMENT_CAPTURE_COLLECT", {});
   const payload = options.map((option, index) => ({
