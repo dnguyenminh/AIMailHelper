@@ -95,6 +95,31 @@ locate("reading-pane") → [id="Skip to message-region"] HIT
   wheel/scroll; không click, không keydown) ✓ giữ nguyên BR cứng.
 - Click TAB (Focused/Khác) = đổi view, không mở mail — an toàn.
 
+## 8. Plan A — AI phân tích attachment (18/10/2026)
+
+> User duyệt: Word/Excel/Text/CSV **+ PDF**. Cap 3 file/email × 20K ký tự. KHÔNG áp dụng triage.
+
+### 8.1 Cơ chế (đã verify trên trang thật)
+- Preview attachment: `POST /owa/<user>/service.svc/s/GetAttachmentPdfPreview?id=<attId>` —
+  OWA TỰ tải binary (auth của nó) rồi render (pdf → mspdfkit.wasm canvas).
+- Menu attachment: Preview / Save to OneDrive / Copy — KHÔNG có download URL trực tiếp.
+- ⟶ Chỉ cần "nghe trộm" bytes: chrome.debugger Network events (permission đã có cho
+  trusted-scroll) + Network.getResponseBody.
+
+### 8.2 Module
+| File | Vai trò |
+|---|---|
+| `background/attachment-capture.ts` | Bắt Network response trong cửa sổ preview (cap 5 file × 3MB, lọc asset noise) |
+| `shared/attachments/zip.ts` | ZIP tối giản (stored + deflate-raw qua DecompressionStream — 0 thư viện) |
+| `shared/attachments/extract.ts` | docx (document.xml) · xlsx (sharedStrings + sheet) · txt/csv · pdf (pdf.js legacy lazy) |
+| `content/owa-adapter/attachment-reader.ts` | Mở preview từng file (synthetic click an toàn) → collect → extract |
+| `shared/llm/prompts.ts` | Ghép khối `ATTACHMENTS` vào <email-data> (fence-neutralized — chống injection) |
+
+### 8.3 Hạn chế đã ghi nhận
+- Preview mở bằng synthetic click — nếu OWA chặn untrusted click cho preview (chưa thấy),
+  chuyển sang CDP click qua debugger session đã attach.
+- jsdom test thiếu DecompressionStream → polyfill từ node:stream/web (runtime Chrome có sẵn).
+
 ## 6. Mail chưa đọc (unread heuristic — UAT 15/10)
 
 - Row chưa đọc nhận diện bằng: aria-label chứa "unread"/"chưa đọc", hoặc nút con
