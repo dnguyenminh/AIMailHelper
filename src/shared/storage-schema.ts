@@ -152,6 +152,15 @@ export function validateVision(value: unknown): VisionConfig {
   if (typeof raw["model"] === "string" && raw["model"].trim().length > 0) {
     vision.model = raw["model"].trim().slice(0, 120); // model VL riêng (UAT 18/10)
   }
+  if (typeof raw["provider"] === "string" && raw["provider"].trim().length > 0) {
+    vision.provider = raw["provider"].trim().slice(0, 50); // provider VL riêng (UAT 18/10)
+  }
+  if (typeof raw["url"] === "string" && raw["url"].trim().length > 0) {
+    vision.url = raw["url"].trim().slice(0, 200); // URL VL riêng (UAT 18/10)
+  }
+  if (typeof raw["apiKey"] === "string" && raw["apiKey"].trim().length > 0) {
+    vision.apiKey = raw["apiKey"].trim().slice(0, 200); // API key VL riêng (UAT 18/10)
+  }
   return vision;
 }
 

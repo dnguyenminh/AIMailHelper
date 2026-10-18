@@ -43,6 +43,9 @@ export interface AutomationConfig {
 export interface VisionConfig {
   enabled: boolean; // mặc định false — BR-03
   model?: string; // UAT 18/10 — model VL riêng (user có 2 model text + VL); trống → dùng model chính nếu hỗ trợ VL
+  provider?: string; // UAT 18/10 — provider VL riêng (local/openai/anthropic/gemini/openai-compatible)
+  url?: string; // UAT 18/10 — URL endpoint VL model
+  apiKey?: string; // UAT 18/10 — API key VL model
 }
 
 export interface AppConfig {
