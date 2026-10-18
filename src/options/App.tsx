@@ -12,6 +12,7 @@ import { ModelPicker } from "./components/ModelPicker";
 import { PromptSettings } from "./components/PromptSettings";
 import { ProviderForm } from "./components/ProviderForm";
 import { TestConnection } from "./components/TestConnection";
+import { VisionModelPicker } from "./components/VisionModelPicker";
 import { VisionSettings } from "./components/VisionSettings";
 import { defaultDraftFor, useConfigData } from "./useConfigData";
 
@@ -41,6 +42,13 @@ export function App() {
       <section className="card">
         <h2>{t("options.section.model")}</h2>
         <ModelPicker draft={draft ?? { provider: active, model: "" }} activeProvider={active} onDraft={setDraft} />
+      </section>
+      <section className="card">
+        <h2>{t("options.section.visionModel")}</h2>
+        <VisionModelPicker
+          draft={draft}
+          config={config}
+          onDraft={(next) => setDraft((prev) => prev ? { ...prev, vision: next.vision } : null)} />
       </section>
       <section className="card">
         <h2>{t("options.section.testConnection")}</h2>
