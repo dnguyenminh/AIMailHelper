@@ -1,0 +1,50 @@
+// src/content/owa-adapter/trusted-scroll.ts — client trusted-scroll (UAT 18/10, SPIKE §7.1).
+// OWA mới chỉ nhận input isTrusted: synthetic wheel + scrollTop code đều bị virtualizer bỏ qua.
+// chrome.debugger chỉ có ở service worker → content gửi RPC DEBUGGER_SCROLL, SW attach tab
+// hiện tại + gửi CDP Input.synthesizeScrollGesture (gesture compositor thật — đã verify).
+// An toàn: gesture cuộn KHÔNG mở mail, KHÔNG đổi trạng thái đã đọc (logger xác minh 18/10).
+import { sendMessage } from "../../shared/messaging";
+import type { DebuggerScrollPayload } from "../../shared/messaging";
+import { liveMailList } from "./list-scroller";
+
+const GROW_TIMEOUT_MS = 2500; // chờ OWA materialize/render thêm row sau gesture
+const GROW_POLL_MS = 250;
+const GESTURE_TIMES = 3;
+const GESTURE_DELTA = 1200;
+
+export interface TrustedScrollResult {
+  sent: number;
+}
+
+// Bắn chuỗi gesture cuộn xuống tại tâm list (SW attach tab + CDP). Ném AppError nếu tab
+// không phải OWA / payload sai — caller coi như "cuộn thất bại" và dừng theo no-growth.
+export async function trustedScrollBurst(x: number, y: number): Promise<TrustedScrollResult> {
+  const payload: DebuggerScrollPayload = { x: x, y: y, deltaY: GESTURE_DELTA, times: GESTURE_TIMES };
+  return sendMessage<TrustedScrollResult>("DEBUGGER_SCROLL", payload);
+}
+
+// Detach debugger khi quét xong — infobar "đang gỡ lỗi" tự biến mất.
+export async function trustedScrollDetach(): Promise<void> {
+  await sendMessage("DEBUGGER_DETACH", {});
+}
+
+// Cuộn tin cậy + chờ row mới (đếm trên container MỚI trong document — list có thể bị thay).
+// Trả true nếu số row tăng = còn nội dung để quét; false = gesture không hiệu lực / hết page.
+export async function trustedScrollAdvance(): Promise<boolean> {
+  const list = liveMailList();
+  if (list === null) return false;
+  const before = list.querySelectorAll('[role="option"], [role="listitem"]').length;
+  const rect = list.getBoundingClientRect();
+  try {
+    await trustedScrollBurst(Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2));
+  } catch (error) {
+    console.warn("[AIMH][trusted-scroll] gesture lỗi — dừng cuộn sâu:", error);
+    return false;
+  }
+  for (let waited = 0; waited < GROW_TIMEOUT_MS; waited += GROW_POLL_MS) {
+    await new Promise((resolve) => setTimeout(resolve, GROW_POLL_MS));
+    const fresh = liveMailList();
+    if (fresh !== null && fresh.querySelectorAll('[role="option"], [role="listitem"]').length > before) return true;
+  }
+  return false;
+}

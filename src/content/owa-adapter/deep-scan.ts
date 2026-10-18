@@ -17,7 +17,8 @@ export interface DeepScanDeps {
   collect: (locate: LocateFn) => Promise<InboxItem[]>; // = collectInboxItems (tự điền currentScan)
   findElement: (messageId: string) => Element | null; // = findItemElement (đọc currentScan)
   locateList: (locate: LocateFn) => Promise<Element | null>; // = locateInboxList
-  loadMore?: (list: Element) => Promise<boolean>; // mặc định: cuộn danh sách (list-scroller)
+  loadMore?: (list: Element) => Promise<boolean>; // mặc định: lai synthetic + trusted (deep-triage)
+  onScanEnd?: () => Promise<void>; // dọn dẹp cuối quét (detach debugger — infobar tắt)
 }
 
 const DEFAULTS: Required<DeepScanOptions> = { maxItems: 500, maxRounds: 150 };
@@ -90,6 +91,7 @@ export async function deepScanCollect(
     await scanRounds(locate, visitRound, opts, deps, list, merged);
   } finally {
     if (scroller !== null) { try { scroller.scrollTop = savedTop; } catch { /* best-effort */ } }
+    if (deps.onScanEnd) await deps.onScanEnd(); // detach debugger kể cả khi scan lỗi/giữa chừng
   }
   console.info(`[AIMH][deep-scan] hoàn tất: ${merged.size} mail (cap ${opts.maxItems})`);
   return Array.from(merged.values());

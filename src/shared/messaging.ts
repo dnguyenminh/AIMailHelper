@@ -15,7 +15,9 @@ export type RpcKind =
   | "VISION_LOCATE"
   | "QUEUE_LIST"
   | "QUEUE_UPDATE"
-  | "GET_RUNTIME_STATE";
+  | "GET_RUNTIME_STATE"
+  | "DEBUGGER_SCROLL"
+  | "DEBUGGER_DETACH";
 
 export const RPC_KINDS: readonly RpcKind[] = [
   "CONFIG_GET",
@@ -28,7 +30,9 @@ export const RPC_KINDS: readonly RpcKind[] = [
   "VISION_LOCATE",
   "QUEUE_LIST",
   "QUEUE_UPDATE",
-  "GET_RUNTIME_STATE"
+  "GET_RUNTIME_STATE",
+  "DEBUGGER_SCROLL",
+  "DEBUGGER_DETACH"
 ];
 
 export function isRpcKind(value: unknown): value is RpcKind {
@@ -57,6 +61,15 @@ export interface StreamRequestPayloads {
   "reply": { email: EmailData; tone: ReplyDraft["tone"]; language: ReplyDraft["language"]; extraInstructions?: string };
   "triage-batch": { items: TriageItem[] };
   "chat-test": { messages: ChatMessage[] };
+}
+
+// UAT 18/10 — trusted-scroll qua chrome.debugger (SPIKE §7.1): OWA chỉ nhận input isTrusted.
+// Payload scroll: tọa độ điểm cuộn (tâm list) + bước wheel + số gesture — SW validate chặt.
+export interface DebuggerScrollPayload {
+  x: number;
+  y: number;
+  deltaY: number;
+  times: number;
 }
 
 export type StreamRequestKind = keyof StreamRequestPayloads;

@@ -6,7 +6,9 @@ import type { ErrCode } from "../shared/errors";
 import { isRpcKind } from "../shared/messaging";
 import type { RpcKind, RpcRequest, RpcResponse } from "../shared/messaging";
 
-export type RpcHandler = (payload: unknown) => Promise<unknown>;
+// Handler nhận (payload, sender) — sender bắt buộc cho DEBUGGER_* (tab thật của CS, KHÔNG tin
+// tabId từ payload — SR-12 security). Handler cũ chỉ nhận payload vẫn tương thích (tham số ít hơn).
+export type RpcHandler = (payload: unknown, sender?: chrome.runtime.MessageSender) => Promise<unknown>;
 
 export class MessageRouter {
   private handlers = new Map<RpcKind, RpcHandler>();
@@ -15,7 +17,7 @@ export class MessageRouter {
     this.handlers.set(kind, handler);
   }
 
-  async handle(message: unknown): Promise<RpcResponse<unknown>> {
+  async handle(message: unknown, sender?: chrome.runtime.MessageSender): Promise<RpcResponse<unknown>> {
     const request = parseRequest(message);
     if (!request) return errorEnvelope("", { code: "ERR-15", i18nKey: DEFAULT_ERROR_I18N["ERR-15"] });
     try {
@@ -23,7 +25,7 @@ export class MessageRouter {
       if (!handler) {
         throw new AppError("ERR-15", "errors.notImplemented", { kind: request.kind });
       }
-      const data = await handler(request.payload);
+      const data = await handler(request.payload, sender);
       return { requestId: request.requestId, ok: true, data: data };
     } catch (error) {
       return this.toErrorEnvelope(request, error);
@@ -44,8 +46,8 @@ export class MessageRouter {
 
   // MV3: listener đăng ký đồng bộ; trả true để giữ kênh mở cho sendResponse bất đồng bộ.
   listen(): void {
-    chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-      void this.handle(message).then(sendResponse);
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      void this.handle(message, sender).then(sendResponse);
       return true;
     });
   }

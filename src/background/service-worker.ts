@@ -12,6 +12,7 @@ import { registerStreamHandlers } from "./handlers/stream.handler";
 import { registerReplyHandlers } from "./handlers/reply.handler";
 import { registerTriageHandlers } from "./handlers/triage.handler";
 import { registerVisionHandlers } from "./handlers/vision.handler";
+import { registerDebuggerHandlers } from "./handlers/debugger.handler";
 
 const router = new MessageRouter();
 registerConfigHandlers(router); // GĐ1: CONFIG_GET/SET + KEY_STORAGE_SET thật (BR-04/BR-08/BR-15)
@@ -20,6 +21,7 @@ registerLocatorHandlers(router); // GĐ3: LOCATOR_RESOLVE (T2)
 registerVisionHandlers(router); // GĐ4: VISION_CAPTURE/LOCATE (T3 — BR-03 opt-in)
 registerQueueHandlers(router); // GĐ6: QUEUE_LIST/UPDATE thật (BR-15 validate; chèn ở CS — BR-01)
 registerStateHandlers(router); // GĐ1: GET_RUNTIME_STATE (FR-GD1-02)
+registerDebuggerHandlers(router); // UAT 18/10: DEBUGGER_SCROLL/DETACH — trusted-scroll deep-scan
 router.listen();
 
 const streamServer = new PortServer();

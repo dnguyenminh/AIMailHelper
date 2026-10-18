@@ -8,8 +8,10 @@ export default defineManifest({
   name: "AIMailHelper",
   description: "Trợ lý AI cho Outlook Web — phân tích email, draft reply (không tự gửi), triage hộp thư.",
   version: "0.1.0",
-  // BR-15/BR-04: chrome.storage sync + local — quyền duy nhất của extension (SR-12 least privilege).
-  permissions: ["storage"],
+  // BR-15/BR-04: chrome.storage sync + local — quyền cốt lõi (SR-12 least privilege).
+  // UAT 18/10: "debugger" — chrome.debugger CDP Input (trusted-scroll) cho deep-scan quét
+  // toàn folder (SPIKE §7.1: OWA chỉ nhận input isTrusted). Hiện infobar "đang gỡ lỗi" khi quét.
+  permissions: ["storage", "debugger"],
   // BR-05: 4 domain OWA (gồm outlook.cloud.microsoft — OWA mới, phát hiện UAT) + 4 LLM cloud (§8.3, GĐ2).
   host_permissions: [
     "https://outlook.office.com/*",

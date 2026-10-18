@@ -36,10 +36,11 @@ const CLOUD_HOSTS = [
 ];
 
 describe("manifest MV3 — least privilege (TC-101: FR-GD1-01, BR-16, SR-12)", () => {
-  it("permissions CHỈ 'storage' — không quyền nhạy cảm (SR-12)", () => {
-    expect(cfg.permissions).toEqual(["storage"]);
+  it("permissions = storage + debugger (SR-12; debugger duyệt UAT 18/10 — trusted-scroll deep-scan, SPIKE §7.1)", () => {
+    expect(cfg.permissions).toEqual(["storage", "debugger"]);
     const raw = JSON.stringify(manifest);
-    expect(raw).not.toMatch(/"debugger"|"cookies"|"tabs"|"webRequest"|"nativeMessaging"|"declarativeNetRequest"/);
+    // debugger được duyệt (trusted-scroll); các quyền nhạy cảm khác vẫn cấm tĩnh.
+    expect(raw).not.toMatch(/"cookies"|"tabs"|"webRequest"|"nativeMessaging"|"declarativeNetRequest"|"\<all_urls\>"/);
   });
 
   it("host_permissions = đúng 3 OWA + 4 LLM cloud cố định (BR-05)", () => {
@@ -84,7 +85,7 @@ describe("manifest MV3 — least privilege (TC-101: FR-GD1-01, BR-16, SR-12)", (
       content_security_policy?: { extension_pages?: string };
     };
     expect(built.manifest_version).toBe(3);
-    expect(built.permissions).toEqual(["storage"]);
+    expect(built.permissions).toEqual(["storage", "debugger"]);
     expect(built.host_permissions ?? []).toEqual(expect.arrayContaining(OWA_HOSTS));
     expect(built.content_security_policy?.extension_pages ?? "").toContain("script-src 'self'");
   });
