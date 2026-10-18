@@ -1,5 +1,5 @@
 // src/options/components/VisionModelPicker.tsx — chọn VL model cho Vision-read (UAT 18/10).
-// Giao diện đơn giản nhất: 1 ô input VL model + nút lưu + trạng thái model chính.
+// Giao diện cực kỳ đơn giản: 1 ô input VL model + trạng thái model chính + nút lưu.
 import { useEffect, useState } from "react";
 import { t } from "../../shared/i18n";
 import { isVisionCapableModel } from "../../shared/llm/vision-model";
