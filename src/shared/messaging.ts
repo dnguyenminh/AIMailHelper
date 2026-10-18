@@ -20,7 +20,8 @@ export type RpcKind =
   | "DEBUGGER_DETACH"
   | "ATTACHMENT_CAPTURE_START"
   | "ATTACHMENT_CAPTURE_COLLECT"
-  | "ATTACHMENT_EXTRACT";
+  | "ATTACHMENT_EXTRACT"
+  | "ATTACHMENT_READ_PREVIEW";;
 
 export const RPC_KINDS: readonly RpcKind[] = [
   "CONFIG_GET",
@@ -38,7 +39,8 @@ export const RPC_KINDS: readonly RpcKind[] = [
   "DEBUGGER_DETACH",
   "ATTACHMENT_CAPTURE_START",
   "ATTACHMENT_CAPTURE_COLLECT",
-  "ATTACHMENT_EXTRACT"
+  "ATTACHMENT_EXTRACT",
+  "ATTACHMENT_READ_PREVIEW"
 ];
 
 export function isRpcKind(value: unknown): value is RpcKind {

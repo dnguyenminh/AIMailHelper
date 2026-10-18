@@ -6,10 +6,11 @@
 import { sendMessage } from "../../shared/messaging";
 
 const MAX_ATTACHMENTS = 3;
-const PREVIEW_LOAD_MS = 3000; // chờ OWA fetch binary sau khi mở preview
+const PREVIEW_RENDER_MS = 4500; // chờ Word/Excel Online render text trong iframe (app nặng)
 // doc/xls (Word/Excel CŨ) nằm trong danh sách: AI ít nhất được báo CÓ file — nếu bytes
 // không trích được (OLE binary, Office Online render) → placeholder thay text (xử lý dưới).
 const SUPPORTED_EXT = ["txt", "csv", "md", "log", "doc", "xls", "docx", "xlsx", "pdf"];
+const MIN_RENDERED_CHARS = 200; // text render ít hơn → coi là chưa render đủ → fallback bytes
 
 export interface AttachmentText {
   name: string;
@@ -67,29 +68,44 @@ export async function extractAttachmentsForEmail(): Promise<AttachmentText[]> {
     console.warn("[AIMH][attachment] bật capture lỗi — bỏ qua attachment:", String(error).slice(0, 120));
     return [];
   }
+  // Vòng 1 — mở preview TỪNG file: đọc TEXT RENDER (Word/Excel Online iframe — UAT 18/10,
+  // đúng cách user nhìn thấy) + capture bytes song song (PDF/txt fallback).
+  const rendered: string[] = [];
   for (const option of options) {
     try {
       clickCenter(option.element);
-      await new Promise((resolve) => setTimeout(resolve, PREVIEW_LOAD_MS));
+      await new Promise((resolve) => setTimeout(resolve, PREVIEW_RENDER_MS));
+      const preview = await sendMessage<{ text: string }>("ATTACHMENT_READ_PREVIEW", {});
+      rendered.push(preview.text);
       await closePreview();
     } catch (error) {
       console.warn("[AIMH][attachment] mở/đóng preview lỗi:", option.name.slice(0, 60), String(error).slice(0, 120));
+      rendered.push("");
     }
   }
+  // Vòng 2 — bytes đã capture: extract (PDF canvas không có text DOM → cần pdf.js từ bytes).
   const collected = await sendMessage<{ files: { url: string; base64: string }[] }>("ATTACHMENT_CAPTURE_COLLECT", {});
   const payload = options.map((option, index) => ({
     name: option.name,
     base64: collected.files[index]?.base64 ?? collected.files.find((f) => f.url.toLowerCase().includes(option.name.split(".").pop() ?? ""))?.base64 ?? ""
   })).filter((item) => item.base64.length > 0);
-  if (payload.length === 0) return [];
-  const extracted = await sendMessage<{ results: { name: string; text?: string }[] }>("ATTACHMENT_EXTRACT", { files: payload });
-  // Lỗi extract KHÔNG bỏ im — placeholder để AI biết CÓ file (kể cả khi không đọc được nội dung).
-  return extracted.results.map((r) => ({
-    name: r.name,
-    text: typeof r.text === "string" && r.text.length > 0
-      ? r.text
-      : "(Không trích được nội dung — định dạng Word/Excel cũ (.doc/.xls) được render qua Office Online, hoặc file nhị phân. Hãy ghi rõ trong phân tích rằng người dùng cần mở file đính kèm để xem nội dung.)"
+  let extracted = new Map<string, string>();
+  if (payload.length > 0) {
+    const response = await sendMessage<{ results: { name: string; text?: string }[] }>("ATTACHMENT_EXTRACT", { files: payload });
+    extracted = new Map(response.results.filter((r) => typeof r.text === "string").map((r) => [r.name, r.text as string]));
+  }
+  // Ghép: text RENDER ưu tiên (≥ MIN_RENDERED_CHARS) → bytes extract → placeholder.
+  return options.map((option, index) => ({
+    name: option.name,
+    text: pickAttachmentText(option.name, rendered[index] ?? "", extracted)
   }));
+}
+
+function pickAttachmentText(name: string, rendered: string, extracted: Map<string, string>): string {
+  if (rendered.trim().length >= MIN_RENDERED_CHARS) return rendered;
+  const fromBytes = extracted.get(name);
+  if (fromBytes !== undefined && fromBytes.length > 0) return fromBytes;
+  return "(Không trích được nội dung — file nhị phân hoặc preview chưa render xong. Hãy ghi rõ trong phân tích rằng người dùng cần mở file đính kèm để xem nội dung.)";
 }
 
 // Hook cho reader.readEmail — email CÓ đính kèm mới đọc (tiết kiệm); LỖI không bao giờ chặn

@@ -5,6 +5,7 @@
 import { AppError } from "../../shared/errors";
 import { extractAttachmentText } from "../../shared/attachments/extract";
 import { collectCapture, registerCaptureListener, startCapture } from "../attachment-capture";
+import { readPreviewText } from "../preview-reader";
 import type { MessageRouter, RpcHandler } from "../router";
 
 const MAX_EXTRACT_FILES = 5;
@@ -60,9 +61,17 @@ const extractHandler: RpcHandler = async (payload) => {
   return { results: results };
 };
 
+// UAT 18/10 (user): preview Word/Excel RENDER text trong iframe Office Online — đọc text
+// đã render qua debugger DOMSnapshot (chỉ-đọc). Tab LUÔN từ sender.tab như các handler khác.
+const readPreviewHandler: RpcHandler = async (_payload, sender) => {
+  const { tabId, url } = senderTab(sender);
+  return { text: await readPreviewText(tabId, url) };
+};
+
 export function registerAttachmentHandlers(router: MessageRouter): void {
   registerCaptureListener();
   router.register("ATTACHMENT_CAPTURE_START", startHandler);
   router.register("ATTACHMENT_CAPTURE_COLLECT", collectHandler);
   router.register("ATTACHMENT_EXTRACT", extractHandler);
+  router.register("ATTACHMENT_READ_PREVIEW", readPreviewHandler);
 }
