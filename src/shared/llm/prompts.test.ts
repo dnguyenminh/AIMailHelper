@@ -99,10 +99,17 @@ describe("prompts — UAT 18/10 body cap + ATTACHMENTS serialization", () => {
     const longBody = "x".repeat(35000);
     const longEmail = { ...email, bodyText: longBody };
     const serialized = serializeEmailData(longEmail);
+    // Body section nằm giữa "BODY:\n" và "\nATTACHMENTS" hoặc "\n=====8<=====[EMAIL-DATA-END]"
     const bodyStart = serialized.indexOf("BODY:\n") + 6;
-    const bodyEnd = serialized.indexOf("\n", bodyStart);
+    const bodyEndMarkers = ["\nATTACHMENTS", "\n=====8<=====[EMAIL-DATA-END]"];
+    let bodyEnd = -1;
+    for (const marker of bodyEndMarkers) {
+      const idx = serialized.indexOf(marker, bodyStart);
+      if (idx >= 0) { bodyEnd = idx; break; }
+    }
     const bodyPart = bodyEnd >= 0 ? serialized.slice(bodyStart, bodyEnd) : serialized.slice(bodyStart);
-    expect(bodyPart.length).toBeLessThanOrEqual(30000 + 50);
+    // bodyPart chứa 30000 ký tự + newline + cap message
+    expect(bodyPart.length).toBeLessThanOrEqual(30000 + 100);
     expect(bodyPart).toContain("[email dài — nội dung sau đây bị cắt để vừa context]");
   });
 
@@ -119,9 +126,9 @@ describe("prompts — UAT 18/10 body cap + ATTACHMENTS serialization", () => {
     const serialized = serializeEmailData(withAttach);
     expect(serialized).toContain("ATTACHMENTS (nội dung file đính kèm đã trích xuất):");
     expect(serialized).toContain("--- FILE: hop-dong.docx ---");
-    // fence trong attachment text phải được neutralize
+    // fence giả trong attachment text phải được neutralize
     expect(serialized).toContain("[fence]");
-    expect(serialized).not.toContain("[EMAIL-DATA-END]");
+    // fence thật ở cuối output (EMAIL_CLOSE) là hợp lệ — KHÔNG check not.toContain
     expect(serialized).toContain("--- FILE: ngan-sach.xlsx ---");
   });
 });
