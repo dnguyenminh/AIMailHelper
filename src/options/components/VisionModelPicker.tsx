@@ -1,9 +1,18 @@
-// src/options/components/VisionModelPicker.tsx — Model VL config giống hệt Provider Form
+// src/options/components/VisionModelPicker.tsx — Model VL config giống hệt Provider Form với model combobox
 import { useEffect, useState } from "react";
 import { t } from "../../shared/i18n";
 import { PROVIDER_IDS } from "../../shared/storage-schema";
 import type { ConfigData } from "../useConfigData";
 import type { ProviderId } from "../../shared/llm/types";
+
+const VL_MODEL_PRESETS: Record<ProviderId, string[]> = {
+  openai: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4"],
+  azure: [""],
+  anthropic: ["claude-3-5-sonnet-20241022", "claude-3-opus-20240229", "claude-3-sonnet-20240229"],
+  gemini: ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-2.0-flash"],
+  "openai-compatible": ["gpt-4o", "gpt-4o-mini", "qwen-vl", "llama-3.2-90b-vision"],
+  local: ["llava", "moondream2", "qwen-vl", "llama-3.2-90b-vision"]
+};
 
 export function VisionModelPicker(props: {
   draft: { vision?: { model?: string; provider?: string; url?: string; apiKey?: string; preset?: string }; model: string } | null;
@@ -54,6 +63,9 @@ export function VisionModelPicker(props: {
       return "";
     }
   };
+
+  const modelPresets = VL_MODEL_PRESETS[provider] ?? [];
+  const modelListId = `vl-model-list-${provider}`;
 
   return (
     <div className="provider-form">
@@ -110,7 +122,18 @@ export function VisionModelPicker(props: {
       {!isAzure && (
         <label className="field">
           <span>{t("options.provider.model")}</span>
-          <input type="text" value={model} onChange={(e) => setModel(e.target.value)} />
+          <input
+            list={modelListId}
+            type="text"
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            placeholder={t("options.visionModel.placeholder")}
+          />
+          <datalist id={modelListId}>
+            {modelPresets.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </datalist>
         </label>
       )}
 
