@@ -1,5 +1,4 @@
-// src/options/components/VisionModelPicker.tsx — Model VL config (Vision-read attachment) giống hệt Provider LLM UI
-// GĐ4 UAT 18/10: giao diện Provider/URL/API Key/Model giống Provider Form
+// src/options/components/VisionModelPicker.tsx — Model VL config giống hệt Provider Form
 import { useEffect, useState } from "react";
 import { t } from "../../shared/i18n";
 import { PROVIDER_IDS } from "../../shared/storage-schema";
@@ -28,13 +27,7 @@ export function VisionModelPicker(props: {
   const save = async () => {
     setStatus("saving");
     try {
-      await props.config.setVision({
-        enabled: true,
-        model,
-        provider,
-        url,
-        apiKey
-      });
+      await props.config.setVision({ enabled: true, model, provider, url, apiKey });
       props.onDraft({ vision: { model, provider, url, apiKey }, model: props.draft?.model ?? "" });
       setStatus("saved");
     } catch {
@@ -45,7 +38,7 @@ export function VisionModelPicker(props: {
   return (
     <div className="provider-form">
       <label className="field">
-        <span>{t("options.visionModel.provider")}</span>
+        <span>{t("options.provider.provider")}</span>
         <select value={provider} onChange={(e) => setProvider(e.target.value as ProviderId)}>
           {PROVIDER_IDS.map((id) => (
             <option key={id} value={id}>{id}</option>
@@ -55,24 +48,19 @@ export function VisionModelPicker(props: {
       <p className="note">{t("options.visionModel.providerHint")}</p>
 
       <label className="field">
-        <span>{t("options.visionModel.apiKey")}</span>
-        <input
-          type="password"
-          value={apiKey}
-          placeholder=""
-          onChange={(e) => setApiKey(e.target.value)}
-        />
+        <span>{t("options.provider.apiKey")}</span>
+        <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
       </label>
       <small className="hint">{t("options.visionModel.apiKeyHint")}</small>
 
       <label className="field">
-        <span>{t("options.visionModel.url")}</span>
+        <span>{t("options.provider.baseUrl")}</span>
         <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} />
       </label>
       <small className="hint">{t("options.visionModel.urlHint")}</small>
 
       <label className="field">
-        <span>{t("options.visionModel.dedicated")}</span>
+        <span>{t("options.provider.model")}</span>
         <input type="text" value={model} onChange={(e) => setModel(e.target.value)} />
       </label>
       <small className="hint">{t("options.visionModel.dedicatedHint")}</small>
