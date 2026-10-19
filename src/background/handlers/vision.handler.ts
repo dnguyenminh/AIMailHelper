@@ -17,19 +17,33 @@ export function registerVisionHandlers(router: MessageRouter): void {
 }
 
 // BR-03 — tắt → ERR-15 (không có capture nào rời máy); bật → dataURL (KHÔNG persist — §8.7).
-const handleVisionCapture: RpcHandler = async (): Promise<{ dataUrl: string }> => {
+const handleVisionCapture: RpcHandler = async (_payload, sender): Promise<{ dataUrl: string }> => {
   const vision = await storage.getVision();
   if (!vision.enabled) throw new AppError("ERR-15", "errors.badRequest", { field: "vision", allowed: "enabled" });
-  // WINDOW_ID_CURRENT — tab hiện tại thuộc 3 domain OWA (host_permissions có sẵn — §8.3).
+  // Capture ĐÚNG window chứa tab OWA gửi request (sender.tab.windowId). Bug cũ: WINDOW_ID_CURRENT
+  // = window focus CUỐI — sai khi user xem DevTools/window khác → capture fail hoặc chụp nhầm.
+  const windowId = sender?.tab?.windowId;
   try {
-    const dataUrl = await chrome.tabs.captureVisibleTab(chrome.windows.WINDOW_ID_CURRENT, { format: "jpeg", quality: 100 });
-    return { dataUrl: dataUrl };
+    return { dataUrl: await captureVisible(windowId ?? chrome.windows.WINDOW_ID_CURRENT) };
   } catch (error) {
-    // captureVisibleTab fail (tab ẩn/minimized/quota) — KHÔNG nuốt: log thật + field riêng để CS phân biệt.
     console.warn("[AIMH][vision] captureVisibleTab lỗi:", String(error).slice(0, 200));
+    // Retry 1 lần: focus lại window OWA (vision-read bắt buộc tab hiển thị) rồi chụp lại.
+    if (typeof windowId === "number") {
+      try {
+        await chrome.windows.update(windowId, { focused: true });
+        await new Promise((r) => setTimeout(r, 300)); // chờ composite xong
+        return { dataUrl: await captureVisible(windowId) };
+      } catch (retryError) {
+        console.warn("[AIMH][vision] retry sau focus vẫn lỗi:", String(retryError).slice(0, 200));
+      }
+    }
     throw new AppError("ERR-15", "errors.badRequest", { field: "captureVisibleTab" });
   }
 };
+
+function captureVisible(windowId: number): Promise<string> {
+  return chrome.tabs.captureVisibleTab(windowId, { format: "jpeg", quality: 100 });
+}
 
 const handleVisionLocate: RpcHandler = async (payload): Promise<{ text: string }> => {
   const request = parseVisionLocate(payload);
