@@ -153,7 +153,7 @@ function logVisionError(name: string, error: unknown): void {
     }
     console.warn(
       "[AIMH][attachment] vision-read BỎ QUA:", name.slice(0, 60),
-      "— chrome.tabs.captureVisibleTab lỗi (tab phải visible, không minimized). Xem log [AIMH][vision] ở Service Worker."
+      "— chrome.tabs.captureVisibleTab lỗi. Lý do:", error.params?.reason ?? "(xem log [AIMH][vision] ở Service Worker)"
     );
     return;
   }

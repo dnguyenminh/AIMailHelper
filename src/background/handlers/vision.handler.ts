@@ -20,24 +20,26 @@ export function registerVisionHandlers(router: MessageRouter): void {
 const handleVisionCapture: RpcHandler = async (_payload, sender): Promise<{ dataUrl: string }> => {
   const vision = await storage.getVision();
   if (!vision.enabled) throw new AppError("ERR-15", "errors.badRequest", { field: "vision", allowed: "enabled" });
-  // Capture ĐÚNG window chứa tab OWA gửi request (sender.tab.windowId). Bug cũ: WINDOW_ID_CURRENT
-  // = window focus CUỐI — sai khi user xem DevTools/window khác → capture fail hoặc chụp nhầm.
+  const tabId = sender?.tab?.id;
   const windowId = sender?.tab?.windowId;
+  // Đảm bảo tab OWA đang ACTIVE + window focused TRƯỚC khi chụp (UAT 20/10: active tab trong
+  // window có thể là chrome://extensions/DevTools → captureVisibleTab fail "Cannot access").
+  if (typeof tabId === "number") await chrome.tabs.update(tabId, { active: true });
+  if (typeof windowId === "number") await chrome.windows.update(windowId, { focused: true });
+  await new Promise((r) => setTimeout(r, 300)); // chờ composite sau khi switch tab/window
   try {
     return { dataUrl: await captureVisible(windowId ?? chrome.windows.WINDOW_ID_CURRENT) };
   } catch (error) {
     console.warn("[AIMH][vision] captureVisibleTab lỗi:", String(error).slice(0, 200));
-    // Retry 1 lần: focus lại window OWA (vision-read bắt buộc tab hiển thị) rồi chụp lại.
     if (typeof windowId === "number") {
+      await new Promise((r) => setTimeout(r, 500)); // retry 1 lần — đã chắc tab active + focused
       try {
-        await chrome.windows.update(windowId, { focused: true });
-        await new Promise((r) => setTimeout(r, 300)); // chờ composite xong
         return { dataUrl: await captureVisible(windowId) };
       } catch (retryError) {
-        console.warn("[AIMH][vision] retry sau focus vẫn lỗi:", String(retryError).slice(0, 200));
+        console.warn("[AIMH][vision] retry vẫn lỗi:", String(retryError).slice(0, 200));
       }
     }
-    throw new AppError("ERR-15", "errors.badRequest", { field: "captureVisibleTab" });
+    throw new AppError("ERR-15", "errors.badRequest", { field: "captureVisibleTab", reason: String(error).slice(0, 150) });
   }
 };
 
