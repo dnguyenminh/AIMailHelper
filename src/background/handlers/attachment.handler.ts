@@ -1,7 +1,7 @@
 import { AppError } from "../../shared/errors";
 import { extractAttachmentText } from "../../shared/attachments/extract";
 import { collectCapture, registerCaptureListener, startCapture } from "../attachment-capture";
-import { readPreviewText } from "../preview-reader";
+import { readPreviewText, readPreviewImages } from "../preview-reader";
 import { resolveActive } from "../llm-runtime";
 import { ensureHostPermission } from "../../shared/llm/permissions";
 import { storage } from "../../shared/storage";
@@ -58,6 +58,11 @@ const extractHandler: RpcHandler = async (payload) => {
 const readPreviewHandler: RpcHandler = async (_payload, sender) => {
   const { tabId, url } = senderTab(sender);
   return { text: await readPreviewText(tabId, url) };
+};
+// UAT 20/10 — extract data URL ảnh trang từ iframe preview (thay screenshot — full-res, không cần focus).
+const readPreviewImagesHandler: RpcHandler = async (_payload, sender) => {
+  const { tabId, url } = senderTab(sender);
+  return { images: await readPreviewImages(tabId, url) };
 };
 interface VisionPageFile {
   name: string;
@@ -164,5 +169,6 @@ export function registerAttachmentHandlers(router: MessageRouter): void {
   router.register("ATTACHMENT_CAPTURE_COLLECT", collectHandler);
   router.register("ATTACHMENT_EXTRACT", extractHandler);
   router.register("ATTACHMENT_READ_PREVIEW", readPreviewHandler);
+  router.register("ATTACHMENT_READ_PREVIEW_IMAGES", readPreviewImagesHandler);
   router.register("ATTACHMENT_VISION_TEXT", visionTextHandler);
 }

@@ -58,12 +58,36 @@ async function captureAllPages(): Promise<string[]> {
   return pages;
 }
 
+// UAT 20/10 — collect ảnh trang từ iframe preview qua CDP (src thẻ <img>), cuộn dần để trigger lazy-load.
+// Dừng khi: hết ảnh mới sau khi cuộn | dialog đóng | đủ MAX_CAPTURE_PAGES vòng.
+async function collectPreviewImages(): Promise<string[]> {
+  const seen = new Set<string>();
+  for (let round = 0; round < MAX_CAPTURE_PAGES; round += 1) {
+    const response = await sendMessage<{ images: string[] }>("ATTACHMENT_READ_PREVIEW_IMAGES", {});
+    const before = seen.size;
+    for (const src of response.images ?? []) seen.add(src);
+    const dialog = document.querySelector('[role="dialog"]');
+    if (!dialog) break;
+    if (round > 0 && seen.size === before) break; // cuộn mà không có ảnh mới → đã đủ trang
+    const rect = dialog.getBoundingClientRect();
+    await sendMessage("DEBUGGER_SCROLL", {
+      x: Math.round(rect.left + rect.width / 2),
+      y: Math.round(rect.top + rect.height / 2),
+      deltaY: 1200,
+      times: 2
+    });
+    await new Promise((r) => setTimeout(r, SETTLE_MS)); // chờ lazy-load ảnh trang kế
+  }
+  return Array.from(seen);
+}
+
 export async function readFullDocumentVision(
   _fileName: string,
   onProgress?: (phase: string, current: number, total: number) => void
 ): Promise<{ synthesis: VisionSynthesisResult; chunks: ChunkSummary[] }> {
-  // 1. Capture TẤT CẢ trang
-  const allPages = await captureAllPages();
+  // 1. Ưu tiên EXTRACT ảnh gốc từ iframe (full-res, không cần tab visible); fallback screenshot.
+  let allPages = await collectPreviewImages();
+  if (allPages.length === 0) allPages = await captureAllPages();
   if (allPages.length === 0) throw new Error("Không capture được trang nào");
 
   // 2. Gửi TẤT CẢ pages đến handler để OCR + chunked summarization + synthesis
