@@ -15,6 +15,11 @@ const VL_MODEL_PRESETS: Record<ProviderId, string[]> = {
   local: ["llava", "moondream2", "qwen-vl", "llama-3.2-90b-vision"]
 };
 
+// preset không lưu storage — đoán từ URL đã lưu để select hiển thị đúng (LM Studio vs Ollama).
+function guessPreset(url: string | undefined): "ollama" | "lmstudio" {
+  return url && url.includes(":1234") ? "lmstudio" : "ollama";
+}
+
 export function VisionModelPicker(props: {
   draft: { vision?: { model?: string; provider?: string; url?: string; apiKey?: string; preset?: string }; model: string } | null;
   config: ConfigData;
@@ -34,13 +39,14 @@ export function VisionModelPicker(props: {
     setModel(vision.model ?? "");
     setUrl(vision.url ?? "");
     setApiKey(vision.apiKey ?? "");
-    setPreset((vision.preset as "ollama" | "lmstudio") ?? "ollama");
+    setPreset((vision.preset as "ollama" | "lmstudio") ?? guessPreset(vision.url));
   }, [props.draft?.vision?.model, props.draft?.vision?.provider, props.draft?.vision?.url, props.draft?.vision?.apiKey, props.draft?.vision?.preset]);
 
-  useEffect(() => {
-    if (preset === "ollama") setUrl("http://localhost:11434");
-    else setUrl("http://localhost:1234/v1");
-  }, [preset]);
+  // KHÔNG ép url theo preset lúc mount (bug cũ: đè URL LM Studio đã lưu) — chỉ đổi url khi user chủ động đổi preset.
+  const changePreset = (next: "ollama" | "lmstudio"): void => {
+    setPreset(next);
+    setUrl(next === "ollama" ? "http://localhost:11434" : "http://localhost:1234/v1");
+  };
 
   useEffect(() => {
     const fetchModels = async () => {
@@ -105,7 +111,7 @@ export function VisionModelPicker(props: {
         <>
           <label className="field">
             <span>{t("options.provider.preset")}</span>
-            <select value={preset} onChange={(e) => setPreset(e.target.value as "ollama" | "lmstudio")}>
+            <select value={preset} onChange={(e) => changePreset(e.target.value as "ollama" | "lmstudio")}>
               <option value="ollama">{t("options.provider.preset.ollama")}</option>
               <option value="lmstudio">{t("options.provider.preset.lmstudio")}</option>
             </select>

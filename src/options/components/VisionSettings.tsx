@@ -31,7 +31,12 @@ export function VisionSettings(props: { config: ConfigData }): JSX.Element {
           type="checkbox"
           checked={draft.enabled}
           onChange={(event) => {
-            const next = { enabled: event.target.checked, model: draft.model };
+            // GIỮ NGUYÊN provider/url/apiKey/model đã lưu — toggle chỉ đổi enabled (bug cũ: ghi đè mất VL config).
+            const next: VisionConfig = {
+              ...(stored ?? {}),
+              enabled: event.target.checked,
+              model: draft.model
+            };
             setDraft(next);
             void save(next);
           }}

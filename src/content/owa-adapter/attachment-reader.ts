@@ -140,13 +140,20 @@ function pickAttachmentText(name: string, rendered: string, extracted: Map<strin
   return "(Không trích được nội dung — file nhị phân hoặc preview chưa render xong. Hãy ghi rõ trong phân tích rằng người dùng cần mở file đính kèm để xem nội dung.)";
 }
 
-// Lỗi vision-read: ERR-15 từ VISION_CAPTURE gần như luôn = Vision đang TẮT (BR-03, vision.handler
-// ném ERR-15 ngay khi !vision.enabled) — log rõ hướng dẫn thay vì lỗi chung chung "badRequest".
+// Lỗi vision-read: ERR-15 từ VISION_CAPTURE phân biệt qua params.field
+// (vision.handler gắn field="vision" khi BR-03 TẮT; field="captureVisibleTab" khi chụp fail).
 function logVisionError(name: string, error: unknown): void {
   if (error instanceof AppError && error.code === "ERR-15") {
+    if (error.params?.field === "vision") {
+      console.warn(
+        "[AIMH][attachment] vision-read BỎ QUA:", name.slice(0, 60),
+        "— Vision đang TẮT. Mở Options → Vision (T3) → tick 'Bật vision' (toggle tự lưu) rồi thử lại."
+      );
+      return;
+    }
     console.warn(
       "[AIMH][attachment] vision-read BỎ QUA:", name.slice(0, 60),
-      "— Vision đang TẮT hoặc capture bị chặn. Mở Options → Vision (T3) → Bật vision + bấm Lưu Model VL."
+      "— chrome.tabs.captureVisibleTab lỗi (tab phải visible, không minimized). Xem log [AIMH][vision] ở Service Worker."
     );
     return;
   }

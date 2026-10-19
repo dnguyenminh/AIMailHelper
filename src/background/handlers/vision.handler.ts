@@ -21,8 +21,14 @@ const handleVisionCapture: RpcHandler = async (): Promise<{ dataUrl: string }> =
   const vision = await storage.getVision();
   if (!vision.enabled) throw new AppError("ERR-15", "errors.badRequest", { field: "vision", allowed: "enabled" });
   // WINDOW_ID_CURRENT — tab hiện tại thuộc 3 domain OWA (host_permissions có sẵn — §8.3).
-  const dataUrl = await chrome.tabs.captureVisibleTab(chrome.windows.WINDOW_ID_CURRENT, { format: "jpeg", quality: 100 });
-  return { dataUrl: dataUrl };
+  try {
+    const dataUrl = await chrome.tabs.captureVisibleTab(chrome.windows.WINDOW_ID_CURRENT, { format: "jpeg", quality: 100 });
+    return { dataUrl: dataUrl };
+  } catch (error) {
+    // captureVisibleTab fail (tab ẩn/minimized/quota) — KHÔNG nuốt: log thật + field riêng để CS phân biệt.
+    console.warn("[AIMH][vision] captureVisibleTab lỗi:", String(error).slice(0, 200));
+    throw new AppError("ERR-15", "errors.badRequest", { field: "captureVisibleTab" });
+  }
 };
 
 const handleVisionLocate: RpcHandler = async (payload): Promise<{ text: string }> => {
