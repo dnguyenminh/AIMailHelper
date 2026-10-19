@@ -18,11 +18,14 @@ export interface VisionSynthesisResult {
   actionItems: string[];
 }
 
-// Capture TẤT CẢ trang trong preview (cuộn đến cuối) — dùng DEBUGGER_SCROLL
+const MAX_CAPTURE_PAGES = 10; // tài liệu dài — SW còn cắt MAX_VISION_PAGES=4 phía handler
+const SETTLE_MS = 1500;
+
+// Capture TẤT CẢ trang trong preview (cuộn đến cuối) — dùng DEBUGGER_SCROLL.
+// Dừng khi: ảnh trùng lần trước (hết nội dung mới) | dialog đóng | đủ MAX_CAPTURE_PAGES.
+// (Bug cũ: so pages.length luôn tăng → stagnant không bao giờ đạt → lặp vô hạn khi dialog mở.)
 async function captureAllPages(): Promise<string[]> {
   const pages: string[] = [];
-  let lastPageCount = 0;
-  let stagnantCount = 0;
 
   // Scroll về đầu trước
   const dialog = document.querySelector('[role="dialog"]');
@@ -30,32 +33,27 @@ async function captureAllPages(): Promise<string[]> {
     const firstPage = dialog.querySelector('[role="option"], [role="listitem"]');
     if (firstPage) {
       (firstPage as HTMLElement).scrollIntoView({ block: "start" });
-      await new Promise((r) => setTimeout(r, 1500)); // Tăng thời gian chờ render
+      await new Promise((r) => setTimeout(r, SETTLE_MS)); // chờ render
     }
   }
 
-  for (let scroll = 0; ; scroll += 1) {
+  for (let scroll = 0; scroll < MAX_CAPTURE_PAGES; scroll += 1) {
     const shot = await sendMessage<{ dataUrl: string }>("VISION_CAPTURE", {});
-    if (shot?.dataUrl) pages.push(shot.dataUrl);
+    const dataUrl = shot?.dataUrl ?? "";
+    if (dataUrl.length === 0) break;
+    if (pages[pages.length - 1] === dataUrl) break; // ảnh trùng → hết nội dung mới
+    pages.push(dataUrl);
 
-    if (pages.length === lastPageCount) {
-      stagnantCount += 1;
-      if (stagnantCount >= 3) break;
-    } else {
-      stagnantCount = 0;
-      lastPageCount = pages.length;
-    }
-
-    const dialog = document.querySelector('[role="dialog"]');
-    if (!dialog) break;
-    const rect = dialog.getBoundingClientRect();
+    const currentDialog = document.querySelector('[role="dialog"]');
+    if (!currentDialog) break;
+    const rect = currentDialog.getBoundingClientRect();
     await sendMessage("DEBUGGER_SCROLL", {
       x: Math.round(rect.left + rect.width / 2),
       y: Math.round(rect.top + rect.height / 2),
       deltaY: 1200,
       times: 2
     });
-    await new Promise((r) => setTimeout(r, 1500)); // Tăng thời gian chờ giữa các lần cuộn
+    await new Promise((r) => setTimeout(r, SETTLE_MS)); // chờ render giữa các lần cuộn
   }
   return pages;
 }

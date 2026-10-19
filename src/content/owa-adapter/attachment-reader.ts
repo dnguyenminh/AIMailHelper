@@ -4,6 +4,7 @@
 // Sau đó: COLLECT bytes + EXTRACT text (SW: pdf.js/zip). Caps: 3 file/email; lỗi 1 file → bỏ qua,
 // KHÔNG bao giờ chặn phân tích email (tinh thần FR-GD5-06).
 import { sendMessage } from "../../shared/messaging";
+import { AppError } from "../../shared/errors";
 
 const MAX_ATTACHMENTS = 3;
 const PREVIEW_RENDER_MS = 8000; // chờ Word/Excel Online render text trong iframe (app nặng)
@@ -86,16 +87,21 @@ export async function extractAttachmentsForEmail(): Promise<AttachmentText[]> {
       const preview = await sendMessage<{ text: string }>("ATTACHMENT_READ_PREVIEW", {});
       const ext = option.name.split(".").pop()?.toLowerCase() ?? "";
       if (preview.text.trim().length < MIN_RENDERED_CHARS && IMAGE_RENDERED_EXT.includes(ext)) {
-        // File render ẢNH (Word/Excel) → Vision-read chunked
-        const result = await readFullDocumentVision(option.name, (phase, current, total) => {
-          console.log(`[AIMH][attachment] ${phase}: ${current}/${total} - ${option.name}`);
-        });
-        const visionText = result.synthesis?.overview + "\n" + result.synthesis?.details + "\n" + result.synthesis?.conclusions;
-        if (visionText && visionText.trim().length > 0) {
-          visionTexts.set(option.name, visionText.trim());
+        // File render ẢNH (Word/Excel) → Vision-read chunked — lỗi vision KHÔNG chặn file/email khác
+        try {
+          const result = await readFullDocumentVision(option.name, (phase, current, total) => {
+            console.log(`[AIMH][attachment] ${phase}: ${current}/${total} - ${option.name}`);
+          });
+          const visionText = result.synthesis?.overview + "\n" + result.synthesis?.details + "\n" + result.synthesis?.conclusions;
+          if (visionText && visionText.trim().length > 0) {
+            visionTexts.set(option.name, visionText.trim());
+          }
+        } catch (error) {
+          logVisionError(option.name, error);
+        } finally {
+          rendered.push(""); // text DOM là JS/CSS rác — không dùng làm attachment text
+          await closePreview();
         }
-        rendered.push(""); // text DOM là JS/CSS rác — không dùng làm attachment text
-        await closePreview();
       } else {
         // File render text (txt/csv/pdf) → dùng text render
         rendered.push(preview.text);
@@ -132,6 +138,19 @@ function pickAttachmentText(name: string, rendered: string, extracted: Map<strin
   const fromBytes = extracted.get(name);
   if (fromBytes !== undefined && fromBytes.length > 0) return fromBytes;
   return "(Không trích được nội dung — file nhị phân hoặc preview chưa render xong. Hãy ghi rõ trong phân tích rằng người dùng cần mở file đính kèm để xem nội dung.)";
+}
+
+// Lỗi vision-read: ERR-15 từ VISION_CAPTURE gần như luôn = Vision đang TẮT (BR-03, vision.handler
+// ném ERR-15 ngay khi !vision.enabled) — log rõ hướng dẫn thay vì lỗi chung chung "badRequest".
+function logVisionError(name: string, error: unknown): void {
+  if (error instanceof AppError && error.code === "ERR-15") {
+    console.warn(
+      "[AIMH][attachment] vision-read BỎ QUA:", name.slice(0, 60),
+      "— Vision đang TẮT hoặc capture bị chặn. Mở Options → Vision (T3) → Bật vision + bấm Lưu Model VL."
+    );
+    return;
+  }
+  console.warn("[AIMH][attachment] vision-read lỗi:", name.slice(0, 60), String(error).slice(0, 120));
 }
 
 // Hook cho reader.readEmail — email CÓ đính kèm mới đọc (tiết kiệm); LỖI không bao giờ chặn
