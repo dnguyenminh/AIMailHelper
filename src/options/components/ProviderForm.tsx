@@ -1,36 +1,63 @@
 // src/options/components/ProviderForm.tsx — form per-provider thật (GĐ2; FSD §3.4 Màn 2 #1).
 // Trường hiển thị theo provider; validate BR-15/SR-06 ở SW (validateProviderConfig); key để trống = giữ
 // key đã lưu (BR-08 merge ở SW); custom origin → chrome.permissions.request lúc lưu (SR-05/BR-05 §8.3).
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { LLMConfig, ProviderId } from "../../shared/llm/types";
 import { requestOrigin } from "../../shared/llm/permissions";
 import { PROVIDER_IDS } from "../../shared/storage-schema";
 import { t } from "../../shared/i18n";
 import type { ConfigData } from "../useConfigData";
+import { sendMessage } from "../../shared/messaging";
 
 interface Props {
   config: ConfigData;
-  draft: LLMConfig | null; // draft sở hữu bởi App — dùng chung với ModelPicker/TestConnection
+  draft: LLMConfig | null;
   onDraft: (next: LLMConfig) => void;
 }
+
+const MODEL_PRESETS: Record<ProviderId, string[]> = {
+  openai: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4"],
+  azure: [""],
+  anthropic: ["claude-3-5-sonnet-20241022", "claude-3-opus-20240229", "claude-3-sonnet-20240229"],
+  gemini: ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-2.0-flash"],
+  "openai-compatible": ["gpt-4o", "gpt-4o-mini", "qwen-text", "llama-3-70b"],
+  local: ["qwen-text", "llama-3-8b", "mistral-7b"]
+};
 
 export function ProviderForm(props: Props): JSX.Element {
   const { config, draft, onDraft } = props;
   const active: ProviderId = config.data?.activeProvider ?? "openai";
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "failed">("idle");
   const hasKey = config.data?.providers[active]?.hasKey ?? false;
+  const [modelList, setModelList] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchModels = async () => {
+      if (!draft) return;
+      try {
+        const response = await sendMessage<{ models: string[] }>("LIST_MODELS", { config: draft });
+        if (response.models && response.models.length > 0) {
+          setModelList(response.models);
+        } else {
+          setModelList(MODEL_PRESETS[active] ?? []);
+        }
+      } catch {
+        setModelList(MODEL_PRESETS[active] ?? []);
+      }
+    };
+    fetchModels();
+  }, [active, draft?.apiKey, draft?.baseUrl, draft?.local?.url]);
 
   const save = async (): Promise<void> => {
     if (!draft) return;
-    // Azure: model ≡ deployment (body KHÔNG có trường model — 5.2.2); giữ validation model non-empty.
     const payload = active === "azure" && draft.azure ? { ...draft, model: draft.azure.deployment || draft.model } : draft;
     setStatus("saving");
     try {
       await config.setProvider(active, payload);
-      await requestOptionalPermission(payload); // SR-05 — xin permission tại thao tác lưu (user gesture)
+      await requestOptionalPermission(payload);
       setStatus("saved");
     } catch {
-      setStatus("failed"); // chi tiết (ERR-15 field/…) chỉ log phía SW — không chứa key (BR-08)
+      setStatus("failed");
     }
   };
 
@@ -45,7 +72,7 @@ export function ProviderForm(props: Props): JSX.Element {
         </select>
       </label>
       <p className="note">{t("options.provider.activeHint")}</p>
-      {draft !== null && <ProviderFields provider={active} draft={draft} hasKey={hasKey} onDraft={onDraft} />}
+      {draft !== null && <ProviderFields provider={active} draft={draft} hasKey={hasKey} onDraft={onDraft} modelList={modelList} />}
       <button type="button" disabled={status === "saving" || draft === null} onClick={() => void save()}>
         {status === "saving" ? t("options.provider.saving") : t("options.provider.save")}
       </button>
@@ -55,17 +82,18 @@ export function ProviderForm(props: Props): JSX.Element {
   );
 }
 
-// SR-05/BR-05: xin optional host permission NGAY lúc lưu (user gesture) cho custom/local origin;
-// từ chối → warn console; lần gọi fetch sau SW check contains → ERR-14 (§8.3).
 async function requestOptionalPermission(config: LLMConfig): Promise<void> {
   const origin = requestOrigin(config);
-  if (origin === null) return; // 4 provider cloud đã có host_permissions tĩnh
+  if (origin === null) return;
   const granted = await chrome.permissions.request({ origins: [origin + "/*"] });
   if (!granted) console.warn("[AIMH][options] permission denied for " + origin);
 }
 
-function ProviderFields(props: { provider: ProviderId; draft: LLMConfig; hasKey: boolean; onDraft: (next: LLMConfig) => void }): JSX.Element {
-  const { provider, draft, hasKey, onDraft } = props;
+function ProviderFields(props: { provider: ProviderId; draft: LLMConfig; hasKey: boolean; onDraft: (next: LLMConfig) => void; modelList: string[] }): JSX.Element {
+  const { provider, draft, hasKey, onDraft, modelList } = props;
+  
+  const modelListId = `model-list-${provider}`;
+  
   const keyField = (
     <label className="field">
       <span>{t("options.provider.apiKey")}</span>
@@ -78,17 +106,29 @@ function ProviderFields(props: { provider: ProviderId; draft: LLMConfig; hasKey:
       {hasKey && <small className="hint">{t("options.provider.apiKeyKeepHint")}</small>}
     </label>
   );
+  
   const modelField = (
     <label className="field">
       <span>{t("options.provider.model")}</span>
-      <input type="text" value={draft.model} onChange={(event) => onDraft({ ...draft, model: event.target.value })} />
+      <input
+        list={modelListId}
+        type="text"
+        value={draft.model}
+        onChange={(event) => onDraft({ ...draft, model: event.target.value })}
+      />
+      <datalist id={modelListId}>
+        {modelList.map((m) => (
+          <option key={m} value={m}>{m}</option>
+        ))}
+      </datalist>
     </label>
   );
+  
   const cloud = provider === "openai" || provider === "anthropic" || provider === "gemini";
   if (cloud) return <>{keyField}{modelField}</>;
-  if (provider === "azure") return <>{keyField}{azureFields(draft, onDraft)}</>; // model ≡ deployment — không hiện
+  if (provider === "azure") return <>{keyField}{azureFields(draft, onDraft)}</>;
   if (provider === "openai-compatible") return <>{keyField}{modelField}{baseUrlField(draft, onDraft)}</>;
-  return <>{localFields(draft, onDraft)}{modelField}</>; // local: KHÔNG key (5.2.6)
+  return <>{localFields(draft, onDraft)}{modelField}</>;
 }
 
 function azureFields(draft: LLMConfig, onDraft: (next: LLMConfig) => void): JSX.Element {
@@ -98,7 +138,7 @@ function azureFields(draft: LLMConfig, onDraft: (next: LLMConfig) => void): JSX.
     <>
       <label className="field"><span>{t("options.provider.endpoint")}</span>
         <input type="url" value={azure.endpoint} onChange={(e) => update({ endpoint: e.target.value })} />
-        <PermissionWarning draft={draft} /> {/* azure-lạ: endpoint ngoài host tĩnh → origin động (F-01) */}
+        <PermissionWarning draft={draft} />
       </label>
       <label className="field"><span>{t("options.provider.deployment")}</span>
         <input type="text" value={azure.deployment} onChange={(e) => update({ deployment: e.target.value })} /></label>
@@ -125,7 +165,6 @@ function localFields(draft: LLMConfig, onDraft: (next: LLMConfig) => void): JSX.
       <label className="field"><span>{t("options.provider.preset")}</span>
         <select value={local.preset} onChange={(e) => {
           const preset = e.target.value as "ollama" | "lmstudio";
-          // FR-GD2-07 — preset 1-click: url chuẩn theo preset (5.2.6)
           update({ preset: preset, url: preset === "ollama" ? "http://localhost:11434" : "http://localhost:1234/v1" });
         }}>
           <option value="ollama">{t("options.provider.preset.ollama")}</option>
@@ -139,9 +178,6 @@ function localFields(draft: LLMConfig, onDraft: (next: LLMConfig) => void): JSX.
   );
 }
 
-// SR-06/F-01 (P5.7) — disclosure copy TRƯỚC optional permission request: render ngay dưới field URL mang
-// origin (baseUrl/localUrl/endpoint) khi requestOrigin(draft) != null — cùng điều kiện khiến save() gọi
-// chrome.permissions.request; 4 provider cloud có host tĩnh → null → không render.
 function PermissionWarning(props: { draft: LLMConfig }): JSX.Element | null {
   const origin = requestOrigin(props.draft);
   if (origin === null) return null;
