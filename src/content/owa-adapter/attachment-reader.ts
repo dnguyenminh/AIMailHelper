@@ -114,7 +114,11 @@ export async function extractAttachmentsForEmail(): Promise<AttachmentText[]> {
     }
   }
   // Vòng 2 — bytes đã capture: extract (PDF canvas không có text DOM → cần pdf.js từ bytes).
-  const collected = await sendMessage<{ files: { url: string; base64: string }[] }>("ATTACHMENT_CAPTURE_COLLECT", {});
+  const collected = await sendMessage<{ files: { url: string; mime: string; base64: string }[] }>("ATTACHMENT_CAPTURE_COLLECT", {});
+  // UAT 20/10: đếm bytes bắt được — nếu 0 → OWA build mới KHÔNG fetch file khi mở preview card
+  // (chỉ fetch khi bấm "Open in Word") → cần chiến lược khác.
+  console.log("[AIMH][attachment] bytes đã capture:", collected.files.length,
+    collected.files.map((f) => f.mime + " " + f.url.slice(0, 80) + " (" + Math.round(f.base64.length * 3 / 4 / 1024) + "KB)"));
   const payload = options.map((option, index) => ({
     name: option.name,
     base64: collected.files[index]?.base64 ?? collected.files.find((f) => f.url.toLowerCase().includes(option.name.split(".").pop() ?? ""))?.base64 ?? ""
