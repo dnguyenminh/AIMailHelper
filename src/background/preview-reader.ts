@@ -83,24 +83,33 @@ interface SnapshotNodesFull {
 }
 
 // Hàm thuần — trích src của mọi <img> từ DOMSnapshot (test được không cần CDP).
+// Preview Word đặt id trang dạng "#i1/#i2/…" — sort theo số trong id để đúng THỨ TỰ TRANG;
+// img không có id giữ thứ tự DOM (stable sort, đẩy về cuối).
 export function imagesFromSnapshot(snapshot: unknown): string[] {
   const snap = snapshot as { strings?: string[]; documents?: { nodes?: SnapshotNodesFull }[] } | undefined;
   const strings = snap?.strings ?? [];
-  const out: string[] = [];
+  const found: { id: string; src: string }[] = [];
   for (const doc of snap?.documents ?? []) {
     const nodeName = doc?.nodes?.nodeName ?? [];
     const attributes = doc?.nodes?.attributes ?? [];
     for (let i = 0; i < nodeName.length; i += 1) {
       if ((strings[nodeName[i] ?? -1] ?? "") !== "IMG") continue;
       const pairs = attributes[i] ?? [];
+      let src = "";
+      let id = "";
       for (let p = 0; p + 1 < pairs.length; p += 2) {
-        if (strings[pairs[p] ?? -1] !== "src") continue;
-        const value = strings[pairs[p + 1] ?? -1];
-        if (typeof value === "string" && value.length > 0) out.push(value);
+        const name = strings[pairs[p] ?? -1];
+        if (name === "src") src = strings[pairs[p + 1] ?? -1] ?? "";
+        else if (name === "id") id = strings[pairs[p + 1] ?? -1] ?? "";
       }
+      if (src.length > 0) found.push({ id: id, src: src });
     }
   }
-  return out;
+  const idOrder = (id: string): number => {
+    const match = id.match(/(\d+)/);
+    return match === null ? Number.MAX_SAFE_INTEGER : parseInt(match[1] ?? "0", 10);
+  };
+  return found.sort((a, b) => idOrder(a.id) - idOrder(b.id)).map((item) => item.src);
 }
 
 // fetch ảnh http(s) (cookie OWA — host_permissions có domain OWA) → data URL. blob: không fetch được từ SW.
