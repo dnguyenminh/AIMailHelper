@@ -1,18 +1,10 @@
-// src/options/components/VisionModelPicker.tsx — Model VL config giống hệt Provider Form với model combobox
+// src/options/components/VisionModelPicker.tsx — Model VL config giống Provider Form, model combobox với fetch real models
 import { useEffect, useState } from "react";
 import { t } from "../../shared/i18n";
 import { PROVIDER_IDS } from "../../shared/storage-schema";
 import type { ConfigData } from "../useConfigData";
 import type { ProviderId } from "../../shared/llm/types";
-
-const VL_MODEL_PRESETS: Record<ProviderId, string[]> = {
-  openai: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4"],
-  azure: [""],
-  anthropic: ["claude-3-5-sonnet-20241022", "claude-3-opus-20240229", "claude-3-sonnet-20240229"],
-  gemini: ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-2.0-flash"],
-  "openai-compatible": ["gpt-4o", "gpt-4o-mini", "qwen-vl", "llama-3.2-90b-vision"],
-  local: ["llava", "moondream2", "qwen-vl", "llama-3.2-90b-vision"]
-};
+import { sendMessage } from "../../shared/messaging";
 
 export function VisionModelPicker(props: {
   draft: { vision?: { model?: string; provider?: string; url?: string; apiKey?: string; preset?: string }; model: string } | null;
@@ -26,6 +18,8 @@ export function VisionModelPicker(props: {
   const [apiKey, setApiKey] = useState<string>(vision.apiKey ?? "");
   const [preset, setPreset] = useState<"ollama" | "lmstudio">(vision.preset as "ollama" | "lmstudio" ?? "ollama");
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "failed">("idle");
+  const [modelList, setModelList] = useState<string[]>([]);
+  const [fetching, setFetching] = useState(false);
 
   useEffect(() => {
     setProvider((vision.provider as ProviderId) ?? "local");
@@ -39,6 +33,23 @@ export function VisionModelPicker(props: {
     if (preset === "ollama") setUrl("http://localhost:11434");
     else setUrl("http://localhost:1234/v1");
   }, [preset]);
+
+  useEffect(() => {
+    const fetchModels = async () => {
+      if (!provider || provider === "azure") return;
+      setFetching(true);
+      try {
+        const config = { provider, model: "", apiKey: apiKey || undefined, baseUrl: url || undefined };
+        const response = await sendMessage<{ models: string[] }>("LIST_MODELS", { config });
+        setModelList(response.models || []);
+      } catch {
+        setModelList([]);
+      } finally {
+        setFetching(false);
+      }
+    };
+    fetchModels();
+  }, [provider, apiKey, url]);
 
   const save = async () => {
     setStatus("saving");
@@ -64,7 +75,6 @@ export function VisionModelPicker(props: {
     }
   };
 
-  const modelPresets = VL_MODEL_PRESETS[provider] ?? [];
   const modelListId = `vl-model-list-${provider}`;
 
   return (
@@ -130,10 +140,11 @@ export function VisionModelPicker(props: {
             placeholder={t("options.visionModel.placeholder")}
           />
           <datalist id={modelListId}>
-            {modelPresets.map((m) => (
+            {modelList.map((m) => (
               <option key={m} value={m}>{m}</option>
             ))}
           </datalist>
+          {fetching && <small className="hint">{t("options.model.fetching")}</small>}
         </label>
       )}
 
