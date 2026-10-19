@@ -47,6 +47,14 @@ export function VisionModelPicker(props: {
   const isOpenAICompat = provider === "openai-compatible";
   const isAzure = provider === "azure";
 
+  const getOrigin = () => {
+    try {
+      return url ? new URL(url).origin : "";
+    } catch {
+      return "";
+    }
+  };
+
   return (
     <div className="provider-form">
       <label className="field">
@@ -72,7 +80,7 @@ export function VisionModelPicker(props: {
             <span>{t("options.provider.localUrl")}</span>
             <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} />
           </label>
-          <small className="hint">{t("options.provider.permissionWarning", { origin: new URL(url).origin })}</small>
+          {url && <small className="hint">{t("options.provider.permissionWarning", { origin: getOrigin() })}</small>}
         </>
       )}
 
@@ -95,7 +103,7 @@ export function VisionModelPicker(props: {
             <span>{t("options.provider.baseUrl")}</span>
             <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} />
           </label>
-          <small className="hint">{t("options.provider.permissionWarning", { origin: url ? new URL(url).origin : "" })}</small>
+          {url && <small className="hint">{t("options.provider.permissionWarning", { origin: getOrigin() })}</small>}
         </>
       )}
 

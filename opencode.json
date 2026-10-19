@@ -80,71 +80,10 @@
     }
   },
   "mcp": {
-    "code-intelligence": {
-      "type": "httpStream",
-      "url": "http://127.0.0.1:9181/mcp",
-      "transportType": "httpStream",
-      "disabled": false,
-      "autoApprove": [
-        "mem_ingest",
-        "execute_dynamic_tool",
-        "find_tools",
-        "toggle_tool",
-        "mem_search",
-        "drawio_auto_layout",
-        "orchestration_status",
-        "code_search",
-        "code_symbols",
-        "code_context",
-        "code_modules",
-        "code_index_status",
-        "stream_write_file",
-        "mem_ingest_file",
-        "mem_get",
-        "mem_delete",
-        "mem_list",
-        "mem_graph",
-        "mem_status",
-        "mem_consolidate",
-        "mem_audit",
-        "mem_sessions",
-        "mem_admin",
-        "mem_tags",
-        "mem_templates",
-        "mem_lifecycle",
-        "mem_scoring",
-        "mem_crud",
-        "mem_discover",
-        "agent_log",
-        "drawio_export_png"
-      ],
-      "disabledTools": [],
-      "command": "npx",
-      "args": [
-        "tsx",
-        "backend/src/index.ts"
-      ],
-      "cwd": "c:\\projects\\kiro\\SDLC-Agents-4-Enterprise",
-      "env": {
-        "CODE_INTEL_PORT": "9181",
-        "CODE_INTEL_WORKSPACE": "c:\\projects\\kiro\\SDLC-Agents-4-Enterprise",
-        "CODE_INTEL_VIEWER_PORT": "3200"
-      }
-    },
-    "atlassian": {
-      "url": "http://localhost:3062/mcp",
-      "type": "httpStream",
-      "transportType": "httpStream",
-      "disabled": false,
-      "autoApprove": [
-        "jira_get_issue",
-        "jira_search",
-        "jira_get_transitions",
-        "jira_get_all_projects",
-        "jira_get_agile_boards",
-        "confluence_search",
-        "confluence_get_page"
-      ]
+    "code-intel": {
+      "type": "remote",
+      "url": "http://127.0.0.1:9481/mcp",
+      "enabled": true 
     }
   }
 }
