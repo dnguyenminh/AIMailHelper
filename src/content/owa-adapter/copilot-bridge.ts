@@ -10,7 +10,7 @@ const POLL_MS = 2500;
 const POLL_ROUNDS = 4;
 const COPILOT_MIN_TEXT = 400; // dưới ngưỡng → coi như chưa có summary thật (UI rác)
 
-export type CopilotTriggerResult = "clicked" | "no-entry" | "popup-not-found" | "panel-already-open";
+export type CopilotTriggerResult = "clicked" | "no-entry" | "popup-not-found";
 
 // Nút Copilot: ưu tiên aria-label (ổn định), fallback cấu trúc #BottomBar child thứ 2 (user chỉ).
 export function findCopilotEntry(): HTMLElement | null {
@@ -48,9 +48,9 @@ export function findSummarizeItem(): HTMLElement | null {
   }) ?? null;
 }
 
-// Trigger: hover entry → chờ popup → click item. KHÔNG tự gõ prompt, KHÔNG gửi mail.
+// Trigger: hover entry → chờ popup → click item. LUÔN trigger mới (bài học 20/10: panel ẩn
+// vẫn còn trong DOM → đọc text CŨ nhầm là summary — chương trình cần text tươi). KHÔNG gõ prompt.
 export async function triggerCopilotSummarize(sleepMs = SETTLE_MS): Promise<CopilotTriggerResult> {
-  if (findCopilotPanel() !== null) return "panel-already-open";
   const entry = findCopilotEntry();
   if (entry === null) return "no-entry";
   dispatchHover(entry);
@@ -80,26 +80,27 @@ async function readCopilotText(): Promise<string> {
   return read.text;
 }
 
-// Bấm "Summarize this email" (hành động USER — bấm nút của extension) → chờ text panel ỔN ĐỊNH
-// (2 vòng liên tiếp không đổi) → trả text. Fail mọi bước → null (caller fallback vision/LLM).
+// Bấm "Summarize this email" (hành động USER — bấm nút của extension) → chờ text panel TƯƠI
+// (khác baseline) + ỔN ĐỊNH (2 vòng liên tiếp bằng nhau) → trả text. Fail → null (fallback).
 export async function analyzeViaCopilot(): Promise<{ text: string } | null> {
-  const beforeLen = (await readCopilotText()).length;
+  const baseline = await readCopilotText(); // text CŨ trong panel (kể cả panel ẩn) — làm chuẩn so sánh
   const trigger = await triggerCopilotSummarize();
   if (trigger === "no-entry" || trigger === "popup-not-found") {
-    if (beforeLen > COPILOT_MIN_TEXT) return { text: await readCopilotText() }; // panel đã sẵn có nội dung
-    return null; // không đọc được gì — caller fallback
+    if (baseline.length > COPILOT_MIN_TEXT) return { text: baseline }; // panel đang mở sẵn (user mở)
+    return null; // không trigger được + không có text — caller fallback
   }
-  let lastLen = -1; let stableRounds = 0;
+  let lastText = ""; let stableRounds = 0;
   for (let round = 0; round < POLL_ROUNDS; round += 1) {
     await new Promise((r) => setTimeout(r, POLL_MS)); // chờ Copilot stream summary...
     const text = await readCopilotText();
-    if (text.length === lastLen && text.length > COPILOT_MIN_TEXT) {
+    const stable = text.length > 0 && text === lastText;
+    if (stable && text.length > COPILOT_MIN_TEXT && text !== baseline) {
       stableRounds += 1;
-      if (stableRounds >= 2) return { text: text }; // 2 liên tiếp bằng → copy xong
+      if (stableRounds >= 2) return { text: text }; // ổn định + khác baseline → text TƯƠI
     } else {
       stableRounds = 0;
     }
-    lastLen = text.length;
+    lastText = text;
   }
-  return null; // không ổn định / không tăng — fallback vision
+  return null; // không tươi hơn baseline / không ổn định — fallback vision
 }
