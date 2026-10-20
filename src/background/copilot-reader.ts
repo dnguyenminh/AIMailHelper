@@ -18,7 +18,7 @@ export interface CopilotReadResult {
   lines: string[]; // redact sẵn (M-2) — báo cáo in nguyên; KHÔNG chứa nội dung chat
 }
 
-const MAX_COPILOT_CHARS = 20_000;
+const MAX_COPILOT_CHARS = 60_000;
 
 // Trích text node (#text → nodeValue index strings) từ DOMSnapshot.
 function textFromSnapshot(snapshot: unknown): string {

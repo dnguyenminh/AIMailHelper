@@ -5,6 +5,7 @@
 // KHÔNG bao giờ chặn phân tích email (tinh thần FR-GD5-06).
 import { sendMessage } from "../../shared/messaging";
 import { AppError } from "../../shared/errors";
+import { MAX_ATTACHMENT_CHARS } from "../../shared/attachments/extract";
 
 const MAX_ATTACHMENTS = 3;
 const PREVIEW_RENDER_MS = 8000; // chờ Word/Excel Online render text trong iframe (app nặng)
@@ -78,7 +79,7 @@ export async function extractAttachmentsForEmail(): Promise<AttachmentText[]> {
       console.log("[AIMH][copilot] dùng summary Copilot (len=" + String(copilot.text.length) + ") — không mở preview");
       return options.map((option, index) => ({
         name: option.name,
-        text: index === 0 ? copilot.text : "" // summary gắn file đầu; file khác chờ GĐ-C
+        text: index === 0 ? copilot.text.slice(0, MAX_ATTACHMENT_CHARS) : "" // cap = chuẩn attachment text
       }));
     }
   } catch (error) {

@@ -9,6 +9,15 @@ const SETTLE_MS = 500;
 const POLL_MS = 2500;
 const POLL_ROUNDS = 4;
 const COPILOT_MIN_TEXT = 400; // dưới ngưỡng → coi như chưa có summary thật (UI rác)
+const MIN_DELTA_CHARS = 120; // delta nhỏ hơn → không chắc là summary → trả full text (LLM chính tự lọc)
+
+// Bóc CHỈ phần MỚI: chat append cuối → current nêu trên baseline là tiền tố → delta = phần đuôi.
+// Không khớp tiền tố (React re-render) → trả full text — an toàn hơn là bỏ lần chạy này.
+function freshText(baseline: string, current: string): string {
+  if (current.startsWith(baseline) === false) return current.trim();
+  const delta = current.slice(baseline.length).trim();
+  return delta.length >= MIN_DELTA_CHARS ? delta : current.trim();
+}
 
 export type CopilotTriggerResult = "clicked" | "no-entry" | "popup-not-found";
 
@@ -96,7 +105,7 @@ export async function analyzeViaCopilot(): Promise<{ text: string } | null> {
     const stable = text.length > 0 && text === lastText;
     if (stable && text.length > COPILOT_MIN_TEXT && text !== baseline) {
       stableRounds += 1;
-      if (stableRounds >= 2) return { text: text }; // ổn định + khác baseline → text TƯƠI
+      if (stableRounds >= 2) return { text: freshText(baseline, text) }; // text TƯƠI — ưu tiên delta
     } else {
       stableRounds = 0;
     }
