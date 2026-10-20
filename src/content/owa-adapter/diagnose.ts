@@ -136,7 +136,7 @@ async function previewProbeSection(probeFn: () => Promise<FrameProbe[]>): Promis
       if (frame.error !== undefined) parts.push("ERROR=" + frame.error);
       return parts.join(" ");
     });
-    return "--- SPIKE: PREVIEW IFRAMES — CDP IMG PROBE (M-2: src đã redact query/token) ---\n" + (lines.join("\n") || "(không có iframe target nào)");
+    return "--- SPIKE: PREVIEW IFRAMES — CDP IMG PROBE (M-2: src đã redact query/token) ---\n" + (lines.join("\n") || "(không có iframe target nào — MỞ dialog preview Word TRƯỚC khi chạy Diagnose; imgs=0 khi preview mở là dữ liệu)");
   } catch (error) {
     return "--- SPIKE: PREVIEW IFRAMES — CDP IMG PROBE ---\n(không probe được: " + String(error).replace(/^Error: /, "").slice(0, 120) + ")";
   }

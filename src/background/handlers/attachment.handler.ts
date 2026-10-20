@@ -67,8 +67,8 @@ const readPreviewImagesHandler: RpcHandler = async (_payload, sender) => {
 };
 // UC-09 mở rộng — probe cấu trúc iframe/img qua CDP cho DIAGNOSE (src redact — M-2).
 const previewProbeHandler: RpcHandler = async (_payload, sender) => {
-  senderTab(sender); // xác thực caller là tab OWA — probe chỉ phục vụ diagnose từ content
-  return { targets: await probePreviewIframes() };
+  const { tabId, url } = senderTab(sender); // attach trang cha trước — bắt buộc để quét OOPIF
+  return { targets: await probePreviewIframes(tabId, url) };
 };
 interface VisionPageFile {
   name: string;
