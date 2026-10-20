@@ -15,13 +15,15 @@ export function copilotRank(url: string): number {
 
 export interface CopilotReadResult {
   text: string;
+  parts: string[]; // text node RIÊNG theo thứ tự DOM — diff theo node (không phụ thuộc join/cap toàn cục)
   lines: string[]; // redact sẵn (M-2) — báo cáo in nguyên; KHÔNG chứa nội dung chat
 }
 
 const MAX_COPILOT_CHARS = 60_000;
+const MAX_PARTS = 5000; // giữ ĐUÔI (node mới nằm cuối chat); đuôi cũ bị gọi là chấp nhận
 
 // Trích text node (#text → nodeValue index strings) từ DOMSnapshot.
-function textFromSnapshot(snapshot: unknown): string {
+function partsFromSnapshot(snapshot: unknown): string[] {
   const snap = snapshot as { strings?: string[]; documents?: { nodes?: { nodeName?: number[]; nodeValue?: number[] } }[] } | undefined;
   const strings = snap?.strings ?? [];
   const parts: string[] = [];
@@ -36,7 +38,7 @@ function textFromSnapshot(snapshot: unknown): string {
       if (typeof text === "string" && text.trim().length > 0) parts.push(text.trim());
     }
   }
-  return parts.join(" ").replace(/[ \t]+/g, " ").trim();
+  return parts.length > MAX_PARTS ? parts.slice(parts.length - MAX_PARTS) : parts;
 }
 
 // Đọc text từ mọi frame Copilot đang mở. Không frame khớp → text "" (caller fallback).
@@ -48,7 +50,7 @@ export async function readCopilotPanelText(): Promise<CopilotReadResult> {
     .slice(0, 3);
   const lines = ["copilot frames: " + (candidates.length === 0 ? "(chưa mở panel)" :
     candidates.map((t) => (t.attached === true ? "A" : "-") + ":" + redactSrc(t.url ?? "")).join(" | "))];
-  const texts: string[] = [];
+  const allParts: string[] = [];
   for (const frame of candidates) {
     const targetId = frame.id; // TargetInfo.id — TS union không có targetId
     if (targetId === undefined) continue;
@@ -60,11 +62,12 @@ export async function readCopilotPanelText(): Promise<CopilotReadResult> {
     } catch {
       continue; // frame hết hạn / client khác giữ attach (DevTools mở — nhớ đóng trước khi test)
     }
-    const text = textFromSnapshot(snapshot);
-    if (text.length > 0) texts.push(text);
+    const parts = partsFromSnapshot(snapshot);
+    if (parts.length > 0) allParts.push(...parts);
   }
-  let merged = texts.join("\n");
-  if (merged.length > MAX_COPILOT_CHARS) merged = merged.slice(0, MAX_COPILOT_CHARS) + "…[cắt]";
-  if (merged.length > 0) lines.push("textLen=" + String(merged.length));
-  return { text: merged, lines: lines };
+  const clipped = allParts.length > MAX_PARTS ? allParts.slice(allParts.length - MAX_PARTS) : allParts;
+  const merged = clipped.join(" ").replace(/[ \t]+/g, " ").trim();
+  const text = merged.length > MAX_COPILOT_CHARS ? merged.slice(merged.length - MAX_COPILOT_CHARS) : merged;
+  if (text.length > 0) lines.push("textLen=" + String(text.length) + " parts=" + String(clipped.length));
+  return { text: text, parts: clipped, lines: lines };
 }

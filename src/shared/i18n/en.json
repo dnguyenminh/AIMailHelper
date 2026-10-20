@@ -131,6 +131,7 @@
   "panel.analyze.button": "Analyze with AI",
   "panel.analyze.running": "Analyzing…",
   "panel.analyze.readingEmail": "Reading email…",
+  "panel.analyze.copilotSource": "Summary from Copilot (Outlook) — shown verbatim, no local AI involved.",
   "panel.analyze.stop": "Stop",
   "panel.analyze.retry": "Retry",
   "panel.analyze.replyButton": "Draft reply",

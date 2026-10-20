@@ -22,6 +22,7 @@ export interface AnalysisUiState {
   raw: string;
   result: AnalysisResult | null;
   error: AnalysisError | null;
+  copilot?: boolean; // GĐ-B — raw là lời Copilot TRẢ VERBATIM (panel hiển thị nguyên văn, result=null)
 }
 
 export interface AnalyzeDeps {
@@ -64,6 +65,13 @@ export class AnalyzeController {
       return;
     }
     this.email = email;
+    // GĐ-B 20/10 — Copilot THAY LLM+VL: có copilotSummary → hiển thị NGUYÊN VĂN (result=null,
+    // KHÔNG request stream LLM). Summary schema cap ≤1000 ký tự (§8.11) không chứa được toàn văn
+    // Copilot → đi qua raw. Fail-closed giữ nguyên: không hiển thị gì khác ngoài lời Copilot.
+    if (typeof email.copilotSummary === "string" && email.copilotSummary.trim().length > 0) {
+      this.setState({ status: "done", raw: email.copilotSummary, result: null, error: null, copilot: true });
+      return;
+    }
     this.raw = "";
     this.setState({ status: "streaming", raw: "", result: null, error: null });
     this.handle = this.deps.request("analyze", { email: email }, (event) => this.onEvent(event));

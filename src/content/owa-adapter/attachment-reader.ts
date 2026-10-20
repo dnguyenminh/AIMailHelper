@@ -5,7 +5,6 @@
 // KHÔNG bao giờ chặn phân tích email (tinh thần FR-GD5-06).
 import { sendMessage } from "../../shared/messaging";
 import { AppError } from "../../shared/errors";
-import { MAX_ATTACHMENT_CHARS } from "../../shared/attachments/extract";
 
 const MAX_ATTACHMENTS = 3;
 const PREVIEW_RENDER_MS = 8000; // chờ Word/Excel Online render text trong iframe (app nặng)
@@ -18,7 +17,6 @@ const IMAGE_RENDERED_EXT = ["doc", "xls", "docx", "xlsx"];
 
 // Chunked vision-read cho tài liệu dài (UAT 18/10): đọc chunk → tóm tắt → lưu → tổng hợp
 import { readFullDocumentVision } from "./vision-chunk-reader";
-import { analyzeViaCopilot } from "./copilot-bridge";
 
 export interface AttachmentText {
   name: string;
@@ -70,21 +68,8 @@ async function closePreview(): Promise<void> {
 export async function extractAttachmentsForEmail(): Promise<AttachmentText[]> {
   const options = findAttachmentOptions().slice(0, MAX_ATTACHMENTS);
   if (options.length === 0) return [];
-  // GĐ-B (20/10) — Copilot THAY preview+vision/LLM (user quyết): 1 lần "Summarize this email"
-  // dùng Copilot đọc cả email + attachments (Graph server-side) → THÀNH CÔNG = KHÔNG mở
-  // preview popup nào. Fail (không license/entry perdido/timeout) → flow cũ (popup + vision).
-  try {
-    const copilot = await analyzeViaCopilot();
-    if (copilot !== null && copilot.text.trim().length > 0) {
-      console.log("[AIMH][copilot] dùng summary Copilot (len=" + String(copilot.text.length) + ") — không mở preview");
-      return options.map((option, index) => ({
-        name: option.name,
-        text: index === 0 ? copilot.text.slice(0, MAX_ATTACHMENT_CHARS) : "" // cap = chuẩn attachment text
-      }));
-    }
-  } catch (error) {
-    console.warn("[AIMH][copilot] branch lỗi — fallback flow cũ:", String(error).slice(0, 120));
-  }
+  // GĐ-B 20/10: nhánh Copilot chuyển LÊN reader.readEmail (trả copilotSummary hiển thị VERBATIM).
+  // Tại đây chỉ pipeline cũ: preview popup + render text + vision + bytes extract (fallback).
   try {
     await sendMessage("ATTACHMENT_CAPTURE_START", {});
   } catch (error) {

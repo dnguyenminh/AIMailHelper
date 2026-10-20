@@ -6,20 +6,18 @@
 import { sendMessage } from "../../shared/messaging";
 
 const SETTLE_MS = 500;
-const POLL_MS = 2500;
-const POLL_ROUNDS = 4;
-const COPILOT_MIN_TEXT = 400; // dưới ngưỡng → coi như chưa có summary thật (UI rác)
-const MIN_DELTA_CHARS = 120; // delta nhỏ hơn → không chắc là summary → trả full text (LLM chính tự lọc)
-
-// Bóc CHỈ phần MỚI: chat append cuối → current nêu trên baseline là tiền tố → delta = phần đuôi.
-// Không khớp tiền tố (React re-render) → trả full text — an toàn hơn là bỏ lần chạy này.
-function freshText(baseline: string, current: string): string {
-  if (current.startsWith(baseline) === false) return current.trim();
-  const delta = current.slice(baseline.length).trim();
-  return delta.length >= MIN_DELTA_CHARS ? delta : current.trim();
-}
+const POLL_MS = 2000;
+const POLL_ROUNDS = 6; // 6×2s = 12s tối đa chờ stream — Copilot tóm tắt email dài cần 5-15s
+const MIN_DELTA_CHARS = 120; // fresh nhỏ hơn ngưỡng → không chắc là summary thật
 
 export type CopilotTriggerResult = "clicked" | "no-entry" | "popup-not-found";
+
+// Cấu trúc trả về của SW (structural — không import module background vào content)
+interface CopilotRead {
+  text: string;
+  parts: string[];
+  lines: string[];
+}
 
 // Nút Copilot: ưu tiên aria-label (ổn định), fallback cấu trúc #BottomBar child thứ 2 (user chỉ).
 export function findCopilotEntry(): HTMLElement | null {
@@ -84,32 +82,36 @@ export function describeCopilotLines(): string[] {
 
 // ── GĐ-B 20/10 — analyzeViaCopilot: trigger "Summarize this email" + đọc ổn định text panel ──
 
-async function readCopilotText(): Promise<string> {
-  const read = await sendMessage<{ text: string; lines: string[] }>("COPIL_PANEL_READ", {});
-  return read.text;
+// Đọc panel qua SW (CDP into iframe cross-origin). Lỗi (SW ngủ/không response) → struct rỗng.
+async function readCopilotPanel(): Promise<CopilotRead> {
+  try {
+    return await sendMessage<CopilotRead>("COPIL_PANEL_READ", {});
+  } catch {
+    return { text: "", parts: [], lines: [] };
+  }
 }
 
-// Bấm "Summarize this email" (hành động USER — bấm nút của extension) → chờ text panel TƯƠI
-// (khác baseline) + ỔN ĐỊNH (2 vòng liên tiếp bằng nhau) → trả text. Fail → null (fallback).
+// Bấm "Summarize this email" (hành động USER — nút bắt đầu từ panel extension) → DIFF theo
+// TEXT NODE: node MỚI (không có ở baseline) = tóm tắt thật. Ổn định 2 vòng + đủ dài → dùng.
+// Học 20/10: KHÔNG dùng text cũ khi trigger fail (panel ẩn + cap giữ text LỊCH SỬ, không tươi).
 export async function analyzeViaCopilot(): Promise<{ text: string } | null> {
-  const baseline = await readCopilotText(); // text CŨ trong panel (kể cả panel ẩn) — làm chuẩn so sánh
+  const baseline = await readCopilotPanel();
+  const baseSet = new Set(baseline.parts);
   const trigger = await triggerCopilotSummarize();
-  if (trigger === "no-entry" || trigger === "popup-not-found") {
-    if (baseline.length > COPILOT_MIN_TEXT) return { text: baseline }; // panel đang mở sẵn (user mở)
-    return null; // không trigger được + không có text — caller fallback
-  }
-  let lastText = ""; let stableRounds = 0;
+  if (trigger === "no-entry" || trigger === "popup-not-found") return null; // fallback pipeline cũ
+  let lastFresh = "";
+  let stableRounds = 0;
   for (let round = 0; round < POLL_ROUNDS; round += 1) {
-    await new Promise((r) => setTimeout(r, POLL_MS)); // chờ Copilot stream summary...
-    const text = await readCopilotText();
-    const stable = text.length > 0 && text === lastText;
-    if (stable && text.length > COPILOT_MIN_TEXT && text !== baseline) {
+    await new Promise((resolve) => setTimeout(resolve, POLL_MS)); // chờ Copilot stream...
+    const current = await readCopilotPanel();
+    const fresh = current.parts.filter((part) => !baseSet.has(part)).join(" ").trim();
+    if (fresh.length >= MIN_DELTA_CHARS && fresh === lastFresh) {
       stableRounds += 1;
-      if (stableRounds >= 2) return { text: freshText(baseline, text) }; // text TƯƠI — ưu tiên delta
+      if (stableRounds >= 2) return { text: fresh }; // ổn định 2 vòng liên tiếp → giữ
     } else {
       stableRounds = 0;
     }
-    lastText = text;
+    lastFresh = fresh;
   }
-  return null; // không tươi hơn baseline / không ổn định — fallback vision
+  return null; // không có nội dung MỚI đủ dài / chưa ổn định — fallback vision/pipeline cũ
 }

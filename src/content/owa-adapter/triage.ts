@@ -7,7 +7,8 @@ import { AppError } from "../../shared/errors";
 import type { TriageItem } from "../../shared/types";
 import { locateInboxList } from "./inbox-list-locator";
 import { resolveMessageId } from "./message-id";
-import { normalizeBody, parsePerson } from "./reader";
+import { parsePerson } from "./recipients";
+import { normalizeBody } from "./reader";
 import type { FunctionKey } from "./selectors";
 import { SELECTOR_CHAINS } from "./selectors";
 

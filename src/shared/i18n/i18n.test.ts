@@ -57,6 +57,6 @@ describe("i18n — FR-GD1-06 (GĐ1 Deliverable: vi/en đổi được)", () => {
     const viRaw = JSON.parse(readFileSync(join(process.cwd(), "src", "shared", "i18n", "vi.json"), "utf8")) as Record<string, string>;
     const enRaw = JSON.parse(readFileSync(join(process.cwd(), "src", "shared", "i18n", "en.json"), "utf8")) as Record<string, string>;
     expect(Object.keys(enRaw).sort()).toEqual(Object.keys(viRaw).sort());
-    expect(Object.keys(viRaw).length).toBe(224); // UAT VisionModelPicker +14 (provider, providerHint, apiKey, apiKeyHint, url, urlHint → +6) → 224; lịch sử: VisionModelPicker +13, triageCap +1, unread +3, digest scroll/open +2, permissionWarning +1
+    expect(Object.keys(viRaw).length).toBe(225); // GĐ-B Copilot +1 (copilotSource); lịch sử: VisionModelPicker +14, triageCap +1, unread +3, digest scroll/open +2, permissionWarning +1
   });
 });

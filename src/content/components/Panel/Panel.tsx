@@ -15,6 +15,7 @@ import { createTriageController, createUnreadTriageController } from "../../modu
 import type { TriageUiState } from "../../modules/digest";
 const IDLE_SCAN: TriageUiState = { status: "running", progress: { done: 0, total: 0, failed: 0 }, cachedSkipped: 0, cap: 0, overflow: 0, folderStopped: false, userStopped: false, error: null, digest: [] };
 import { AnalysisView } from "./AnalysisView";
+import { CopilotResult } from "./CopilotResult"; // GĐ-B — Copilot verbatim (result=null)
 import { DiagnoseView } from "./DiagnoseView";
 import { DigestView } from "./DigestView";
 import { ErrorBanner } from "./ErrorBanner";
@@ -150,6 +151,7 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
       )}
       {state.status === "reading" && <p className="aimh-note">{t("panel.analyze.readingEmail")}</p>}
       {state.status === "streaming" && <pre className="aimh-stream">{state.raw}</pre>}
+      {state.copilot === true && state.status === "done" && <CopilotResult raw={state.raw} />}
       {state.result !== null && <AnalysisView result={state.result} />}
       {state.error !== null && <ErrorBanner error={state.error} onRetry={analyze} />}
       {state.result !== null && <ReplySection email={email} />}

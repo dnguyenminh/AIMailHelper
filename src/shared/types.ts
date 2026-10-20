@@ -85,6 +85,7 @@ export interface EmailData {
   bodyText: string;
   hasAttachment: boolean; // UAT — phát hiện đính kèm trong pane (rules + triage)
   attachments?: { name: string; text: string }[]; // UAT 18/10 Plan A — text trích xuất (max 3 file, 20K ký tự)
+  copilotSummary?: string; // GĐ-B 20/10 — lời Copilot trả (VERBATIM): panel hiển thị nguyên văn, KHÔNG qua LLM
   threadContext?: { subject: string; from: string; excerpt: string }[]; // chỉ khi conversation (AF-1)
   detectedView: "reading-pane" | "popout" | "conversation";
 }

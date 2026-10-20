@@ -4,7 +4,9 @@
 import { AppError } from "../../shared/errors";
 import type { EmailData } from "../../shared/types";
 import type { OwaViewInfo } from "./detector";
+import { readSender, readRecipients, readFromLine } from "./recipients";
 import { withAttachmentTexts } from "./attachment-reader";
+import { analyzeViaCopilot } from "./copilot-bridge";
 import { resolveMessageId } from "./message-id";
 import type { FunctionKey } from "./selectors";
 
@@ -12,10 +14,6 @@ export type LocateFn = (functionKey: FunctionKey, question: string) => Promise<E
 
 const SUBJECT_PROBE = '[role="heading"], h1, h2';
 const BODY_PROBE = '[aria-label*="body" i]';
-const FROM_PATTERN = /^(From|Từ)\b/i;
-const TO_PATTERN = /^(To|Đến)\b/i;
-const CC_PATTERN = /^Cc\b/i;
-const EMPTY_PERSON = { name: "", email: "" };
 const EXCERPT_CHARS = 160;
 
 // UC-01 step 2 — reader qua self-healing locator; ERR-06 khi không thấy vùng đọc (EF-3).
@@ -39,8 +37,7 @@ export async function readEmail(locate: LocateFn, view: OwaViewInfo): Promise<Em
       textOf(container.querySelector("[data-testid*='subject' i]")) ||
       textOf(container.querySelector('[placeholder*="Subject" i], [placeholder*="Tiêu đề" i]'));
   }
-  const fromRaw = labeledValues(container, FROM_PATTERN)[0] ?? "";
-  const sender = parsePerson(fromRaw) ?? { ...EMPTY_PERSON };
+  const sender = readSender(container);
   let bodyText = normalizeBody(extractBodyText(container));
   if (bodyText.replace(/\s/g, "").length < 40) {
     // UAT — OWA mới (outlook.cloud.microsoft): container locate được sai (ribbon "Quick steps"),
@@ -61,13 +58,25 @@ export async function readEmail(locate: LocateFn, view: OwaViewInfo): Promise<Em
     messageId: id.messageId,
     subject: subject,
     sender: sender,
-    to: readRecipients(container, TO_PATTERN),
-    cc: readRecipients(container, CC_PATTERN),
+    to: readRecipients(container, "to"),
+    cc: readRecipients(container, "cc"),
     bodyText: bodyText,
     hasAttachment: detectAttachments(container),
     threadContext: view.view === "conversation" ? buildThreadContext(container) : undefined,
     detectedView: view.view === "unknown" ? "reading-pane" : view.view
   };
+  // GĐ-B (20/10) — Copilot THAY LLM+VL (user quyết): "Summarize this email" → DIFF text node
+  // chống cắt cap → tóm tắt TƯƠI trả về email.copilotSummary → AnalyzeController hiển thị
+  // VERBATIM, KHÔNG gọi LLM stream. Fail (không license/entry/timeout) → pipeline cũ bên dưới.
+  try {
+    const copilot = await analyzeViaCopilot();
+    if (copilot !== null && copilot.text.trim().length > 0) {
+      console.log("[AIMH][copilot] tóm tắt TƯƠI (len=" + String(copilot.text.length) + ") — hiển thị nguyên văn, không gọi LLM local");
+      return { ...email, copilotSummary: copilot.text };
+    }
+  } catch (error) {
+    console.warn("[AIMH][copilot] fail — fallback pipeline cũ:", String(error).slice(0, 120));
+  }
   return withAttachmentTexts(email); // UAT 18/10 Plan A — text attachment (KHÔNG chặn khi lỗi)
 }
 
@@ -97,42 +106,6 @@ function findReadingContext(): { container: Element; bodyDoc: Document } | null 
     if (extra > 120) break; // ancestor đã chứa thêm header/metadata — đủ làm vùng đọc
   }
   return { container: container, bodyDoc: best.doc };
-}
-
-// Header row qua aria-label prefix (EN/VN) — structural attribute, không đoán theo text.
-function labeledValues(container: Element, pattern: RegExp): string[] {
-  const values: string[] = [];
-  for (const el of container.querySelectorAll("[aria-label]")) {
-    const label = el.getAttribute("aria-label") ?? "";
-    if (!pattern.test(label)) continue;
-    const sep = label.indexOf(":");
-    values.push(sep >= 0 ? label.slice(sep + 1).trim() : label.replace(/^\S+\s*/, "").trim());
-  }
-  return values;
-}
-
-function readRecipients(container: Element, pattern: RegExp): { name: string; email: string }[] {
-  const result: { name: string; email: string }[] = [];
-  for (const raw of labeledValues(container, pattern)) {
-    for (const part of raw.split(/[,;]/)) {
-      const person = parsePerson(part.trim());
-      if (person) result.push(person);
-    }
-  }
-  return result;
-}
-
-// "An <an@x.com>" → {name:"An",email:"an@x.com"}; bare email → {name:"",email}; chỉ text → name.
-export function parsePerson(raw: string): { name: string; email: string } | null {
-  const value = raw.trim();
-  if (value.length === 0) return null;
-  const angled = /^([^<>]*?)\s*<([^<>@]+@[^<>@]+)>\s*$/.exec(value);
-  if (angled && angled[1] !== undefined && angled[2] !== undefined) {
-    return { name: angled[1].trim(), email: angled[2].trim() };
-  }
-  const bare = /([^\s,;<>"@]+@[^\s,;<>"@]+\.[^\s,;<>"@]+)/.exec(value);
-  if (bare && bare[1] !== undefined) return { name: value.replace(bare[1], "").trim(), email: bare[1] };
-  return { name: value, email: "" };
 }
 
 // Body: probe aria-label *body* → fallback con trực tiếp chứa nhiều text nhất (structural).
@@ -174,7 +147,7 @@ function buildThreadContext(container: Element): EmailData["threadContext"] {
   if (blocks.length < 2) return undefined;
   return blocks.slice(0, -1).map((block) => ({
     subject: textOf(block.querySelector(SUBJECT_PROBE)),
-    from: labeledValues(block, FROM_PATTERN)[0] ?? "",
+    from: readFromLine(block),
     excerpt: normalizeBody(block.textContent ?? "").slice(0, EXCERPT_CHARS)
   }));
 }

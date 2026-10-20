@@ -131,6 +131,7 @@
   "panel.analyze.button": "AI phân tích",
   "panel.analyze.running": "Đang phân tích…",
   "panel.analyze.readingEmail": "Đang đọc email…",
+  "panel.analyze.copilotSource": "Tóm tắt từ Copilot (Outlook) — hiển thị nguyên văn, không dùng AI local.",
   "panel.analyze.stop": "Dừng",
   "panel.analyze.retry": "Thử lại",
   "panel.analyze.replyButton": "Soạn trả lời",
