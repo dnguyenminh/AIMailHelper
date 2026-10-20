@@ -82,12 +82,13 @@ interface FrameEntry {
 }
 
 // Duyệt cây frame → dòng indent cho report (redact sẵn) + node để match với target.
-function walkFrameTree(entry: FrameEntry, depth: number, lines: string[], out: DiscoveredFrame[]): void {
+// SKIP frame gốc (url trùng tabUrl — nó chính là target tab, không phải frame con).
+function walkFrameTree(entry: FrameEntry, depth: number, lines: string[], out: DiscoveredFrame[], skipUrl: string): void {
   const id = String(entry?.frame?.id ?? "?");
   const url = entry?.frame?.url ?? "";
   lines.push("  ".repeat(depth) + "frame " + id.slice(0, 8) + " " + redactSrc(url));
-  out.push({ url: url, attached: false, via: "tree" });
-  for (const child of entry?.childFrames ?? []) walkFrameTree(child, depth + 1, lines, out);
+  if (url.length > 0 && url !== skipUrl) out.push({ url: url, attached: false, via: "tree" });
+  for (const child of entry?.childFrames ?? []) walkFrameTree(child, depth + 1, lines, out, skipUrl);
 }
 
 export interface DiscoveryResult {
@@ -105,10 +106,13 @@ export async function discoverFrames(tabId: number, tabUrl: string | undefined):
   await autoAttach(tabId, lines);
   await sleep(700); // chờ event auto-attach về; frame load tự nhiên (không waitForDebugger)
   const targets = await getTargets();
-  const dump = targets.slice(0, 10)
-    .map((t, i) => "#" + String(i) + ":" + String(t.type ?? "?") + ":" + (t.attached === true ? "A" : "-") + ":" + redactSrc(t.url ?? ""))
-    .join(" | ");
-  lines.push("target count=" + String(targets.length) + " " + dump);
+  // Dump ĐẦY ĐỦ (bài học 20/10 run 2: cap 10 đều là worker → iframe sau cap bị che).
+  const workers = targets.filter((t) => (t.type as string) === "worker");
+  const nonWorker = targets.filter((t) => (t.type as string) !== "worker");
+  lines.push("target worker=" + String(workers.length) + " | còn lại=" + String(nonWorker.length) + " trên tổng " + String(targets.length));
+  for (const [index, t] of nonWorker.slice(0, 30).entries()) {
+    lines.push("target #" + String(index) + " " + String(t.type ?? "?") + " attached=" + (t.attached === true ? "A" : "-") + " url=" + redactSrc(t.url ?? ""));
+  }
   const frames: DiscoveredFrame[] = [];
   for (const t of targets) {
     if ((t.type as string) !== "iframe" || t.id === undefined) continue;
@@ -126,7 +130,7 @@ export async function discoverFrames(tabId: number, tabUrl: string | undefined):
     });
   });
   const frameEntry = (tree as { frameTree?: FrameEntry } | undefined)?.frameTree;
-  if (frameEntry !== undefined) walkFrameTree(frameEntry, 0, lines, frames);
+  if (frameEntry !== undefined) walkFrameTree(frameEntry, 0, lines, frames, tabUrl ?? "");
   else lines.push("getFrameTree: không có kết quả");
   // frame tree — insight cho frame không có target riêng (cùng-process hoặc Edge ẩn target)
   return { frames: frames.slice(0, 8), lines: lines.slice(0, 30) };

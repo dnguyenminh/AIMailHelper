@@ -20,14 +20,16 @@ export interface IFrameProbe {
 }
 
 // Dựng probe từ snapshot: đếm img + id + src redact.
+// IMG KHÔNG id vẫn hiện dạng "(no id)" — bài học run 2 (imgs=10 nhưng ids chỉ logo: 9 img
+// không id bị ẩn → nghi ngờ chính là ảnh trang Word trên trang chính).
 function snapshotProbe(url: string, attached: boolean, snapshot: unknown, main: boolean): IFrameProbe {
   const images = imagesFromSnapshot(snapshot);
   return {
     url: url,
     attached: attached,
     imgCount: images.length,
-    ids: Array.from(new Set(images.map((img) => img.id).filter((id) => id.length > 0))).slice(0, 12),
-    samples: Array.from(new Set(images.map((img) => redactSrc(img.src)))).slice(0, 3),
+    ids: images.slice(0, 12).map((img) => (img.id.length > 0 ? img.id : "(no id)")),
+    samples: Array.from(new Set(images.map((img) => redactSrc(img.src)))).slice(0, 8),
     main: main === true || undefined
   };
 }
@@ -48,8 +50,8 @@ export async function probePreviewIframes(tabId: number, tabUrl: string | undefi
       try { await chrome.debugger.detach({ targetId: targetId }); } catch { /* ignore */ }
       const images = imagesFromSnapshot(snapshot);
       probe.imgCount = images.length;
-      probe.ids = Array.from(new Set(images.map((img) => img.id).filter((id) => id.length > 0))).slice(0, 12);
-      probe.samples = Array.from(new Set(images.map((img) => redactSrc(img.src)))).slice(0, 3);
+      probe.ids = images.slice(0, 12).map((img) => (img.id.length > 0 ? img.id : "(no id)"));
+      probe.samples = Array.from(new Set(images.map((img) => redactSrc(img.src)))).slice(0, 8);
     } catch (error) {
       probe.error = String(error).slice(0, 80);
     }
