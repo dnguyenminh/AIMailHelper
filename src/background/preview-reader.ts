@@ -4,6 +4,7 @@
 // target (OOPIF) và dùng CDP DOMSnapshot.captureSnapshot (CHỈ ĐỌC — không Runtime.evaluate).
 // Ưu điểm: đọc được MỌI định dạng OWA render (doc/docx/xls/xlsx…) — không cần format parser.
 import { ensureAttachedShared } from "./debugger-scroll";
+import { discoverFrames, getTargets, sendSnapshot } from "./frame-discovery";
 
 const PREVIEW_FRAME_PATTERN = /officeapps\.live\.com|office\.com\/(wv|xv|pv|we)|word-view|excel-view|powerpoint-view|attachments\.office\.net/i;
 const MAX_PREVIEW_CHARS = 20_000;
@@ -39,18 +40,7 @@ export function textFromSnapshot(snapshot: unknown): string {
   return parts.join(" ").replace(/[ \t]+/g, " ").trim();
 }
 
-export function getTargets(): Promise<chrome.debugger.TargetInfo[]> {
-  return new Promise((resolve) => chrome.debugger.getTargets((targets) => resolve(targets ?? [])));
-}
-
-export function sendSnapshot(targetId: string): Promise<unknown> {
-  return new Promise((resolve) => {
-    chrome.debugger.sendCommand({ targetId: targetId }, "DOMSnapshot.captureSnapshot", { computedStyles: [] }, (result) => {
-      void chrome.runtime.lastError; // iframe hết hạn/đóng — resolve undefined
-      resolve(result);
-    });
-  });
-}
+// ── Chuyển getTargets/sendSnapshot sang frame-discovery (dùng chung với probe UC-09). ──
 
 // Đọc text từ TẤT CẢ iframe preview của tab (Word/Excel Online…). Gọi SAU khi preview mở.
 export async function readPreviewText(tabId: number, tabUrl: string | undefined): Promise<string> {
@@ -160,17 +150,19 @@ const MAX_PREVIEW_IMAGES = 10;
 // LỌI MỌI iframe (OOPIF): frame preview có thể src=about:blank (Office ghi nội dung động) —
 // KHÔNG lọc theo PREVIEW_FRAME_PATTERN; attach lỗi (đã attach bởi chính extension) vẫn dùng session.
 export async function readPreviewImages(tabId: number, tabUrl: string | undefined): Promise<string[]> {
-  await ensureAttachedShared(tabId, tabUrl);
-  const targets = await getTargets();
-  const frames = targets.filter((t) => (t.type as string) === "iframe" && typeof t.id === "string");
-  const found: PreviewImage[] = [];
+  // Dùng discovery chung: attach trang cha + auto-attach + frame tree (bài học 20/10 — 0 frame
+  // khi không attach trước; frame preview có thể about:blank nên KHÔNG lọc theo pattern).
+  const discovery = await discoverFrames(tabId, tabUrl);
+  const built: PreviewImage[] = [];
   const seenSrc = new Set<string>();
-  for (const frame of frames.slice(0, 4)) {
+  for (const frame of discovery.frames.filter((f) => f.targetId !== undefined).slice(0, 6)) {
+    const targetId = frame.targetId;
+    if (targetId === undefined) continue;
     let snapshot: unknown;
     try {
-      try { await chrome.debugger.attach({ targetId: frame.id }, "1.3"); } catch { /* đã attach — session của chính extension vẫn dùng được */ }
-      snapshot = await sendSnapshot(frame.id);
-      try { await chrome.debugger.detach({ targetId: frame.id }); } catch { /* ignore */ }
+      try { await chrome.debugger.attach({ targetId: targetId }, "1.3"); } catch { /* đã attach — session của chính extension vẫn dùng được */ }
+      snapshot = await sendSnapshot(targetId);
+      try { await chrome.debugger.detach({ targetId: targetId }); } catch { /* ignore */ }
     } catch {
       continue; // frame hết hạn/session của extension khác — bỏ qua
     }
@@ -178,7 +170,7 @@ export async function readPreviewImages(tabId: number, tabUrl: string | undefine
       const resolved = resolveSrc(item.src, frame.url);
       if (seenSrc.has(resolved)) continue;
       seenSrc.add(resolved);
-      found.push({ id: item.id, src: resolved });
+      built.push({ id: item.id, src: resolved });
     }
   }
   const idOrder = (id: string): number => {
@@ -186,7 +178,7 @@ export async function readPreviewImages(tabId: number, tabUrl: string | undefine
     return match === null ? Number.MAX_SAFE_INTEGER : parseInt(match[1] ?? "0", 10);
   };
   const dataUrls: string[] = [];
-  for (const item of found.sort((a, b) => idOrder(a.id) - idOrder(b.id))) {
+  for (const item of built.sort((a, b) => idOrder(a.id) - idOrder(b.id))) {
     const dataUrl = await srcToDataUrl(item.src, 2_500_000);
     if (dataUrl !== null) dataUrls.push(dataUrl);
     if (dataUrls.length >= MAX_PREVIEW_IMAGES) break;

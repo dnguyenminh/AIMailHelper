@@ -20,6 +20,9 @@ export interface FrameProbe {
   imgCount: number;
   ids: string[];
   samples: string[];
+  main?: boolean;
+  via?: string;
+  tree?: string[];
   error?: string;
 }
 
@@ -131,10 +134,13 @@ async function previewProbeSection(probeFn: () => Promise<FrameProbe[]>): Promis
     const frames = await probeFn();
     const lines = frames.map((frame, index) => {
       const parts = ["iframe #" + String(index) + ": url=" + frame.url, "attached=" + String(frame.attached), "imgs=" + String(frame.imgCount)];
+      if (frame.main === true) parts[0] = "TRANG CHÍNH [" + String(index) + "]: url=" + frame.url;
+      if (frame.via !== undefined) parts.push("via=" + frame.via);
       if (frame.ids.length > 0) parts.push("ids=[" + frame.ids.join(",") + "]");
       if (frame.samples.length > 0) parts.push("srcs=" + frame.samples.join(" | "));
       if (frame.error !== undefined) parts.push("ERROR=" + frame.error);
-      return parts.join(" ");
+      const subLines = (frame.tree ?? []).map((line) => "    ▸ " + line);
+      return parts.join(" ") + (subLines.length > 0 ? "\n" + subLines.join("\n") : "");
     });
     return "--- SPIKE: PREVIEW IFRAMES — CDP IMG PROBE (M-2: src đã redact query/token) ---\n" + (lines.join("\n") || "(không có iframe target nào — MỞ dialog preview Word TRƯỚC khi chạy Diagnose; imgs=0 khi preview mở là dữ liệu)");
   } catch (error) {
