@@ -3,6 +3,9 @@
 // Không đọc hết 1 lần (tránh context tràn) — đọc chunk → tóm tắt → lưu → chunk tiếp.
 
 import { sendMessage } from "../../shared/messaging";
+import { collectDialogImages } from "./preview-dialog";
+
+const CONTENT_FETCH_DEPS = { fetchImpl: fetch, FileReaderCtor: FileReader }; // page context
 
 export interface ChunkSummary {
   chunkIndex: number;
@@ -58,13 +61,16 @@ async function captureAllPages(): Promise<string[]> {
   return pages;
 }
 
-// UAT 20/10 — collect ảnh trang từ iframe preview qua CDP (src thẻ <img>), cuộn dần để trigger lazy-load.
-// Dừng khi: hết ảnh mới sau khi cuộn | dialog đóng | đủ MAX_CAPTURE_PAGES vòng.
+// UAT 20/10 — collect ảnh trang: LỚP 1 = dialog shell (DOM content, ảnh trên trang chính),
+// LỚP 2 = CDP iframe qua SW RPC, cuộn dần để trigger lazy-load. Dừng: hết ảnh mới | dialog đóng.
 async function collectPreviewImages(): Promise<string[]> {
   const seen = new Set<string>();
   for (let round = 0; round < MAX_CAPTURE_PAGES; round += 1) {
+    const before = seen.size; // đếm trước khi collect — dùng kiểm tra "hết ảnh mới" bên dưới
+    // LỚP 1 — img trong dialog shell (không đi qua SW, tận dụng fetch page context)
+    for (const src of await collectDialogImages(CONTENT_FETCH_DEPS)) seen.add(src);
+    // LỚP 2 — CDP iframe (nếu ảnh nằm trong iframe cross-origin)
     const response = await sendMessage<{ images: string[] }>("ATTACHMENT_READ_PREVIEW_IMAGES", {});
-    const before = seen.size;
     for (const src of response.images ?? []) seen.add(src);
     const dialog = document.querySelector('[role="dialog"]');
     if (!dialog) break;

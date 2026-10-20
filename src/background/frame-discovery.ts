@@ -6,6 +6,9 @@
 //   (3) Page.getFrameTree — cây frame đầy đủ (kể cả frame KHÔNG có target riêng → chỉ insight).
 // SR-12: CHỈ ĐỌC — không Runtime.evaluate; waitForDebuggerOnStart=false (không treo frame con).
 import { ensureAttachedShared } from "./debugger-scroll";
+import { redactSrc } from "../shared/redact";
+
+export { redactSrc }; // giữ API cũ cho preview-probe (sau này chuyển hết sang shared)
 
 export interface DiscoveredFrame {
   targetId?: string; // thiếu → không attach trực tiếp được (chỉ qua frame tree)
@@ -25,19 +28,6 @@ function ensureEventListener(): void {
     const info = (params as { targetInfo?: chrome.debugger.TargetInfo } | undefined)?.targetInfo;
     if (info !== undefined && info.id !== undefined) eventFrames.push(info);
   });
-}
-
-// Redact an toàn: data: → "mime;base64,<n> chars"; blob: → chỉ báo độ dài (uuid là token);
-// about: giữ nguyên; absolute http → origin + path cuối (query # strip); path tương đối giữ nguyên.
-export function redactSrc(src: string): string {
-  if (src.startsWith("blob:")) return "blob:<" + String(src.length) + " chars>";
-  const dataMatch = src.match(/^(data:[^;,]+)/);
-  if (dataMatch !== null) return (dataMatch[1] ?? "data:") + ";base64,<" + String(src.length) + " chars>";
-  if (src.startsWith("about:")) return src;
-  if (!/^https?:/i.test(src)) return (src.split("?")[0] ?? src).split("#")[0] ?? "";
-  const parts = ((src.split("?")[0] ?? src).split("#")[0] ?? "").split("/");
-  const origin = (parts[0] ?? "") + "//" + (parts[2] ?? "");
-  return (origin + "/…/" + (parts[parts.length - 1] ?? "")).slice(0, 80);
 }
 
 export function getTargets(): Promise<chrome.debugger.TargetInfo[]> {

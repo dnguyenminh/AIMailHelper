@@ -1,6 +1,7 @@
 // src/shared/redact.ts — redactSecrets ĐA PATTERN, MỘT điểm redact duy nhất (SR-03, TDD §8.1).
 // Patterns: sk-… (OpenAI/Anthropic sk-ant-…/OpenRouter sk-or-…/generic) · AIza… (Gemini) · hex-32 (Azure).
 // Defense-in-depth: redact là LỚP CUỐI — KHÔNG BAO GIỜ serialize headers/auth/config vào log từ đầu.
+// UAT 20/10 bổ sung: redactSrc — redact URL cho báo cáo UC-09 (bond/token/uuid không lọt).
 
 const REDACTED = "[redacted]";
 
@@ -31,4 +32,17 @@ export function redactConfig<T extends object>(config: T): T {
     copy["azure"] = redactConfig(copy["azure"] as object);
   }
   return copy as unknown as T;
+}
+
+// redactSrc — URL an toàn cho báo cáo: blob:/data: chỉ báo độ dài; about: giữ nguyên;
+// http(s) → origin + path cuối (query/hash strip: usid/sig/token không lọt); tương đối giữ nguyên.
+export function redactSrc(src: string): string {
+  if (src.startsWith("blob:")) return "blob:<" + String(src.length) + " chars>";
+  const dataMatch = src.match(/^(data:[^;,]+)/);
+  if (dataMatch !== null) return (dataMatch[1] ?? "data:") + ";base64,<" + String(src.length) + " chars>";
+  if (src.startsWith("about:")) return src;
+  if (!/^https?:/i.test(src)) return (src.split("?")[0] ?? src).split("#")[0] ?? "";
+  const parts = ((src.split("?")[0] ?? src).split("#")[0] ?? "").split("/");
+  const origin = (parts[0] ?? "") + "//" + (parts[2] ?? "");
+  return (origin + "/…/" + (parts[parts.length - 1] ?? "")).slice(0, 80);
 }

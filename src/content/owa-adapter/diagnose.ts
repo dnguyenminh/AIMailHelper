@@ -11,6 +11,7 @@ import { createA11yIndex } from "./a11y-tree";
 import { normalizeLabel, resolveBySelectorsFromChain, spikeSection } from "./owa-spike";
 import { detectView } from "./detector";
 import { sendMessage } from "../../shared/messaging";
+import { describePreviewDialogLines } from "./preview-dialog";
 
 export const MAX_REPORT_CHARS = 20_000; // EF-1 UC-09 — snapshot quá lớn → cắt + ghi chú
 
@@ -34,6 +35,7 @@ export interface DiagnoseDeps {
   sendPresence: () => boolean; // đối chiếu UC-09 — KHÔNG có đường kích hoạt nào từ extension
   userAgent: () => string;
   probePreviewIframes?: () => Promise<FrameProbe[]>; // UAT 20/10 — CDP probe (mặc định qua SW RPC)
+  previewDialog?: () => string[]; // UAT 20/10 — DOM dialog surface (fui-DialogSurface) — nội dung redact sẵn
 }
 
 export interface ProbeResult {
@@ -66,7 +68,8 @@ export function defaultDiagnoseDeps(): DiagnoseDeps {
     probeChains: () => probeAllChains(),
     sendPresence: () => resolveBySelectorsFromChain(SEND_BUTTON_SELECTORS) !== null,
     userAgent: () => navigator.userAgent,
-    probePreviewIframes: async () => (await sendMessage<{ targets: FrameProbe[] }>("PREVIEW_IFRAME_PROBE", {})).targets
+    probePreviewIframes: async () => (await sendMessage<{ targets: FrameProbe[] }>("PREVIEW_IFRAME_PROBE", {})).targets,
+    previewDialog: () => describePreviewDialogLines()
   };
 }
 
@@ -95,6 +98,7 @@ export async function collectDiagnoseReport(deps: DiagnoseDeps = defaultDiagnose
   sections.push(probeSection(deps.probeChains()));
   sections.push(spikeSection()); // UAT — SPIKE trước snapshot lớn để không bị cắt (EF-1)
   if (deps.probePreviewIframes !== undefined) sections.push(await previewProbeSection(deps.probePreviewIframes));
+  if (deps.previewDialog !== undefined) sections.push(previewDialogSection(deps.previewDialog));
   sections.push(snapshotSection(deps.snapshot()));
   const hash = await deps.layoutHash();
   sections.push("LAYOUT HASH: " + hash + " (đổi khi MS đổi cấu trúc — BR-06)");
@@ -126,6 +130,15 @@ function probeSection(probes: ProbeResult[]): string {
     return "- " + probe.functionKey + ": " + hit;
   });
   return "--- T1 SELECTOR CHAINS ---\n" + lines.join("\n");
+}
+
+// UAT 20/10 — preview dialog (Fluent DialogSurface) TRỰC TIẾP từ DOM content — nhanh, redact sẵn.
+function previewDialogSection(linesFn: () => string[]): string {
+  try {
+    return "--- SPIKE: PREVIEW DIALOG (fui-DialogSurface — DOM content, M-2 redact) ---\n" + linesFn().join("\n");
+  } catch (error) {
+    return "--- SPIKE: PREVIEW DIALOG ---\n(không probe được: " + String(error).replace(/^Error: /, "").slice(0, 120) + ")";
+  }
 }
 
 // UAT 20/10 — CDP IMG probe: cấu trúc iframe preview + ảnh trang (src đã redact phía SW — M-2).
