@@ -74,7 +74,7 @@ export async function readPreviewText(tabId: number, tabUrl: string | undefined)
   return merged.length > MAX_PREVIEW_CHARS ? merged.slice(0, MAX_PREVIEW_CHARS) + "…[cắt]" : merged;
 }
 
-// ── UAT 20/10: preview Word render từng TRANG là <img> trong iframe — extract src trực tiếp
+// ── UAT 20/10: preview Word render từng TRANG là <img id="i1…"> trong iframe — extract src trực tiếp
 // (ảnh gốc full-res → OCR nét hơn screenshot; KHÔNG cần tab visible/focus). Chụp màn hình chỉ fallback.
 
 interface SnapshotNodesFull {
@@ -82,13 +82,17 @@ interface SnapshotNodesFull {
   attributes?: number[][]; // mỗi node 1 mảng phẳng [nameIdx, valueIdx, …]
 }
 
+export interface PreviewImage {
+  id: string;
+  src: string;
+}
+
 // Hàm thuần — trích src của mọi <img> từ DOMSnapshot (test được không cần CDP).
-// Preview Word đặt id trang dạng "#i1/#i2/…" — sort theo số trong id để đúng THỨ TỰ TRANG;
-// img không có id giữ thứ tự DOM (stable sort, đẩy về cuối).
-export function imagesFromSnapshot(snapshot: unknown): string[] {
+// Ưu tiên src → data-src (lazy) → url(…) trong style; sort theo số trong id "#i1/#i2…" (thứ tự trang).
+export function imagesFromSnapshot(snapshot: unknown): PreviewImage[] {
   const snap = snapshot as { strings?: string[]; documents?: { nodes?: SnapshotNodesFull }[] } | undefined;
   const strings = snap?.strings ?? [];
-  const found: { id: string; src: string }[] = [];
+  const found: PreviewImage[] = [];
   for (const doc of snap?.documents ?? []) {
     const nodeName = doc?.nodes?.nodeName ?? [];
     const attributes = doc?.nodes?.attributes ?? [];
@@ -96,20 +100,38 @@ export function imagesFromSnapshot(snapshot: unknown): string[] {
       if ((strings[nodeName[i] ?? -1] ?? "") !== "IMG") continue;
       const pairs = attributes[i] ?? [];
       let src = "";
+      let fallback = "";
       let id = "";
       for (let p = 0; p + 1 < pairs.length; p += 2) {
         const name = strings[pairs[p] ?? -1];
-        if (name === "src") src = strings[pairs[p + 1] ?? -1] ?? "";
-        else if (name === "id") id = strings[pairs[p + 1] ?? -1] ?? "";
+        const value = strings[pairs[p + 1] ?? -1] ?? "";
+        if (name === "src" && value.length > 0) src = value;
+        else if (name === "data-src" && value.length > 0) fallback = value;
+        else if (name === "id") id = value;
+        else if (name === "style" && fallback.length === 0) {
+          const match = value.match(/url\((['"]?)([^'")]+)\1\)/i);
+          if (match?.[2]) fallback = match[2];
+        }
       }
-      if (src.length > 0) found.push({ id: id, src: src });
+      const finalSrc = src.length > 0 ? src : fallback;
+      if (finalSrc.length > 0) found.push({ id: id, src: finalSrc });
     }
   }
   const idOrder = (id: string): number => {
     const match = id.match(/(\d+)/);
     return match === null ? Number.MAX_SAFE_INTEGER : parseInt(match[1] ?? "0", 10);
   };
-  return found.sort((a, b) => idOrder(a.id) - idOrder(b.id)).map((item) => item.src);
+  return found.sort((a, b) => idOrder(a.id) - idOrder(b.id));
+}
+
+// src tương đối trong iframe → tuyệt đối theo URL frame; data:/http giữ nguyên.
+function resolveSrc(src: string, frameUrl: string | undefined): string {
+  if (src.startsWith("data:") || /^https?:/i.test(src)) return src;
+  try {
+    return new URL(src, frameUrl).toString();
+  } catch {
+    return src;
+  }
 }
 
 // fetch ảnh http(s) (cookie OWA — host_permissions có domain OWA) → data URL. blob: không fetch được từ SW.
@@ -135,24 +157,39 @@ async function srcToDataUrl(src: string, maxChars: number): Promise<string | nul
 const MAX_PREVIEW_IMAGES = 10;
 
 // Lấy data URL của TẤT CẢ ảnh trang trong iframe preview của tab.
+// LỌI MỌI iframe (OOPIF): frame preview có thể src=about:blank (Office ghi nội dung động) —
+// KHÔNG lọc theo PREVIEW_FRAME_PATTERN; attach lỗi (đã attach bởi chính extension) vẫn dùng session.
 export async function readPreviewImages(tabId: number, tabUrl: string | undefined): Promise<string[]> {
   await ensureAttachedShared(tabId, tabUrl);
   const targets = await getTargets();
-  const frames = targets.filter((t) =>
-    (t.type as string) === "iframe" && t.url !== undefined && PREVIEW_FRAME_PATTERN.test(t.url) && t.attached === false);
-  const dataUrls: string[] = [];
+  const frames = targets.filter((t) => (t.type as string) === "iframe" && typeof t.id === "string");
+  const found: PreviewImage[] = [];
+  const seenSrc = new Set<string>();
   for (const frame of frames.slice(0, 4)) {
+    let snapshot: unknown;
     try {
-      await chrome.debugger.attach({ targetId: frame.id }, "1.3");
-      const snapshot = await sendSnapshot(frame.id);
-      for (const src of imagesFromSnapshot(snapshot)) {
-        const dataUrl = await srcToDataUrl(src, 2_500_000);
-        if (dataUrl !== null) dataUrls.push(dataUrl);
-        if (dataUrls.length >= MAX_PREVIEW_IMAGES) return dataUrls;
-      }
+      try { await chrome.debugger.attach({ targetId: frame.id }, "1.3"); } catch { /* đã attach — session của chính extension vẫn dùng được */ }
+      snapshot = await sendSnapshot(frame.id);
+      try { await chrome.debugger.detach({ targetId: frame.id }); } catch { /* ignore */ }
     } catch {
-      /* iframe hết hạn/detach — bỏ qua frame này */
+      continue; // frame hết hạn/session của extension khác — bỏ qua
     }
+    for (const item of imagesFromSnapshot(snapshot)) {
+      const resolved = resolveSrc(item.src, frame.url);
+      if (seenSrc.has(resolved)) continue;
+      seenSrc.add(resolved);
+      found.push({ id: item.id, src: resolved });
+    }
+  }
+  const idOrder = (id: string): number => {
+    const match = id.match(/(\d+)/);
+    return match === null ? Number.MAX_SAFE_INTEGER : parseInt(match[1] ?? "0", 10);
+  };
+  const dataUrls: string[] = [];
+  for (const item of found.sort((a, b) => idOrder(a.id) - idOrder(b.id))) {
+    const dataUrl = await srcToDataUrl(item.src, 2_500_000);
+    if (dataUrl !== null) dataUrls.push(dataUrl);
+    if (dataUrls.length >= MAX_PREVIEW_IMAGES) break;
   }
   return dataUrls;
 }

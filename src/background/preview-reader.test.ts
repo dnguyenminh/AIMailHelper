@@ -1,10 +1,12 @@
-// src/background/preview-reader.test.ts — imagesFromSnapshot: trích src thẻ IMG từ DOMSnapshot (UAT 20/10).
+// src/background/preview-reader.test.ts — imagesFromSnapshot: trích ảnh trang từ DOMSnapshot (UAT 20/10).
 import { describe, expect, it } from "vitest";
 import { imagesFromSnapshot } from "./preview-reader";
 
 interface ImgSpec {
   src?: string;
   id?: string;
+  dataSrc?: string;
+  style?: string;
 }
 
 // Helper dựng snapshot chuẩn CDP: bảng strings + node IMG với attributes phẳng [nameIdx, valueIdx, …].
@@ -22,6 +24,8 @@ function buildSnapshot(imgs: ImgSpec[]): unknown {
     nodeName.push(intern("IMG"));
     const pairs: number[] = [];
     if (img.src !== undefined) pairs.push(intern("src"), intern(img.src));
+    if (img.dataSrc !== undefined) pairs.push(intern("data-src"), intern(img.dataSrc));
+    if (img.style !== undefined) pairs.push(intern("style"), intern(img.style));
     if (img.id !== undefined) pairs.push(intern("id"), intern(img.id));
     attributes.push(pairs);
   }
@@ -31,15 +35,7 @@ function buildSnapshot(imgs: ImgSpec[]): unknown {
 describe("imagesFromSnapshot", () => {
   it("trích data URL src của IMG", () => {
     const result = imagesFromSnapshot(buildSnapshot([{ src: "data:image/jpeg;base64,AAA" }]));
-    expect(result).toEqual(["data:image/jpeg;base64,AAA"]);
-  });
-
-  it("trích nhiều ảnh theo thứ tự DOM khi không có id", () => {
-    const result = imagesFromSnapshot(buildSnapshot([
-      { src: "https://x/1.png" },
-      { src: "https://x/2.png" }
-    ]));
-    expect(result).toEqual(["https://x/1.png", "https://x/2.png"]);
+    expect(result).toEqual([{ id: "", src: "data:image/jpeg;base64,AAA" }]);
   });
 
   it("sort theo số trong id (#i1/#i2/…) bất kể thứ tự DOM — đúng thứ tự trang Word", () => {
@@ -49,22 +45,29 @@ describe("imagesFromSnapshot", () => {
       { id: "i10", src: "https://x/p10.png" },
       { id: "i3", src: "https://x/p3.png" }
     ]));
-    expect(result).toEqual([
+    expect(result.map((r) => r.src)).toEqual([
       "https://x/p1.png", "https://x/p2.png", "https://x/p3.png", "https://x/p10.png"
     ]);
   });
 
-  it("img có src không có id → giữ thứ tự DOM, đẩy sau nhóm có id", () => {
+  it("img src rỗng → fallback data-src, rồi background url(…) trong style", () => {
     const result = imagesFromSnapshot(buildSnapshot([
-      { src: "https://x/no-id.png" },
-      { id: "i1", src: "https://x/p1.png" }
+      { id: "i1", src: "", dataSrc: "https://x/lazy.png" },
+      { id: "i2", style: "width:100%; background-image: url('https://x/bg.jpg')" }
     ]));
-    expect(result).toEqual(["https://x/p1.png", "https://x/no-id.png"]);
+    expect(result.map((r) => r.src)).toEqual(["https://x/lazy.png", "https://x/bg.jpg"]);
   });
 
-  it("IMG không có src → bỏ qua, không lỗi", () => {
+  it("src có giá trị → ưu tiên hơn data-src/style", () => {
+    const result = imagesFromSnapshot(buildSnapshot([
+      { id: "i1", src: "https://x/real.png", dataSrc: "https://x/lazy.png" }
+    ]));
+    expect(result.map((r) => r.src)).toEqual(["https://x/real.png"]);
+  });
+
+  it("IMG không có src nào → bỏ qua, không lỗi", () => {
     expect(imagesFromSnapshot(buildSnapshot([{ id: "i1" }, { src: "https://x/ok.png" }])))
-      .toEqual(["https://x/ok.png"]);
+      .toEqual([{ id: "", src: "https://x/ok.png" }]);
     expect(imagesFromSnapshot(buildSnapshot([]))).toEqual([]);
   });
 
