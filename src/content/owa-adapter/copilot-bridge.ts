@@ -3,7 +3,12 @@
 //  nút panel AIMH "Phân tích Copilot" → hover nút Copilot ở BottomBar (user chỉ: #BottomBar > div:nth-child(2))
 //  → popup "Summarize this email" hiện → click → chatbox mở sidebar → SW đọc text qua CDP.
 // Click là hành động của USER (chủ động bấm nút của extension) — đúng phạm vi AutoMode (BR-01).
+import { sendMessage } from "../../shared/messaging";
+
 const SETTLE_MS = 500;
+const POLL_MS = 2500;
+const POLL_ROUNDS = 4;
+const COPILOT_MIN_TEXT = 400; // dưới ngưỡng → coi như chưa có summary thật (UI rác)
 
 export type CopilotTriggerResult = "clicked" | "no-entry" | "popup-not-found" | "panel-already-open";
 
@@ -66,4 +71,35 @@ export function describeCopilotLines(): string[] {
   const panel = findCopilotPanel();
   lines.push("panel chat: " + (panel === null ? "đóng" : "MỞ (id ẩn GUID — cacheable-iframe:*)"));
   return lines;
+}
+
+// ── GĐ-B 20/10 — analyzeViaCopilot: trigger "Summarize this email" + đọc ổn định text panel ──
+
+async function readCopilotText(): Promise<string> {
+  const read = await sendMessage<{ text: string; lines: string[] }>("COPIL_PANEL_READ", {});
+  return read.text;
+}
+
+// Bấm "Summarize this email" (hành động USER — bấm nút của extension) → chờ text panel ỔN ĐỊNH
+// (2 vòng liên tiếp không đổi) → trả text. Fail mọi bước → null (caller fallback vision/LLM).
+export async function analyzeViaCopilot(): Promise<{ text: string } | null> {
+  const beforeLen = (await readCopilotText()).length;
+  const trigger = await triggerCopilotSummarize();
+  if (trigger === "no-entry" || trigger === "popup-not-found") {
+    if (beforeLen > COPILOT_MIN_TEXT) return { text: await readCopilotText() }; // panel đã sẵn có nội dung
+    return null; // không đọc được gì — caller fallback
+  }
+  let lastLen = -1; let stableRounds = 0;
+  for (let round = 0; round < POLL_ROUNDS; round += 1) {
+    await new Promise((r) => setTimeout(r, POLL_MS)); // chờ Copilot stream summary...
+    const text = await readCopilotText();
+    if (text.length === lastLen && text.length > COPILOT_MIN_TEXT) {
+      stableRounds += 1;
+      if (stableRounds >= 2) return { text: text }; // 2 liên tiếp bằng → copy xong
+    } else {
+      stableRounds = 0;
+    }
+    lastLen = text.length;
+  }
+  return null; // không ổn định / không tăng — fallback vision
 }

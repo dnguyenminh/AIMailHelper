@@ -4,6 +4,7 @@
 
 import { sendMessage } from "../../shared/messaging";
 import { collectDialogImages } from "./preview-dialog";
+import { analyzeViaCopilot } from "./copilot-bridge";
 
 const CONTENT_FETCH_DEPS = { fetchImpl: fetch, FileReaderCtor: FileReader }; // page context
 
@@ -91,6 +92,24 @@ export async function readFullDocumentVision(
   _fileName: string,
   onProgress?: (phase: string, current: number, total: number) => void
 ): Promise<{ synthesis: VisionSynthesisResult; chunks: ChunkSummary[] }> {
+  // GĐ-B (20/10) — Copilot THAY LLM+VL (user quyết): trigger "Summarize this email" + đọc text
+  // panel. Fail (không license/panel chết/timeout) → null → pipeline vision cũ làm fallback.
+  onProgress?.("copilot", 0, 1);
+  const copilot = await analyzeViaCopilot();
+  if (copilot !== null) {
+    onProgress?.("copilot", 1, 1);
+    const synthesis: VisionSynthesisResult = {
+      overview: copilot.text,
+      details: "",
+      conclusions: "",
+      actionItems: []
+    };
+    return {
+      synthesis: synthesis,
+      chunks: [{ chunkIndex: 0, summary: copilot.text, keyPoints: [], pageRange: { from: 1, to: 1 } }]
+    };
+  }
+
   // 1. Ưu tiên EXTRACT ảnh gốc từ iframe (full-res, không cần tab visible); fallback screenshot.
   let allPages = await collectPreviewImages();
   if (allPages.length === 0) allPages = await captureAllPages();
