@@ -4,7 +4,7 @@
 // target (OOPIF) và dùng CDP DOMSnapshot.captureSnapshot (CHỈ ĐỌC — không Runtime.evaluate).
 // Ưu điểm: đọc được MỌI định dạng OWA render (doc/docx/xls/xlsx…) — không cần format parser.
 import { ensureAttachedShared } from "./debugger-scroll";
-import { discoverFrames, getTargets, sendSnapshot } from "./frame-discovery";
+import { discoverFrames, getTargets, isFrameCandidate, sendSnapshot } from "./frame-discovery";
 
 const PREVIEW_FRAME_PATTERN = /officeapps\.live\.com|office\.com\/(wv|xv|pv|we)|word-view|excel-view|powerpoint-view|attachments\.office\.net/i;
 const MAX_PREVIEW_CHARS = 20_000;
@@ -46,9 +46,9 @@ export function textFromSnapshot(snapshot: unknown): string {
 export async function readPreviewText(tabId: number, tabUrl: string | undefined): Promise<string> {
   await ensureAttachedShared(tabId, tabUrl); // session chung với trusted-scroll (1 infobar)
   const targets = await getTargets();
-  // @types/chrome chưa có "iframe" trong union — Chrome thật trả về "iframe" cho OOPIF.
+  // Edge 155: OOPIF type="other" (wordviewerframe…) — isFrameCandidate bắt cả "iframe" của Chrome.
   const frames = targets.filter((t) =>
-    (t.type as string) === "iframe" && t.url !== undefined && PREVIEW_FRAME_PATTERN.test(t.url) && t.attached === false);
+    isFrameCandidate(t) && t.url !== undefined && PREVIEW_FRAME_PATTERN.test(t.url) && t.attached === false);
   const texts: string[] = [];
   for (const frame of frames.slice(0, 4)) {
     try {

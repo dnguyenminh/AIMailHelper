@@ -14,7 +14,23 @@ export interface DiscoveredFrame {
   targetId?: string; // thiếu → không attach trực tiếp được (chỉ qua frame tree)
   url: string; // nguyên bản (dùng để fetch ảnh); báo cáo PHẢI redact trước khi in
   attached: boolean;
-  via: "target" | "event" | "tree";
+  via: string; // "target[|:other]" | "event" | "tree" — nguồn phát hiện
+}
+
+// Edge 155 trả type="other" cho OOPIF/iframe đếm được (word-viewerframe.aspx…) — KHÔNG phải
+// "iframe" như Chrome → filter cũ bỏ nhầm toàn bộ frame preview. Candidate = iframe (Chrome)
+// HOẶC other có url http(s)/blob (Edge) — loại chrome-extension/devtools/worker.
+export function isFrameCandidate(info: chrome.debugger.TargetInfo): boolean {
+  const type = (info.type as string) ?? "";
+  const url = info.url ?? "";
+  if (type !== "iframe" && type !== "other") return false;
+  if (url.length === 0 || url.startsWith("chrome-extension://") || url.startsWith("devtools://")) return false;
+  return /^(https?|blob):/i.test(url);
+}
+
+// Thứ tự ưu tiên attach: frame Office viewer (nội dung attachment) trước, khác sau.
+export function viewerRank(url: string): number {
+  return /officeapps|word-view|excel-view|powerpoint-view|attachments\.office/i.test(url) ? 0 : 1;
 }
 
 // event auto-attach — listener LAZY-INSTALL (chỉ khi discoverFrames chạy thật, tránh phá test env).
@@ -104,9 +120,12 @@ export async function discoverFrames(tabId: number, tabUrl: string | undefined):
     lines.push("target #" + String(index) + " " + String(t.type ?? "?") + " attached=" + (t.attached === true ? "A" : "-") + " url=" + redactSrc(t.url ?? ""));
   }
   const frames: DiscoveredFrame[] = [];
-  for (const t of targets) {
-    if ((t.type as string) !== "iframe" || t.id === undefined) continue;
-    frames.push({ targetId: t.id, url: t.url ?? "", attached: t.attached === true, via: "target" });
+  const candidates = targets.filter(isFrameCandidate)
+    .sort((a, b) => viewerRank(a.url ?? "") - viewerRank(b.url ?? "")); // word-viewer trước
+  lines.push("frame candidates: " + (candidates.slice(0, 8).map((t) => String(t.type ?? "?") + ":" + redactSrc(t.url ?? "")).join(" | ") || "(không có)"));
+  for (const t of candidates) {
+    if (t.id === undefined || frames.some((f) => f.targetId === t.id)) continue;
+    frames.push({ targetId: t.id, url: t.url ?? "", attached: t.attached === true, via: "target:" + String(t.type ?? "?") });
   }
   for (const info of eventFrames.slice(0, 8)) {
     if (info.id === undefined || frames.some((f) => f.targetId === info.id)) continue;
