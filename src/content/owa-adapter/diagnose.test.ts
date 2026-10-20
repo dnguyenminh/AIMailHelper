@@ -78,6 +78,26 @@ describe("UC-09 — collectDiagnoseReport", () => {
     );
     expect(report.text).toContain("unknown (EF-2)");
   });
+
+  it("CDP IMG probe: hiện iframe + count + ids; dep bỏ trống → section không xuất hiện", async () => {
+    const withProbe = await collectDiagnoseReport(makeDeps({
+      probePreviewIframes: async () => [
+        { url: "https://officeapps.live.com/…/viewer.html", attached: false, imgCount: 3, ids: ["i1", "i2", "i3"], samples: ["https://officeapps.live.com/…/p1.png"] }
+      ]
+    }));
+    expect(withProbe.text).toContain("imgs=3");
+    expect(withProbe.text).toContain("ids=[i1,i2,i3]");
+    expect(withProbe.text).toContain("CDP IMG PROBE");
+    const withoutProbe = await collectDiagnoseReport(makeDeps({}));
+    expect(withoutProbe.text).not.toContain("CDP IMG PROBE"); // dep tùy chọn — test cũ không bị ảnh hưởng
+  });
+
+  it("CDP IMG probe lỗi SW → báo 'không probe được' trong section (không ném ra ngoài)", async () => {
+    const report = await collectDiagnoseReport(makeDeps({
+      probePreviewIframes: async () => { throw new Error("PREVIEW_IFRAME_PROBE failed"); }
+    }));
+    expect(report.text).toContain("(không probe được: PREVIEW_IFRAME_PROBE failed");
+  });
 });
 
 describe("probeAllChains — T1 chain status (UC-09 AF-1)", () => {

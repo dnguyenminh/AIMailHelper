@@ -10,8 +10,18 @@ import { SELECTOR_CHAINS } from "./selectors";
 import { createA11yIndex } from "./a11y-tree";
 import { normalizeLabel, resolveBySelectorsFromChain, spikeSection } from "./owa-spike";
 import { detectView } from "./detector";
+import { sendMessage } from "../../shared/messaging";
 
 export const MAX_REPORT_CHARS = 20_000; // EF-1 UC-09 — snapshot quá lớn → cắt + ghi chú
+
+export interface FrameProbe {
+  url: string;
+  attached: boolean;
+  imgCount: number;
+  ids: string[];
+  samples: string[];
+  error?: string;
+}
 
 export interface DiagnoseDeps {
   detect: () => { view: string; container: Element | null };
@@ -20,6 +30,7 @@ export interface DiagnoseDeps {
   probeChains: () => ProbeResult[];
   sendPresence: () => boolean; // đối chiếu UC-09 — KHÔNG có đường kích hoạt nào từ extension
   userAgent: () => string;
+  probePreviewIframes?: () => Promise<FrameProbe[]>; // UAT 20/10 — CDP probe (mặc định qua SW RPC)
 }
 
 export interface ProbeResult {
@@ -51,7 +62,8 @@ export function defaultDiagnoseDeps(): DiagnoseDeps {
     layoutHash: () => computeLayoutHash(),
     probeChains: () => probeAllChains(),
     sendPresence: () => resolveBySelectorsFromChain(SEND_BUTTON_SELECTORS) !== null,
-    userAgent: () => navigator.userAgent
+    userAgent: () => navigator.userAgent,
+    probePreviewIframes: async () => (await sendMessage<{ targets: FrameProbe[] }>("PREVIEW_IFRAME_PROBE", {})).targets
   };
 }
 
@@ -79,6 +91,7 @@ export async function collectDiagnoseReport(deps: DiagnoseDeps = defaultDiagnose
   sections.push(viewSection(deps.detect()));
   sections.push(probeSection(deps.probeChains()));
   sections.push(spikeSection()); // UAT — SPIKE trước snapshot lớn để không bị cắt (EF-1)
+  if (deps.probePreviewIframes !== undefined) sections.push(await previewProbeSection(deps.probePreviewIframes));
   sections.push(snapshotSection(deps.snapshot()));
   const hash = await deps.layoutHash();
   sections.push("LAYOUT HASH: " + hash + " (đổi khi MS đổi cấu trúc — BR-06)");
@@ -110,6 +123,23 @@ function probeSection(probes: ProbeResult[]): string {
     return "- " + probe.functionKey + ": " + hit;
   });
   return "--- T1 SELECTOR CHAINS ---\n" + lines.join("\n");
+}
+
+// UAT 20/10 — CDP IMG probe: cấu trúc iframe preview + ảnh trang (src đã redact phía SW — M-2).
+async function previewProbeSection(probeFn: () => Promise<FrameProbe[]>): Promise<string> {
+  try {
+    const frames = await probeFn();
+    const lines = frames.map((frame, index) => {
+      const parts = ["iframe #" + String(index) + ": url=" + frame.url, "attached=" + String(frame.attached), "imgs=" + String(frame.imgCount)];
+      if (frame.ids.length > 0) parts.push("ids=[" + frame.ids.join(",") + "]");
+      if (frame.samples.length > 0) parts.push("srcs=" + frame.samples.join(" | "));
+      if (frame.error !== undefined) parts.push("ERROR=" + frame.error);
+      return parts.join(" ");
+    });
+    return "--- SPIKE: PREVIEW IFRAMES — CDP IMG PROBE (M-2: src đã redact query/token) ---\n" + (lines.join("\n") || "(không có iframe target nào)");
+  } catch (error) {
+    return "--- SPIKE: PREVIEW IFRAMES — CDP IMG PROBE ---\n(không probe được: " + String(error).replace(/^Error: /, "").slice(0, 120) + ")";
+  }
 }
 
 // M-2 — label trong snapshot được lọc lần 2: chỉ control chức năng giữ label.

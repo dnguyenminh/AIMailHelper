@@ -2,6 +2,7 @@ import { AppError } from "../../shared/errors";
 import { extractAttachmentText } from "../../shared/attachments/extract";
 import { collectCapture, registerCaptureListener, startCapture } from "../attachment-capture";
 import { readPreviewText, readPreviewImages } from "../preview-reader";
+import { probePreviewIframes } from "../preview-probe";
 import { resolveActive } from "../llm-runtime";
 import { ensureHostPermission } from "../../shared/llm/permissions";
 import { storage } from "../../shared/storage";
@@ -63,6 +64,11 @@ const readPreviewHandler: RpcHandler = async (_payload, sender) => {
 const readPreviewImagesHandler: RpcHandler = async (_payload, sender) => {
   const { tabId, url } = senderTab(sender);
   return { images: await readPreviewImages(tabId, url) };
+};
+// UC-09 mở rộng — probe cấu trúc iframe/img qua CDP cho DIAGNOSE (src redact — M-2).
+const previewProbeHandler: RpcHandler = async (_payload, sender) => {
+  senderTab(sender); // xác thực caller là tab OWA — probe chỉ phục vụ diagnose từ content
+  return { targets: await probePreviewIframes() };
 };
 interface VisionPageFile {
   name: string;
@@ -170,5 +176,6 @@ export function registerAttachmentHandlers(router: MessageRouter): void {
   router.register("ATTACHMENT_EXTRACT", extractHandler);
   router.register("ATTACHMENT_READ_PREVIEW", readPreviewHandler);
   router.register("ATTACHMENT_READ_PREVIEW_IMAGES", readPreviewImagesHandler);
+  router.register("PREVIEW_IFRAME_PROBE", previewProbeHandler);
   router.register("ATTACHMENT_VISION_TEXT", visionTextHandler);
 }

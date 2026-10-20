@@ -39,11 +39,11 @@ export function textFromSnapshot(snapshot: unknown): string {
   return parts.join(" ").replace(/[ \t]+/g, " ").trim();
 }
 
-function getTargets(): Promise<chrome.debugger.TargetInfo[]> {
+export function getTargets(): Promise<chrome.debugger.TargetInfo[]> {
   return new Promise((resolve) => chrome.debugger.getTargets((targets) => resolve(targets ?? [])));
 }
 
-function sendSnapshot(targetId: string): Promise<unknown> {
+export function sendSnapshot(targetId: string): Promise<unknown> {
   return new Promise((resolve) => {
     chrome.debugger.sendCommand({ targetId: targetId }, "DOMSnapshot.captureSnapshot", { computedStyles: [] }, (result) => {
       void chrome.runtime.lastError; // iframe hết hạn/đóng — resolve undefined
