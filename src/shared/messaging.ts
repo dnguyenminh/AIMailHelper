@@ -24,7 +24,8 @@ export type RpcKind =
   | "ATTACHMENT_READ_PREVIEW"
   | "ATTACHMENT_READ_PREVIEW_IMAGES"
   | "PREVIEW_IFRAME_PROBE"
-  | "ATTACHMENT_VISION_TEXT";
+  | "ATTACHMENT_VISION_TEXT"
+  | "COPIL_PANEL_READ";
 
 export const RPC_KINDS: readonly RpcKind[] = [
   "CONFIG_GET",
@@ -46,7 +47,8 @@ export const RPC_KINDS: readonly RpcKind[] = [
   "ATTACHMENT_READ_PREVIEW",
   "ATTACHMENT_READ_PREVIEW_IMAGES",
   "PREVIEW_IFRAME_PROBE",
-  "ATTACHMENT_VISION_TEXT"
+  "ATTACHMENT_VISION_TEXT",
+  "COPIL_PANEL_READ"
 ];
 
 export function isRpcKind(value: unknown): value is RpcKind {

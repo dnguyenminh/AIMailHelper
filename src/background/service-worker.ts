@@ -14,6 +14,7 @@ import { registerTriageHandlers } from "./handlers/triage.handler";
 import { registerVisionHandlers } from "./handlers/vision.handler";
 import { registerDebuggerHandlers } from "./handlers/debugger.handler";
 import { registerAttachmentHandlers } from "./handlers/attachment.handler";
+import { registerCopilotHandlers } from "./handlers/copilot.handler";
 
 const router = new MessageRouter();
 registerConfigHandlers(router); // GĐ1: CONFIG_GET/SET + KEY_STORAGE_SET thật (BR-04/BR-08/BR-15)
@@ -24,6 +25,7 @@ registerQueueHandlers(router); // GĐ6: QUEUE_LIST/UPDATE thật (BR-15 validate
 registerStateHandlers(router); // GĐ1: GET_RUNTIME_STATE (FR-GD1-02)
 registerDebuggerHandlers(router); // UAT 18/10: DEBUGGER_SCROLL/DETACH — trusted-scroll deep-scan
 registerAttachmentHandlers(router); // UAT 18/10 Plan A: capture + extract attachment cho AI
+registerCopilotHandlers(router); // GĐ-A 20/10: COPIL_PANEL_READ — đọc summary Copilot qua CDP
 router.listen();
 
 const streamServer = new PortServer();

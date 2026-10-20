@@ -12,20 +12,13 @@ import { normalizeLabel, resolveBySelectorsFromChain, spikeSection } from "./owa
 import { detectView } from "./detector";
 import { sendMessage } from "../../shared/messaging";
 import { describePreviewDialogLines } from "./preview-dialog";
+import { describeCopilotLines } from "./copilot-bridge";
+import { copilotSection, previewDialogSection, previewProbeSection } from "./diagnose-uat-sections";
+
+export type { FrameProbe } from "./diagnose-uat-sections";
+import type { FrameProbe } from "./diagnose-uat-sections";
 
 export const MAX_REPORT_CHARS = 20_000; // EF-1 UC-09 — snapshot quá lớn → cắt + ghi chú
-
-export interface FrameProbe {
-  url: string;
-  attached: boolean;
-  imgCount: number;
-  ids: string[];
-  samples: string[];
-  main?: boolean;
-  via?: string;
-  tree?: string[];
-  error?: string;
-}
 
 export interface DiagnoseDeps {
   detect: () => { view: string; container: Element | null };
@@ -36,6 +29,7 @@ export interface DiagnoseDeps {
   userAgent: () => string;
   probePreviewIframes?: () => Promise<FrameProbe[]>; // UAT 20/10 — CDP probe (mặc định qua SW RPC)
   previewDialog?: () => string[]; // UAT 20/10 — DOM dialog surface (fui-DialogSurface) — nội dung redact sẵn
+  copilotPanel?: () => Promise<string[]>; // GĐ-A 20/10 — trạng thái Copilot + CDP đọc panel (M-2)
 }
 
 export interface ProbeResult {
@@ -69,7 +63,14 @@ export function defaultDiagnoseDeps(): DiagnoseDeps {
     sendPresence: () => resolveBySelectorsFromChain(SEND_BUTTON_SELECTORS) !== null,
     userAgent: () => navigator.userAgent,
     probePreviewIframes: async () => (await sendMessage<{ targets: FrameProbe[] }>("PREVIEW_IFRAME_PROBE", {})).targets,
-    previewDialog: () => describePreviewDialogLines()
+    previewDialog: () => describePreviewDialogLines(),
+    copilotPanel: async () => {
+      const state = describeCopilotLines();
+      const read = await sendMessage<{ text: string; lines: string[] }>("COPIL_PANEL_READ", {});
+      const lines = [...state, ...read.lines];
+      if (read.text.length > 0) lines.push("panel textLen=" + String(read.text.length) + " (nội dung ẨN per M-2 — xem kết quả phân tích để đọc full)");
+      return lines;
+    }
   };
 }
 
@@ -99,6 +100,7 @@ export async function collectDiagnoseReport(deps: DiagnoseDeps = defaultDiagnose
   sections.push(spikeSection()); // UAT — SPIKE trước snapshot lớn để không bị cắt (EF-1)
   if (deps.probePreviewIframes !== undefined) sections.push(await previewProbeSection(deps.probePreviewIframes));
   if (deps.previewDialog !== undefined) sections.push(previewDialogSection(deps.previewDialog));
+  if (deps.copilotPanel !== undefined) sections.push(await copilotSection(deps.copilotPanel));
   sections.push(snapshotSection(deps.snapshot()));
   const hash = await deps.layoutHash();
   sections.push("LAYOUT HASH: " + hash + " (đổi khi MS đổi cấu trúc — BR-06)");
@@ -130,35 +132,6 @@ function probeSection(probes: ProbeResult[]): string {
     return "- " + probe.functionKey + ": " + hit;
   });
   return "--- T1 SELECTOR CHAINS ---\n" + lines.join("\n");
-}
-
-// UAT 20/10 — preview dialog (Fluent DialogSurface) TRỰC TIẾP từ DOM content — nhanh, redact sẵn.
-function previewDialogSection(linesFn: () => string[]): string {
-  try {
-    return "--- SPIKE: PREVIEW DIALOG (fui-DialogSurface — DOM content, M-2 redact) ---\n" + linesFn().join("\n");
-  } catch (error) {
-    return "--- SPIKE: PREVIEW DIALOG ---\n(không probe được: " + String(error).replace(/^Error: /, "").slice(0, 120) + ")";
-  }
-}
-
-// UAT 20/10 — CDP IMG probe: cấu trúc iframe preview + ảnh trang (src đã redact phía SW — M-2).
-async function previewProbeSection(probeFn: () => Promise<FrameProbe[]>): Promise<string> {
-  try {
-    const frames = await probeFn();
-    const lines = frames.map((frame, index) => {
-      const parts = ["iframe #" + String(index) + ": url=" + frame.url, "attached=" + String(frame.attached), "imgs=" + String(frame.imgCount)];
-      if (frame.main === true) parts[0] = "TRANG CHÍNH [" + String(index) + "]: url=" + frame.url;
-      if (frame.via !== undefined) parts.push("via=" + frame.via);
-      if (frame.ids.length > 0) parts.push("ids=[" + frame.ids.join(",") + "]");
-      if (frame.samples.length > 0) parts.push("srcs=" + frame.samples.join(" | "));
-      if (frame.error !== undefined) parts.push("ERROR=" + frame.error);
-      const subLines = (frame.tree ?? []).map((line) => "    ▸ " + line);
-      return parts.join(" ") + (subLines.length > 0 ? "\n" + subLines.join("\n") : "");
-    });
-    return "--- SPIKE: PREVIEW IFRAMES — CDP IMG PROBE (M-2: src đã redact query/token) ---\n" + (lines.join("\n") || "(không có iframe target nào — MỞ dialog preview Word TRƯỚC khi chạy Diagnose; imgs=0 khi preview mở là dữ liệu)");
-  } catch (error) {
-    return "--- SPIKE: PREVIEW IFRAMES — CDP IMG PROBE ---\n(không probe được: " + String(error).replace(/^Error: /, "").slice(0, 120) + ")";
-  }
 }
 
 // M-2 — label trong snapshot được lọc lần 2: chỉ control chức năng giữ label.
