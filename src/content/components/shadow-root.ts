@@ -108,5 +108,23 @@ export const PANEL_BASE_CSS = [
   ".aimh-body { display: flex; flex-direction: column; gap: 4px; }",
   ".aimh-bubble { width: 44px; height: 44px; border-radius: 50%; border: none; cursor: pointer;",
   "  background: #0f6cbd; color: #ffffff; font-size: 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.24); }",
-  ".aimh-bubble:hover { background: #115ea3; }"
+  ".aimh-bubble:hover { background: #115ea3; }",
+  // 21/10 uat60 — Copilot markdown render (heading/bullet/link/table giữ format chat)
+  ".aimh-md { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px;",
+  "  max-height: 260px; overflow: auto; padding: 8px; border-radius: 6px; background: #f5f5f7; }",
+  ".aimh-md-h { font-weight: 600; margin-top: 2px; }",
+  ".aimh-md-h1 { font-size: 15px; } .aimh-md-h2 { font-size: 14px; }",
+  ".aimh-md-h3 { font-size: 13.5px; } .aimh-md-h4 { font-size: 13px; }",
+  ".aimh-md-h5, .aimh-md-h6 { font-size: 12.5px; }",
+  ".aimh-md-p { margin: 0; }",
+  ".aimh-md-ul, .aimh-md-ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 3px; }",
+  ".aimh-md-pre, .aimh-md-code { font-family: Consolas, monospace; font-size: 11.5px;",
+  "  background: #ececf0; border-radius: 4px; }",
+  ".aimh-md-pre { padding: 6px 8px; overflow: auto; white-space: pre-wrap; }",
+  ".aimh-md-code { padding: 1px 4px; }",
+  ".aimh-md-quote { margin: 0; padding: 2px 10px; border-left: 3px solid #c7c7cc; color: #5f6368; }",
+  ".aimh-md-a { color: #0f6cbd; word-break: break-word; }",
+  ".aimh-md-tablewrap { overflow: auto; }",
+  ".aimh-md-table { border-collapse: collapse; font-size: 11.5px; }",
+  ".aimh-md-table td { border: 1px solid #d1d1d7; padding: 3px 6px; vertical-align: top; }"
 ].join("\n");

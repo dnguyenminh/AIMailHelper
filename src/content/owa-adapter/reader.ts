@@ -2,7 +2,7 @@
 // Đọc QUA locate() (T1/T2) — không thao tác DOM ngoài owa-adapter (GĐ3 Done #6). bodyText chuẩn hóa
 // qua textContent (SR-10). Gate BR-14: bodyText rỗng → ERR-10 ngay tại reader, KHÔNG gọi LLM.
 import { AppError } from "../../shared/errors";
-import type { EmailData } from "../../shared/types";
+import type { EmailData, CancelSignal } from "../../shared/types";
 import type { OwaViewInfo } from "./detector";
 import { readSender, readRecipients, readFromLine } from "./recipients";
 import { withAttachmentTexts } from "./attachment-reader";
@@ -17,7 +17,8 @@ const BODY_PROBE = '[aria-label*="body" i]';
 const EXCERPT_CHARS = 160;
 
 // UC-01 step 2 — reader qua self-healing locator; ERR-06 khi không thấy vùng đọc (EF-3).
-export async function readEmail(locate: LocateFn, view: OwaViewInfo): Promise<EmailData> {
+// signal (uat58): start mới/cancel() flip → nhánh Copilot tự hủy, không còn pipeline mồ côi.
+export async function readEmail(locate: LocateFn, view: OwaViewInfo, signal?: CancelSignal): Promise<EmailData> {
   let container = view.container ?? (await locate("reading-pane", "vùng đọc email đang mở"));
   if (!container) throw new AppError("ERR-06", "errors.owaNotFound");
   // UAT — OWA mới (outlook.cloud.microsoft): detector findConversation trả [data-conversation]
@@ -69,10 +70,10 @@ export async function readEmail(locate: LocateFn, view: OwaViewInfo): Promise<Em
   // chống cắt cap → tóm tắt TƯƠI trả về email.copilotSummary → AnalyzeController hiển thị
   // VERBATIM, KHÔNG gọi LLM stream. Fail (không license/entry/timeout) → pipeline cũ bên dưới.
   try {
-    const copilot = await analyzeViaCopilot();
+    const copilot = await analyzeViaCopilot(signal);
     if (copilot !== null && copilot.text.trim().length > 0) {
       console.log("[AIMH][copilot] tóm tắt TƯƠI (len=" + String(copilot.text.length) + ") — hiển thị nguyên văn, không gọi LLM local");
-      return { ...email, copilotSummary: copilot.text };
+      return { ...email, copilotSummary: copilot.text, copilotHtml: copilot.html };
     }
   } catch (error) {
     console.warn("[AIMH][copilot] fail — fallback pipeline cũ:", String(error).slice(0, 120));

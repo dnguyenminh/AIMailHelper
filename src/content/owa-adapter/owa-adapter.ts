@@ -2,7 +2,7 @@
 // Biên DOM duy nhất (§1.4 #2): modules/components chỉ thấy facade; chuỗi locate theo §5.3:
 // SemanticLocator (T1→cache→T2) → T3 VisionFallback CHỈ khi T1+T2 fail (BR-12; BR-03 opt-in
 // kiểm tra kép tại vision-fallback). FunctionKey/LocatorStrategy/SelectorTier canonical selectors.ts.
-import type { EmailData } from "../../shared/types";
+import type { EmailData, CancelSignal } from "../../shared/types";
 import { insertDraft, openReplyBox } from "./actions";
 import type { ActionsDeps, InsertDecision, InsertOutcome } from "./actions";
 import { readEditableText, writeEditableText } from "./editable";
@@ -55,8 +55,9 @@ export class OwaAdapter {
   }
 
   // §3.1.4 — reader: EmailData qua locate; gate BR-14 nằm trong reader (GĐ3 Done #2).
-  async readEmail(): Promise<EmailData> {
-    return readEmail((key, question) => this.locate(key, question), this.detectView());
+  // signal (uat58): start mới/cancel() flip → nhánh Copilot tự hủy (không pipeline mồ côi).
+  async readEmail(signal?: CancelSignal): Promise<EmailData> {
+    return readEmail((key, question) => this.locate(key, question), this.detectView(), signal);
   }
 
   // FR-GD3-04 — inject nút "AI phân tích" vào toolbar email QUA adapter (components không tự bấm DOM).

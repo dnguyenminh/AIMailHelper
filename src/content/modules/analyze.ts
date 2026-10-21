@@ -1,12 +1,12 @@
-// src/content/modules/analyze.ts — orchestrate UC-01 (TDD §3.7): readEmail → Port "analyze" stream →
-// parse 6.6f fail-closed (validateAnalysisResult caps §8.11 L3) → state cho Panel render.
-// AF-4: request cũ hủy khi bắt đầu phân tích email mới; streaming render gom rAF ≤ 1 render/frame.
+// src/content/modules/analyze.ts — UC-01 (TDD §3.7): readEmail → Port "analyze" → parse 6.6f
+// fail-closed → state cho Panel. AF-4 + uat58: run mới hủy run cũ; watchdog chống treo streaming.
 import { toAnalysisResult } from "../../shared/analysis";
 import { AppError } from "../../shared/errors";
 import type { PortEvent } from "../../shared/messaging";
 import { PortClient } from "../../shared/port-client";
 import type { StreamHandle } from "../../shared/port-client";
-import type { AnalysisResult, EmailData } from "../../shared/types";
+import type { AnalysisResult, EmailData, CancelSignal } from "../../shared/types";
+import type { MdNode } from "../../shared/copilot-format";
 import { owaAdapter } from "../owa-adapter/owa-adapter";
 
 export interface AnalysisError {
@@ -23,17 +23,18 @@ export interface AnalysisUiState {
   result: AnalysisResult | null;
   error: AnalysisError | null;
   copilot?: boolean; // GĐ-B — raw là lời Copilot TRẢ VERBATIM (panel hiển thị nguyên văn, result=null)
+  rawHtml?: MdNode[]; // 21/10 uat60 — cây sanitized từ outerHTML Copilot (render React giữ format)
 }
 
 export interface AnalyzeDeps {
-  readEmail: () => Promise<EmailData>;
+  readEmail: (signal?: CancelSignal) => Promise<EmailData>;
   request: (kind: "analyze", payload: { email: EmailData }, onEvent: (event: PortEvent) => void) => StreamHandle;
   onState: (state: AnalysisUiState) => void;
 }
 
 const IDLE: AnalysisUiState = { status: "idle", raw: "", result: null, error: null };
 
-// rAF không có trong mọi env (jsdom không bật pretendToBeVisual) — fallback timer cùng ngữ nghĩa.
+// rAF không có trong mọi env (jsdom không bật pretendToBeVisual) — fallback timer.
 const nextFrame: (callback: () => void) => number =
   typeof requestAnimationFrame === "function"
     ? (callback) => requestAnimationFrame(() => callback())
@@ -43,43 +44,70 @@ const cancelFrame = (id: number): void => {
   else clearTimeout(id);
 };
 
+const WATCHDOG_MS = 120_000; // uat58 — LLM first-chunk thường <30s; 120s = biên an toàn
+
 export class AnalyzeController {
   private handle: StreamHandle | null = null;
   private state: AnalysisUiState = IDLE;
   private raw = "";
   private frameId = 0;
   private email: EmailData | null = null; // GĐ4 — email nguồn cho UC-02 (panel đọc qua getEmail)
+  private runSignal: CancelSignal = { cancelled: false }; // uat58 — hủy pipeline mồ côi
+  private watchdogId = 0; // uat58 — stream câm tuyệt đối → ERR-07 (chống treo "Đang phân tích…")
 
   constructor(private readonly deps: AnalyzeDeps) {}
-
-  // UC-01 Main Flow — AF-4: start mới ⇒ cancel stream cũ (đổi email giữa chừng).
+  // UC-01 Main Flow — AF-4: start mới ⇒ cancel run cũ. Run cũ bị flip cancelled → poll
+  // Copilot tự chết + setState bị chặn (uat58: hết 2 instance giành chrome.debugger).
   async start(): Promise<void> {
+    this.runSignal.cancelled = true;
+    const signal: CancelSignal = { cancelled: false };
+    this.runSignal = signal;
     this.cancelStream();
     this.setState({ status: "reading", raw: "", result: null, error: null });
     let email: EmailData;
     try {
-      email = await this.deps.readEmail(); // ERR-10 (BR-14) / ERR-06 ném từ reader — EF-1/EF-3
+      email = await this.deps.readEmail(signal); // ERR-10 (BR-14) / ERR-06 ném từ reader — EF-1/EF-3
     } catch (error) {
       this.email = null;
       this.setState({ status: "error", raw: "", result: null, error: toAnalysisError(error) });
       return;
     }
+    if (signal.cancelled) return; // bị thay thế giữa lúc đọc — run mới đang owns state
     this.email = email;
-    // GĐ-B 20/10 — Copilot THAY LLM+VL: có copilotSummary → hiển thị NGUYÊN VĂN (result=null,
-    // KHÔNG request stream LLM). Summary schema cap ≤1000 ký tự (§8.11) không chứa được toàn văn
-    // Copilot → đi qua raw. Fail-closed giữ nguyên: không hiển thị gì khác ngoài lời Copilot.
+    // GĐ-B 20/10 — copilotSummary → NGUYÊN VĂN (schema cap ≤1000 ký tự §8.11 → đi qua raw).
     if (typeof email.copilotSummary === "string" && email.copilotSummary.trim().length > 0) {
-      this.setState({ status: "done", raw: email.copilotSummary, result: null, error: null, copilot: true });
+      this.setState({ status: "done", raw: email.copilotSummary, result: null, error: null, copilot: true, rawHtml: email.copilotHtml });
       return;
     }
     this.raw = "";
     this.setState({ status: "streaming", raw: "", result: null, error: null });
     this.handle = this.deps.request("analyze", { email: email }, (event) => this.onEvent(event));
+    this.armWatchdog();
+  }
+
+  // uat58 — watchdog: stream câm (port mất/SW chết/mạng treo) → ERR-07 sau 120s; panel
+  // không đứng ở "Đang phân tích…" vĩnh viễn. Copilot path không stream — không hụ.
+  private armWatchdog(): void {
+    this.clearWatchdog();
+    this.watchdogId = setTimeout(() => {
+      if (this.state.status !== "streaming") return;
+      this.onEvent({ type: "error", requestId: "watchdog", code: "ERR-07", i18nKey: "errors.timeout", retryable: true });
+    }, WATCHDOG_MS) as unknown as number;
+  }
+
+  private clearWatchdog(): void {
+    if (this.watchdogId !== 0) {
+      clearTimeout(this.watchdogId);
+      this.watchdogId = 0;
+    }
   }
 
   cancel(): void {
+    this.runSignal.cancelled = true;
     this.cancelStream();
-    this.setState(IDLE);
+    this.clearWatchdog();
+    this.state = IDLE; // GÁN TRỰC TIẾP — bypass guard (cancel có quyền set IDLE)
+    this.deps.onState(IDLE);
   }
 
   private cancelStream(): void {
@@ -89,9 +117,11 @@ export class AnalyzeController {
       cancelFrame(this.frameId);
       this.frameId = 0;
     }
+    this.clearWatchdog();
   }
 
   private onEvent(event: PortEvent): void {
+    this.clearWatchdog(); // tín hiệu sống — hủy watchdog
     if (event.type === "chunk") {
       this.raw += event.delta;
       this.scheduleRender(); // gom nhiều chunk trong 1 frame — ≤ 1 render/frame (NFR §10)
@@ -135,6 +165,7 @@ export class AnalyzeController {
   }
 
   private setState(state: AnalysisUiState): void {
+    if (this.runSignal.cancelled) return; // run mồ côi KHÔNG được đè state của run mới (uat58)
     this.state = state;
     this.deps.onState(state);
   }
@@ -161,7 +192,7 @@ export function toAnalysisError(error: unknown): AnalysisError {
 export function createAnalyzeController(onState: (state: AnalysisUiState) => void): AnalyzeController {
   const client = new PortClient();
   return new AnalyzeController({
-    readEmail: () => owaAdapter.readEmail(),
+    readEmail: (signal) => owaAdapter.readEmail(signal),
     request: (kind, payload, onEvent) => client.request(kind, payload, onEvent),
     onState: onState
   });

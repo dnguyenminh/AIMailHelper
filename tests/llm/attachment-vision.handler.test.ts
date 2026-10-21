@@ -14,12 +14,22 @@ function boot() {
   return router;
 }
 
-async function callVision(router: any, payload: unknown, sender: unknown) {
-  return router.handle({ kind: "ATTACHMENT_VISION_TEXT", requestId: "rpc_v", payload }, sender);
+async function callVision(router: MessageRouter, payload: unknown, sender?: unknown) {
+  return router.handle({ kind: "ATTACHMENT_VISION_TEXT", requestId: "rpc_v", payload },
+    sender as chrome.runtime.MessageSender | undefined);
+}
+
+// RpcResponse union: error nằm ở nhánh ok:false — helper thu gọn cho test (không dùng any).
+function errorOf(response: { ok: boolean } & Record<string, unknown>): { code: string } {
+  if (response.ok !== false) throw new Error("expected error response");
+  return response.error as { code: string };
 }
 
 beforeEach(() => {
-  const mock = createChromeMock() as any;
+  const mock = createChromeMock() as unknown as {
+    storage: { sync: { get: unknown } };
+    debugger: Record<string, unknown>;
+  };
   mock.storage.sync.get = vi.fn(async () => ({ vision: { enabled: true, model: "qwen2.5-vl" } }));
   mock.debugger = {
     attach: vi.fn(async () => undefined),
@@ -32,7 +42,7 @@ beforeEach(() => {
     onDetach: { addListener: vi.fn() },
     onEvent: { addListener: vi.fn() }
   };
-  (globalThis as any).chrome = mock;
+  (globalThis as { chrome?: unknown }).chrome = mock as unknown;
   resetSessionsForTests();
   vi.restoreAllMocks();
 });
@@ -42,41 +52,41 @@ describe("ATTACHMENT_VISION_TEXT — payload validation (UAT 18/10)", () => {
     const r = boot();
     const response = await callVision(r, { files: [] }, { tab: OWA_TAB });
     expect(response.ok).toBe(false);
-    expect(response.error.code).toBe("ERR-15");
+    expect(errorOf(response).code).toBe("ERR-15");
   });
 
   it("file không có pages → ERR-15", async () => {
     const r = boot();
     const response = await callVision(r, { files: [{ name: "a.docx", pages: [] }] }, { tab: OWA_TAB });
     expect(response.ok).toBe(false);
-    expect(response.error.code).toBe("ERR-15");
+    expect(errorOf(response).code).toBe("ERR-15");
   });
 
   it("file thiếu name → ERR-15", async () => {
     const r = boot();
     const response = await callVision(r, { files: [{ name: "", pages: ["data:image/jpeg;base64,/9j/"] }] }, { tab: OWA_TAB });
     expect(response.ok).toBe(false);
-    expect(response.error.code).toBe("ERR-15");
+    expect(errorOf(response).code).toBe("ERR-15");
   });
 
   it("quá nhiều file (>3) → ERR-15", async () => {
     const r = boot();
     const response = await callVision(r, { files: Array(5).fill({ name: "x.docx", pages: ["data:image/jpeg;base64,/9j/"] }) }, { tab: OWA_TAB });
     expect(response.ok).toBe(false);
-    expect(response.error.code).toBe("ERR-15");
+    expect(errorOf(response).code).toBe("ERR-15");
   });
 
   it("payload không phải array → ERR-15", async () => {
     const r = boot();
     const response = await callVision(r, { files: "not-array" }, { tab: OWA_TAB });
     expect(response.ok).toBe(false);
-    expect(response.error.code).toBe("ERR-15");
+    expect(errorOf(response).code).toBe("ERR-15");
   });
 
   it("file thiếu name property → ERR-15", async () => {
     const r = boot();
     const response = await callVision(r, { files: [{ pages: ["data:image/jpeg;base64,/9j/"] }] }, { tab: OWA_TAB });
     expect(response.ok).toBe(false);
-    expect(response.error.code).toBe("ERR-15");
+    expect(errorOf(response).code).toBe("ERR-15");
   });
 });

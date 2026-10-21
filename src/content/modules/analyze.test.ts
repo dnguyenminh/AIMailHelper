@@ -20,7 +20,7 @@ const EMAIL: EmailData = {
 };
 
 interface Deps {
-  readEmail: () => Promise<EmailData>;
+  readEmail: (signal?: { cancelled: boolean }) => Promise<EmailData>;
   request: (kind: "analyze", payload: { email: EmailData }, onEvent: (event: PortEvent) => void) => { cancel(): void };
   onState: (state: AnalysisUiState) => void;
 }
@@ -84,6 +84,8 @@ describe("AnalyzeController — UC-01 state machine (GĐ3)", () => {
     expect(final.error?.i18nKey).toBe("errors.emptyEmail");
     expect(harness.events).toHaveLength(0); // không gọi LLM với payload rỗng
   });
+
+  // 4 test uat58 (signal + watchdog) chuyển sang analyze-cancel.test.ts
 
   it("Port error event → error state giữ phần raw đã nhận (EF-4)", async () => {
     const harness = makeHarness();

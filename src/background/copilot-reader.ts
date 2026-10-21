@@ -2,18 +2,25 @@
 // User quyết định: Copilot thay LLM+VL cho phân tích email. Panel chat là iframe cross-origin
 // (cacheable-iframe:*copilotSidePanel*) → đường duy nhất khả thi: attach target type iframe
 // hoặc other (Edge 155 — xem frame-discovery.isFrameCandidate) + DOMSnapshot (CHỈ ĐỌC — SR-12).
-// 21/10 — thêm triggerCopilotChip: click chip "Summarize this email" TRONG panel bằng
-// Input.dispatchMouseEvent (trusted) — click nút entry đôi khi chỉ mở panel không chạy summary
-// (học UAT 20/10) → khi panel trống, chip click là đường submit đáng tin duy nhất.
+// 21/10 — đọc chatbox thật (UAT): RAW snapshot 186k chars mà 99% là #text của <script>/<style>
+// → lọc bằng parentIndex; sidebar Copilot riêng của Edge (copilot.microsoft.com) attach bị
+// DENIED ("Cannot access chrome:// and edge:// URLs") → loại khỏi candidate; rank ưu tiên
+// semanticoverview (panel OWA duy nhất đọc được).
 import { getTargets, isFrameCandidate, sendSnapshot } from "./frame-discovery";
+import { boundsAt } from "../shared/copilot-format";
+import type { RawDoc } from "../shared/copilot-format";
 import { redactSrc } from "../shared/redact";
 
 // URL pattern các panel chat/trợ lý: copilot + dcub (chat UI) + myday/mdc/optik/semanticoverview.
 export const COPILOT_URL_PATTERN = /copilot|dcub|myday|mdc\/|optik|semanticoverview/i;
 
-// Rank: copilot/dcub đứng trước các panel phụ.
+// Sidebar Copilot RIÊNG của Edge (browser UI, type=other) — chrome.debugger bị chặn tuyệt đối.
+// (?:/|\.) copilot.microsoft.com — bắt cả https://copilot… và sub-domain.
+export const COPILOT_EXCLUDE_RE = /(?:\/|\.)copilot\.microsoft\.com/i;
+
+// Rank: semanticoverview (panel OWA duy nhất đọc được) trước, khác sau.
 export function copilotRank(url: string): number {
-  return /copilot|dcub/i.test(url) ? 0 : 1;
+  return /semanticoverview|copilotSidePanel|dcub/i.test(url) ? 0 : 1;
 }
 
 export interface CopilotReadResult {
@@ -32,31 +39,52 @@ const MAX_COPILOT_CHARS = 60_000;
 const MAX_PARTS = 5000; // giữ ĐUÔI (node mới nằm cuối chat); đuôi cũ bị gọi là chấp nhận
 const CHIP_TEXT_RE = /^(summarize( this email)?|tóm tắt( email này)?|tóm tắt email)$/i;
 
-// Frame Copilot (dùng chung đọc + chip click): lọc candidate + rank + cap số lượng.
-async function copilotTargets(limit: number): Promise<chrome.debugger.TargetInfo[]> {
+// Frame Copilot (dùng chung đọc + chip click + AX structure): lọc candidate (LOẠI sidebar Edge) + rank + cap.
+export async function copilotTargets(limit: number): Promise<chrome.debugger.TargetInfo[]> {
   const targets = await getTargets();
   return targets
-    .filter((t) => isFrameCandidate(t) && t.id !== undefined && COPILOT_URL_PATTERN.test(t.url ?? ""))
+    .filter((t) => isFrameCandidate(t) && t.id !== undefined
+      && COPILOT_URL_PATTERN.test(t.url ?? "") && !COPILOT_EXCLUDE_RE.test(t.url ?? ""))
     .sort((a, b) => copilotRank(a.url ?? "") - copilotRank(b.url ?? ""))
     .slice(0, limit);
 }
 
-// Trích text node (#text → nodeValue index strings) từ DOMSnapshot.
-function partsFromSnapshot(snapshot: unknown): string[] {
-  const snap = snapshot as { strings?: string[]; documents?: { nodes?: { nodeName?: number[]; nodeValue?: number[] } }[] } | undefined;
+// Text node của <script>/<style> chiếm ~99% snapshot (UAT 21/10: 186k tổng / 2.2k sạch) —
+// loại bằng parentIndex: đi ngược ancestor tối đa 10 mức, gặp SCRIPT/STYLE → junk.
+function junkAncestor(strings: string[], nodeName: number[], parentIndex: number[], start: number): boolean {
+  let parent = parentIndex[start];
+  for (let depth = 0; parent !== undefined && parent >= 0 && depth < 10; depth += 1) {
+    if (/^(script|style)$/i.test(strings[nodeName[parent] ?? -1] ?? "")) return true;
+    parent = parentIndex[parent];
+  }
+  return false;
+}
+
+interface SnapNodes { nodes?: { nodeName?: number[]; nodeValue?: number[]; parentIndex?: number[] } }
+
+// Trích text node SẠCH của 1 document: #text có nội dung + ancestor không phải script/style.
+function partsFromDoc(doc: SnapNodes, strings: string[]): string[] {
+  const nodeName = doc.nodes?.nodeName ?? [], nodeValue = doc.nodes?.nodeValue ?? [], parentIndex = doc.nodes?.parentIndex ?? [];
+  const parts: string[] = [];
+  for (let i = 0; i < nodeName.length; i += 1) {
+    if ((strings[nodeName[i] ?? -1] ?? "") !== "#text") continue;
+    const valueIndex = nodeValue[i];
+    if (valueIndex === undefined || valueIndex === -1) continue;
+    const text = strings[valueIndex];
+    if (typeof text !== "string" || text.trim().length === 0) continue;
+    if (parentIndex.length > 0 && junkAncestor(strings, nodeName, parentIndex, i)) continue;
+    parts.push(text.trim());
+  }
+  return parts;
+}
+
+// Trích text node (#text → nodeValue index strings) từ DOMSnapshot — đã lọc script/style.
+// exported cho test (pattern của repo: unit test helper trực tiếp).
+export function partsFromSnapshot(snapshot: unknown): string[] {
+  const snap = snapshot as { strings?: string[]; documents?: SnapNodes[] } | undefined;
   const strings = snap?.strings ?? [];
   const parts: string[] = [];
-  for (const doc of snap?.documents ?? []) {
-    const nodeName = doc?.nodes?.nodeName ?? [];
-    const nodeValue = doc?.nodes?.nodeValue ?? [];
-    for (let i = 0; i < nodeName.length; i += 1) {
-      if ((strings[nodeName[i] ?? -1] ?? "") !== "#text") continue;
-      const valueIndex = nodeValue[i];
-      if (valueIndex === undefined || valueIndex === -1) continue;
-      const text = strings[valueIndex];
-      if (typeof text === "string" && text.trim().length > 0) parts.push(text.trim());
-    }
-  }
+  for (const doc of snap?.documents ?? []) parts.push(...partsFromDoc(doc, strings));
   return parts.length > MAX_PARTS ? parts.slice(parts.length - MAX_PARTS) : parts;
 }
 
@@ -107,23 +135,19 @@ interface ChipSnapshot {
   nodeName: number[];
   nodeValue: number[];
   layoutIndex: number[]; // layout.nodeIndex — node DOM thứ k của layout
-  bounds: number[]; // layout.bounds — 4 số CSS px/node (x,y,w,h) theo tài liệu frame
+  bounds: unknown; // bounds[k]=[x,y,w,h] nested (Edge 155 — uat12) hoặc flat 4 số/node
 }
 
-// Gộp mảng node + layout từ captureSnapshot (documents[0] + layout — thiếu 1 trong hai → null).
+// Gộp mảng node + layout từ captureSnapshot (layout NẰM TRONG documents[0] — không top-level).
 function chipArraysFromSnapshot(snapshot: unknown): ChipSnapshot | null {
-  const snap = snapshot as {
-    strings?: string[]; documents?: { nodes?: { nodeName?: number[]; nodeValue?: number[] } }[];
-    layout?: { nodeIndex?: number[]; bounds?: number[] };
-  } | undefined;
-  const layout = snap?.layout;
-  if (snap?.documents?.[0] === undefined || layout === undefined) return null;
+  const doc = (snapshot as { strings?: string[]; documents?: RawDoc[] } | undefined)?.documents?.[0];
+  if (doc?.nodes === undefined || doc?.layout === undefined) return null;
   return {
-    strings: snap.strings ?? [],
-    nodeName: snap.documents[0]?.nodes?.nodeName ?? [],
-    nodeValue: snap.documents[0]?.nodes?.nodeValue ?? [],
-    layoutIndex: layout.nodeIndex ?? [],
-    bounds: layout.bounds ?? []
+    strings: (snapshot as { strings?: string[] }).strings ?? [],
+    nodeName: doc.nodes.nodeName ?? [],
+    nodeValue: doc.nodes.nodeValue ?? [],
+    layoutIndex: doc.layout.nodeIndex ?? [],
+    bounds: doc.layout.bounds ?? []
   };
 }
 
@@ -138,9 +162,9 @@ function chipRectFromSnapshot(snapshot: unknown): ChipRect | null {
     if (node < 0 || (data.strings[data.nodeName[node] ?? -1] ?? "") !== "#text") continue;
     const value = data.strings[data.nodeValue[node] ?? -1] ?? "";
     if (!CHIP_TEXT_RE.test(value.trim())) continue;
-    const x = data.bounds[4 * k], y = data.bounds[4 * k + 1], w = data.bounds[4 * k + 2], h = data.bounds[4 * k + 3];
-    if (x === undefined || y === undefined || !w || w <= 0 || !h || h <= 0) continue;
-    found = { text: value, x: x, y: y, w: w, h: h };
+    const box = boundsAt(data.bounds, k);
+    if (box.x === undefined || box.y === undefined || !box.w || box.w <= 0 || !box.h || box.h <= 0) continue;
+    found = { text: value, x: box.x, y: box.y, w: box.w, h: box.h };
   }
   return found;
 }

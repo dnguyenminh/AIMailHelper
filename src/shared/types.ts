@@ -1,5 +1,6 @@
 // src/shared/types.ts — entities chuẩn hóa (TDD §7.2) + config sections (§6.3). KHÔNG cài logic.
 import type { LLMConfig, ProviderId } from "./llm/types";
+import type { MdNode } from "./copilot-format";
 
 export type { ChatMessage, ChatOptions, LLMConfig, LLMResponse, ProviderId, TestConnectionResult } from "./llm/types";
 
@@ -7,6 +8,12 @@ export type UiLanguage = "vi" | "en";
 export type KeyStorage = "sync" | "local";
 export type ReplyTone = "chinh-thuc" | "than-mat" | "ngan-gon";
 export type ReplyLanguage = "auto" | "vi" | "en";
+
+// 21/10 (uat58) — tín hiệu hủy run: start mới / cancel() flip flag; poll Copilot đọc mỗi
+// vòng → orphan pipeline tự chết, không còn 2 chuỗi trigger giành chrome.debugger.
+export interface CancelSignal {
+  cancelled: boolean;
+}
 
 // §6.3 — config.general (keyStorage canonical ở ĐÂY — DISC-1).
 export interface GeneralConfig {
@@ -86,6 +93,7 @@ export interface EmailData {
   hasAttachment: boolean; // UAT — phát hiện đính kèm trong pane (rules + triage)
   attachments?: { name: string; text: string }[]; // UAT 18/10 Plan A — text trích xuất (max 3 file, 20K ký tự)
   copilotSummary?: string; // GĐ-B 20/10 — lời Copilot trả (VERBATIM): panel hiển thị nguyên văn, KHÔNG qua LLM
+  copilotHtml?: MdNode[]; // 21/10 uat60 — cây node sanitized từ outerHTML lượt cuối (render React giữ format)
   threadContext?: { subject: string; from: string; excerpt: string }[]; // chỉ khi conversation (AF-1)
   detectedView: "reading-pane" | "popout" | "conversation";
 }

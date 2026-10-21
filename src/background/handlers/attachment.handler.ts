@@ -148,7 +148,7 @@ const visionTextHandler: RpcHandler = async (payload) => {
         maxTokens: 3_000,
         visionImage: undefined,
       });
-      let synthesis: any = { overview: "", details: "", conclusions: "", actionItems: [] };
+      let synthesis: { overview: string; details?: string; conclusions?: string; actionItems?: string[] } = { overview: "", details: "", conclusions: "", actionItems: [] };
       try {
         synthesis = JSON.parse(synthesisResponse.text.trim());
       } catch {

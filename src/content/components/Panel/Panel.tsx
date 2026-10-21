@@ -151,7 +151,7 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
       )}
       {state.status === "reading" && <p className="aimh-note">{t("panel.analyze.readingEmail")}</p>}
       {state.status === "streaming" && <pre className="aimh-stream">{state.raw}</pre>}
-      {state.copilot === true && state.status === "done" && <CopilotResult raw={state.raw} />}
+      {state.copilot === true && state.status === "done" && <CopilotResult raw={state.raw} md={state.rawHtml} />}
       {state.result !== null && <AnalysisView result={state.result} />}
       {state.error !== null && <ErrorBanner error={state.error} onRetry={analyze} />}
       {state.result !== null && <ReplySection email={email} />}

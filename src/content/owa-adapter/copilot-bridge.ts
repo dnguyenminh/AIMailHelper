@@ -1,36 +1,27 @@
 // src/content/owa-adapter/copilot-bridge.ts — GĐ-A/B (20/10): phân tích bằng Copilot OWA.
-// user quyết định: Copilot THAY LLM+VL. Luồng (duy nhất 1 click, KHÔNG gửi mail):
-//  nút panel AIMH "Phân tích" → hover nút Copilot ở BottomBar → popup "Summarize this email"
-//  → click → chatbox mở sidebar → SW đọc text qua CDP.
-// Học UAT 20/10: bấm item popup chỉ MỞ panel, summary KHÔNG tự chạy (panel trống) + hover
-// đơn thuần mouse không mở popup (Fluent nghe pointer*). Fix 21/10: hover đủ pointer+mouse,
-// chờ item tối đa 2.5s (hover lại mỗi 300ms), press chuỗi event đầy đủ; poll text vẫn trống
-// → SW click ĐÚNG chip "Summarize this email" trong panel qua CDP Input (trusted). Đọc text
-// luôn READ-ONLY (SR-12) — chỉ click nút của Copilot, không gõ prompt, không gửi mail (BR-01).
+// user quyết định: Copilot THAY LLM+VL. 1 click, KHÔNG gửi mail (BR-01).
+// 21/10 (UAT Edge thật): flyout OWA CHỈ nghe event TRUSTED → trigger qua SW Input
+// (RPC COPIL_INPUT_*). Poll 90s — panel auto-inject prompt + stream tóm tắt mất 20–70s.
+// Đọc READ-ONLY (SR-12): chỉ click nút của Copilot, không gõ prompt.
 import { sendMessage } from "../../shared/messaging";
+import { filterNewExchange } from "../../shared/copilot-format";
+import type { MdNode } from "../../shared/copilot-format";
+import type { CancelSignal } from "../../shared/types";
+import { copilotMdTree } from "./copilot-sanitize";
 
-const HOVER_POLL_MS = 300; // mỗi vòng chờ popup render (async) sau khi hover lại
-const HOVER_TRY_MS = 2_500; // tổng thời gian đợi popup — 1 lần 500ms cũ dễ miss khi page bận
-const POLL_MS = 2000;
-const POLL_ROUNDS = 6; // 6×2s = 12s — Copilot tóm tắt email dài cần 5-15s
+const HOVER_POLL_MS = 300; // mỗi vòng chờ popup render sau hover TRUSTED của SW
+const HOVER_TRY_MS = 3_500; // tổng thời gian đợi item popup sau hover
+const POLL_MS = 3000;
+const POLL_ROUNDS = 30; // 30×3s = 90s — đo thật: prompt inject + stream cần 20-70s
 const MIN_DELTA_CHARS = 120; // fresh nhỏ hơn ngưỡng → không chắc là tóm tắt thật
 
 export type CopilotTriggerResult = "clicked" | "no-entry" | "popup-not-found";
 
-// Cấu trúc trả về của SW (structural — không import module background vào content)
-interface CopilotRead {
-  text: string;
-  parts: string[];
-  lines: string[];
-}
+// CopilotRead/ChipOutcome — trả về của SW (structural); nút Copilot: ưu tiên aria-label,
+// fallback #BottomBar child thứ 2 (user chỉ).
+interface CopilotRead { text: string; parts: string[]; lines: string[] }
+interface ChipOutcome { clicked: boolean; reason: string }
 
-// Kết quả click chip submit trong panel (SW CDP — Input trusted)
-interface ChipOutcome {
-  clicked: boolean;
-  reason: string;
-}
-
-// Nút Copilot: ưu tiên aria-label (ổn định), fallback cấu trúc #BottomBar child thứ 2 (user chỉ).
 export function findCopilotEntry(): HTMLElement | null {
   const bar = document.querySelector("#BottomBar");
   if (bar === null) return null;
@@ -46,25 +37,11 @@ export function findCopilotPanel(): HTMLIFrameElement | null {
     .find((f) => /copilotSidePanel/i.test(f.id)) ?? null;
 }
 
-function centerInit(target: HTMLElement): PointerEventInit {
-  const rect = target.getBoundingClientRect();
-  return { bubbles: true, cancelable: true, pointerId: 1, pointerType: "mouse", isPrimary: true,
-    clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 };
-}
-
-// Hover ĐỦ event: Fluent (OWA) nghe POINTER — chỉ dispatch mouse là popup không mở.
-function dispatchHover(target: HTMLElement): void {
-  const opts = centerInit(target);
-  target.dispatchEvent(new PointerEvent("pointerover", opts));
-  target.dispatchEvent(new PointerEvent("pointerenter", { ...opts, bubbles: false }));
-  target.dispatchEvent(new PointerEvent("pointermove", opts));
-  target.dispatchEvent(new MouseEvent("mouseover", opts));
-  target.dispatchEvent(new MouseEvent("mouseenter", { ...opts, bubbles: false }));
-  target.dispatchEvent(new MouseEvent("mousemove", opts));
-}
+// (press tổng hợp đã bỏ — UAT 21/10: isTrusted=false bị flyout bỏ qua)
 
 // Tìm popup item "Summarize this email" (en) / "Tóm tắt email này" (vi). Ưu tiên element
 // VISIBLE (ghost ẩn — bài học panel ẩn — bị loại) + nằm trong flyout (menu/tooltip/dialog).
+// Dùng cả cho hiển thị describe + lấy toạ độ click.
 export function findSummarizeItem(): HTMLElement | null {
   const names = ["summarize this email", "tóm tắt email này"];
   const all = Array.from(document.querySelectorAll<HTMLElement>(
@@ -80,32 +57,32 @@ export function findSummarizeItem(): HTMLElement | null {
   return flyout.find(matches) ?? pool.find(matches) ?? null;
 }
 
-// Press đầy đủ: pointerdown→mousedown→focus→pointerup→mouseup→click với toạ độ tâm element
-// (MouseEvent("click") đơn lẻ bị Fluent menu item bỏ qua — học UAT 20/10).
-function pressElement(el: HTMLElement): void {
-  const opts = centerInit(el);
-  el.dispatchEvent(new PointerEvent("pointerdown", opts));
-  el.dispatchEvent(new MouseEvent("mousedown", opts));
-  try { el.focus(); } catch { /* không focus được — click vẫn gửi */ }
-  el.dispatchEvent(new PointerEvent("pointerup", opts));
-  el.dispatchEvent(new MouseEvent("mouseup", opts));
-  el.click();
+// Chờ item popup sau hover TRUSTED của SW (đã mở flyout thật, không dispatch tổng hợp).
+async function waitPopupItem(): Promise<HTMLElement | null> {
+  const deadline = Date.now() + HOVER_TRY_MS;
+  while (Date.now() < deadline) {
+    const item = findSummarizeItem();
+    if (item !== null) return item;
+    await new Promise((resolve) => setTimeout(resolve, HOVER_POLL_MS));
+  }
+  return null;
 }
 
-// Trigger: hover entry → chờ item tối đa 2.5s (hover lại mỗi 300ms) → press item.
+// Trigger TRUSTED (21/10): entry toạ độ → SW Input.hover → chờ item → item toạ độ → SW click.
 export async function triggerCopilotSummarize(): Promise<CopilotTriggerResult> {
   const entry = findCopilotEntry();
   if (entry === null) return "no-entry";
-  let item = findSummarizeItem();
-  const deadline = Date.now() + HOVER_TRY_MS;
-  while (item === null && Date.now() < deadline) {
-    dispatchHover(entry);
-    await new Promise((resolve) => setTimeout(resolve, HOVER_POLL_MS));
-    item = findSummarizeItem();
-  }
+  const rect = entry.getBoundingClientRect();
+  const hover = await sendMessage<{ moved?: string }>("COPIL_INPUT_HOVER",
+    { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+  console.log("[AIMH][copilot] hover trusted: " + String(hover.moved ?? "?").slice(0, 60));
+  const item = await waitPopupItem();
   if (item === null) return "popup-not-found";
   console.log("[AIMH][copilot] popup item: " + String(item.tagName) + "/" + (item.getAttribute("role") ?? "?"));
-  pressElement(item);
+  const ir = item.getBoundingClientRect();
+  const tapped = await sendMessage<{ outcome?: string }>("COPIL_INPUT_CLICK",
+    { x: ir.left + ir.width / 2, y: ir.top + ir.height / 2 });
+  console.log("[AIMH][copilot] click trusted: " + String(tapped.outcome ?? "?").slice(0, 60));
   return "clicked";
 }
 
@@ -150,29 +127,69 @@ async function maybeClickChip(round: number, fresh: string, chipTries: number): 
   return chip.clicked ? 99 : chipTries + 1;
 }
 
-export async function analyzeViaCopilot(): Promise<{ text: string } | null> {
+export async function analyzeViaCopilot(signal?: CancelSignal): Promise<{ text: string; html?: MdNode[] } | null> {
   const baseline = await readCopilotPanel();
   const baseSet = new Set(baseline.parts);
+  if (signal?.cancelled === true) return null;
+  if (findCopilotPanel() !== null) {
+    // Panel mở: chip trong panel tạo lượt mới — độc lập layout OWA (flyout hụt khi OWA
+    // đổi layout — uat44/45: #BottomBar không còn nút Copilot).
+    const chip = await clickChipInPanel();
+    if (chip.clicked) {
+      console.log("[AIMH][copilot] chip panel: OK → poll");
+      return await pollFreshText(baseSet, signal);
+    }
+    console.log("[AIMH][copilot] chip panel: " + chip.reason + " → thử flyout");
+  }
   const trigger = await triggerCopilotSummarize();
-  if (trigger === "no-entry" || trigger === "popup-not-found") return null; // fallback pipeline cũ
-  return await pollFreshText(baseSet);
+  const isCancelled = (): boolean => signal?.cancelled === true;
+  if (trigger !== "clicked" || isCancelled()) return null; // hụt entry/popup/hủy → pipeline cũ
+  return await pollFreshText(baseSet, signal);
 }
 
-// DIFF theo TEXT NODE: node MỚI (không có ở baseline) = tóm tắt thật, ổn định 2 vòng + đủ dài.
-// Bài học 20/10: KHÔNG dùng text cũ khi trigger fail (panel ẩn + cap giữ text LỊCH SỬ, không
-// tươi) — fresh rỗng → thường xuyên click chip trong panel (chỉ KHI fresh rỗng mới click).
-async function pollFreshText(baseSet: Set<string>): Promise<{ text: string } | null> {
+// DIFF theo TEXT NODE (đã lọc script/style từ 21/10): node MỚI không ở baseline = tóm tắt
+// thật; ổn định 2 vòng + ≥120 chars. KHÔNG dùng text cũ khi trigger fail (bài học 20/10).
+// Bài học 21/10: suggestion chip lặp ("Summarize this email" ×N) — dedupe part liền kề trước diff.
+function freshParts(current: string[], baseSet: Set<string>): string {
+  const deduped = current.filter((part, index) => part !== current[index - 1]);
+  return deduped.filter((part) => !baseSet.has(part)).join(" ").trim();
+}
+
+// AX tree (CDP READ-ONLY — SR-12): fresh ổn định → đọc 1 lần giữ cấu trúc mục/bullet; cắt từ
+// lượt "You said" cuối. Lỗi SW/target → giữ raw. 21/10 (uat60): thêm cây MdNode từ outerHTML
+// lượt cuối (fai-User/CopilotMessage) — panel render React giữ 100% heading/bullet/link.
+async function withFormat(raw: string): Promise<{ text: string; html?: MdNode[] }> {
+  let structured = "", audit = "(rpc-fail thiéu envelope)";
+  try {
+    const read = await sendMessage<{ text?: string; audit?: string; error?: string }>("COPIL_PANEL_STRUCTURE", {});
+    structured = typeof read.text === "string" ? filterNewExchange(read.text) : "";
+    audit = typeof read.audit === "string" && read.audit.length > 0 ? (read.error ?? "ok") + " | " + read.audit : "envelope không có audit (SW cũ?)";
+  } catch (error) {
+    audit = "rpc-throw " + String(error instanceof Error ? error.message : String(error)).slice(0, 70);
+  }
+  const ok = structured.length >= MIN_DELTA_CHARS && structured.length * 2 >= raw.length;
+  console.log("[AIMH][copilot] structure: len=" + structured.length + " raw=" + raw.length + " → " + (ok ? "structured" : "raw") + " | " + audit);
+  if (!ok) return { text: raw };
+  const html = await copilotMdTree();
+  if (html === undefined) console.log("[AIMH][copilot] html: không có/có lỗi — dùng text có \\n");
+  return { text: structured, html: html };
+}
+
+async function pollFreshText(baseSet: Set<string>, signal?: CancelSignal): Promise<{ text: string; html?: MdNode[] } | null> {
+  const isCancelled = (): boolean => signal?.cancelled === true; // flag mutation giữa các await
   let lastFresh = "";
   let stableRounds = 0;
   let chipTries = 0;
   for (let round = 0; round < POLL_ROUNDS; round += 1) {
+    if (isCancelled()) return null; // run mới/cancel() — orphan tự chết (uat58)
     await new Promise((resolve) => setTimeout(resolve, POLL_MS)); // chờ Copilot stream...
+    if (isCancelled()) return null;
     const current = await readCopilotPanel();
-    const fresh = current.parts.filter((part) => !baseSet.has(part)).join(" ").trim();
+    const fresh = freshParts(current.parts, baseSet);
     chipTries = await maybeClickChip(round, fresh, chipTries);
     if (fresh.length >= MIN_DELTA_CHARS && fresh === lastFresh) {
       stableRounds += 1;
-      if (stableRounds >= 2) return { text: fresh }; // ổn định 2 vòng liên tiếp → giữ
+      if (stableRounds >= 2) return await withFormat(fresh); // ổn định 2 vòng → cấu trúc
     } else {
       stableRounds = 0;
     }
