@@ -18,7 +18,7 @@ export function PopupApp() {
 
   return (
     <main className="popup">
-      <h1 className="popup-title">{t("popup.title")}</h1>
+      <h1 className="popup-title">{t("popup.title")} <span className="popup-version">v{chrome.runtime.getManifest().version}</span></h1>
       <p className="popup-provider">
         {state ? t("popup.provider.label", { provider: state.providerActive }) : t("popup.loading")}
       </p>
