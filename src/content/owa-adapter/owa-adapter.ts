@@ -3,6 +3,7 @@
 // SemanticLocator (T1→cache→T2) → T3 VisionFallback CHỈ khi T1+T2 fail (BR-12; BR-03 opt-in
 // kiểm tra kép tại vision-fallback). FunctionKey/LocatorStrategy/SelectorTier canonical selectors.ts.
 import type { EmailData, CancelSignal } from "../../shared/types";
+import { sendMessage } from "../../shared/messaging";
 import { insertDraft, openReplyBox } from "./actions";
 import type { ActionsDeps, InsertDecision, InsertOutcome } from "./actions";
 import { readEditableText, writeEditableText } from "./editable";
@@ -12,7 +13,7 @@ import { readEmail } from "./reader";
 import { SelectorTier } from "./selectors";
 import type { FunctionKey, LocatorStrategy } from "./selectors";
 import { collectInboxItemsDeep as collectItemsDeep } from "./deep-triage";
-import { findItemElement } from "./triage";
+import { scrollSearchRow } from "./row-finder";
 import type { InboxItem } from "./triage";
 import { VisionFallback } from "./vision-fallback";
 import type { VisionLocator } from "./vision-fallback";
@@ -76,20 +77,33 @@ export class OwaAdapter {
   }
 
   // UAT — cuộn đến mail trong danh sách (KHÔNG mở mail, KHÔNG đổi trạng thái đã đọc).
-  // scrollIntoView chỉ đổi scroll position — không tương tác React OWA.
-  scrollToItem(messageId: string): boolean {
-    const element = findItemElement(messageId);
-    if (element === null || !element.isConnected) return false;
-    element.scrollIntoView({ block: "center", behavior: "smooth" });
+  // uat62: row có thể bị OWA virtualize khỏi DOM sau deep-scan → scroll-search danh sách.
+  async scrollToItem(messageId: string): Promise<boolean> {
+    const row = await scrollSearchRow(messageId, (key, question) => this.locate(key, question));
+    if (row === null) {
+      console.warn("[AIMH][panel] 👁 không tìm thấy mail trong danh sách hiện tại — thử refresh Outlook rồi quét lại");
+      return false;
+    }
+    row.scrollIntoView({ block: "center", behavior: "smooth" });
     return true;
   }
 
   // UAT — MỞ mail (click) → Outlook đánh dấu "đã đọc". Người dùng chủ động chọn.
-  openItem(messageId: string): boolean {
-    const element = findItemElement(messageId);
-    if (element === null || !element.isConnected) return false;
-    element.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-    return true;
+  // uat62: (1) row virtualized → scroll-search; (2) OWA mới BỎ QUA click tổng hợp
+  // (isTrusted=false — cùng lớp flyout) → trusted click qua SW chrome.debugger (COPIL_INPUT_CLICK).
+  async openItem(messageId: string): Promise<boolean> {
+    const row = await scrollSearchRow(messageId, (key, question) => this.locate(key, question));
+    if (row === null) {
+      console.warn("[AIMH][panel] ↗ không tìm thấy mail trong danh sách hiện tại — thử refresh Outlook rồi quét lại");
+      return false;
+    }
+    const rect = row.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return false;
+    const outcome = await sendMessage<{ outcome?: string }>("COPIL_INPUT_CLICK",
+      { x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + rect.height / 2) });
+    const ok = outcome.outcome === "ok";
+    if (!ok) console.warn("[AIMH][panel] ↗ trusted click thất bại: " + String(outcome.outcome ?? "?").slice(0, 80));
+    return ok;
   }
 
   // FR-GD5-03 — badge màu trên list item. UAT-3: TẮT DOM injection — appendChild vào

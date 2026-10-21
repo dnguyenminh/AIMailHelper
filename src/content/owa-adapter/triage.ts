@@ -100,7 +100,8 @@ export async function collectUnreadItems(locate: LocateFn): Promise<InboxItem[]>
 
 // Đọc 1 list item: subject (heading probe) + sender (aria-label From/Từ) + preview (textContent
 // normalize — SR-10) → messageId chain §7.5. Không đủ dữ liệu → null (caller bỏ qua + log).
-async function readItem(element: Element): Promise<InboxItem | null> {
+// Export (uat62): row-finder dùng lại để khớp messageId trên row SỐNG (synthetic id khớp được).
+export async function readItem(element: Element): Promise<InboxItem | null> {
   const subject = element.querySelector(SUBJECT_PROBE)?.textContent?.trim() ?? "";
   const senderRaw = firstLabeled(element, FROM_PATTERN);
   const sender = parsePerson(senderRaw) ?? { name: "", email: "" };
