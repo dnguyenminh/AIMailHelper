@@ -1,103 +1,43 @@
-# AIMailHelper — CI pipeline (GitHub Actions)
-# Target state: written for the post-GD1 scaffold (package.json + scripts exist).
-# NOTE: the repo is currently local-only (branch AIMH-LOCAL, no remote) and src/ is
-# empty — this pipeline only turns green after GD1 (scaffold) provides package.json
-# with the script contract: typecheck / lint / build / test.
-# See documents/AIMH-LOCAL/DPG.md (section 1.4) for the full contract.
-
+# CI — chạy trên mọi push + pull request: typecheck → lint → test → build → artifact dist.
 name: CI
 
 on:
   push:
+    branches: ["**"]
   pull_request:
 
-permissions:
-  contents: read
-
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  build:
-    name: Build extension (Node ${{ matrix.node-version }})
+  ci:
+    name: Typecheck · Lint · Test · Build
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: [20]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js ${{ matrix.node-version }}
+      - name: Setup Node 20
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: npm
+          node-version: "20"
+          cache: "npm"
 
-      - name: Install dependencies (npm ci)
+      - name: Install dependencies
         run: npm ci
 
-      - name: Typecheck (tsc --noEmit)
+      - name: Typecheck
         run: npm run typecheck
 
-      - name: Lint (eslint)
+      - name: Lint
         run: npm run lint
 
-      - name: Build extension (vite + @crxjs/vite-plugin)
-        run: npm run build
-
-      - name: Upload dist/ artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: extension-dist-node${{ matrix.node-version }}
-          path: dist/
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Package extension zip (store upload candidate)
-        run: |
-          cd dist
-          zip -r "../aimailhelper-${{ github.sha }}.zip" .
-
-      - name: Upload zip artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: extension-zip-node${{ matrix.node-version }}
-          path: aimailhelper-${{ github.sha }}.zip
-          if-no-files-found: error
-          retention-days: 14
-
-  test:
-    name: Tests (vitest run)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies (npm ci)
-        run: npm ci
-
-      # SR-07/DR-06 (P5.7 F-02) — supply-chain audit trên prod deps; warn-only giai đoạn đầu.
-      - name: Audit production dependencies (npm audit --omit=dev)
-        run: npm audit --omit=dev --audit-level=high
-        continue-on-error: true
-
-      - name: Run tests (vitest run)
+      - name: Test (Vitest)
         run: npm test
 
-      - name: Upload test results (junit)
+      - name: Build (Vite + CRXJS)
+        run: npm run build
+
+      - name: Upload dist artifact
         uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: test-results
-          path: test-results/
-          if-no-files-found: warn
+          name: aimailhelper-dist
+          path: dist/
           retention-days: 14

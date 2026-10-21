@@ -1,8 +1,22 @@
 # User Guide (UG)
 
-## AIMailHelper — AIMH-LOCAL: Trợ lý AI cho Outlook Web (Browser Extension MV3)
+## AIMailHelper — Trợ lý AI cho Outlook Web (Browser Extension MV3)
 
-> **Ghi chú nguồn:** UG v1 được **DEV agent tạo offline** cho placeholder **AIMH-LOCAL** — KHÔNG Jira, KHÔNG DOCX (SM sẽ export khi cần). Mọi tên nút, ô nhập và thông báo trong guide được **copy nguyên văn từ src/shared/i18n/vi.json** và đối chiếu trực tiếp với code thật (src/options/components/*, src/popup/PopupApp.tsx, src/content/components/Panel/*, manifest.config.ts) — không bịa nút/thông báo không tồn tại. Nội dung viết cho **người dùng cuối**; thuật ngữ kỹ thuật được giải thích ngay khi xuất hiện.
+> **Phiên bản 1.1.10.** Guide đối chiếu trực tiếp với code thật (src/shared/i18n/vi.json, src/options/components/*, src/popup/PopupApp.tsx, src/content/components/Panel/*, manifest.config.ts) — mọi tên nút, ô nhập và thông báo là nguyên văn từ UI. Kèm **ảnh chụp màn hình thật** tại `docs/screenshots/` chèn ngay các mục liên quan.
+
+**Danh mục hình:**
+
+| Hình | Nội dung |
+|------|----------|
+| Hình 1 | Popup bật/tắt nhanh — `01-popup.png` |
+| Hình 2 | Options — Provider LLM + Model — `02-options-provider-model.png` |
+| Hình 3 | Options — Kiểm tra kết nối + Chat thử — `03-options-test-chat.png` |
+| Hình 4 | Options — Prompt, Tự động hóa, Cài đặt chung — `04-options-prompt-auto-general.png` |
+| Hình 5 | Panel AIMailHelper trong Outlook Web — `06-panel-aimh.png` |
+| Hình 6 | Panel đang phân tích — `07-panel-analyzing.png` |
+| Hình 7 | Copilot side panel — chip "Summarize this email" — `09-copilot-panel.png` |
+
+*(File ảnh nằm tại `docs/screenshots/` trong repo.)*
 
 ---
 
@@ -14,10 +28,10 @@
 | Title | AIMailHelper — Trợ lý AI cho Outlook Web (Browser Extension MV3) |
 | Author | DEV Agent |
 | Reviewer | BA Agent |
-| Version | 1.1 |
-| Date | 2026-10-15 |
+| Version | 1.2 |
+| Date | 2026-10-21 |
 | Status | Draft |
-| Extension version | 0.1.0 (package.json + manifest.config.ts) |
+| Extension version | 1.1.10 (package.json + manifest.config.ts) |
 | Related BRD | documents/AIMH-LOCAL/BRD.md (v1) |
 | Related FSD | documents/AIMH-LOCAL/FSD.md (v1.3) |
 | Related TDD | documents/AIMH-LOCAL/TDD.md (v1.1) |
@@ -32,6 +46,12 @@
 |---------|------|--------|---------|
 | 1.0 | 2026-10-15 | DEV Agent | Khởi tạo UG v1 — đối chiếu code GĐ1–6 + i18n vi.json; KHÔNG Jira, KHÔNG DOCX |
 | 1.1 | 2026-10-15 | BA Agent | BA review: sửa trình bày nút "AI phân tích" toolbar (mục 2.3/4.1/6.3) — toolbar không đảm bảo xuất hiện trên OWA thật (spike UNVERIFIED, deferred-to-UAT); các mục khác PASS không đổi |
+| 1.2 | 2026-10-21 | DEV Agent | Thêm 7 ảnh chụp màn hình thật (../../docs/screenshots/) vào mục cài đặt/cấu hình/sử dụng; version 1.1.10; bổ sung tích hợp Copilot Outlook (4.1b) + cài bản release zip |
+
+---
+
+![Hình 1 — Popup bật/tắt nhanh](../../docs/screenshots/01-popup.png)
+*Hình 1 — Popup: dòng "Provider: …", ô "Bật extension", nút "Mở Options".*
 
 ---
 
@@ -87,12 +107,12 @@ Extension đọc trực tiếp giao diện Outlook đang hiển thị trên trì
 
 ### 2.1 Cách 1 — "Load unpacked" (khuyên dùng hiện tại)
 
-Bản 0.1.0 **chưa phát hành trên store**, nên cài bằng chế độ nhà phát triển (chỉ mất ~1 phút, làm 1 lần):
+Bản 1.1.10 **chưa phát hành trên store**, nên cài bằng chế độ nhà phát triển (chỉ mất ~1 phút, làm 1 lần):
 
 **Bước 1 — Tải bản cài đặt:**
 
-- Tải file zip từ GitHub Release (tên dạng `aimailhelper-v0.1.0.zip`) và **giải nén** vào một thư mục, ví dụ `C:\AIMailHelper\`. Bên trong là thư mục `dist/` chứa file `manifest.json` — đây là thư mục bạn cần.
-- (Hoặc nếu bạn có mã nguồn: mở terminal trong thư mục dự án, chạy `npm install` rồi `npm run build` — kết quả build nằm ở thư mục `dist/`.)
+- Tải file zip từ [GitHub Releases](https://github.com/dnguyenminh/AIMailHelper/releases) (tên dạng `AIMailHelper-v1.1.10.zip`) và **giải nén** — bên trong là thư mục `dist/` chứa file `manifest.json` — đây là thư mục bạn cần.
+- (Hoặc nếu bạn có mã nguồn: mở terminal trong thư mục dự án, chạy `npm ci` rồi `npm run build` — kết quả build nằm ở thư mục `dist/`.)
 
 **Bước 2 — Mở trang quản lý tiện ích:**
 
@@ -124,9 +144,12 @@ Khi extension được duyệt lên **Chrome Web Store** và **Edge Add-ons** (x
 
 ### 2.3 Kiểm tra cài đặt thành công
 
-1. Bấm icon **AIMailHelper** trên thanh công cụ → popup hiện ra với tiêu đề **"AIMailHelper"**, dòng **"Provider: openai"** (giá trị mặc định), ô tick **"Bật extension"** và nút **"Mở Options"**.
-2. Bấm **"Mở Options"** → trang **"AIMailHelper — Cấu hình"** hiển thị đủ các phần (xem mục 3).
-3. Mở Outlook Web và mở 1 email → xuất hiện **panel AI** cạnh email với nút **"AI phân tích"** — đây là dấu hiệu chính. Nút này cũng được thêm vào **thanh công cụ của email** khi extension tìm được thanh công cụ Outlook; trên một số phiên bản OWA nút toolbar có thể chưa xuất hiện — nút trên panel luôn dùng được (xem mục 6.3).
+![Hình 1 — Popup](../../docs/screenshots/01-popup.png)
+*Hình 1 — Popup sau khi cài: "Provider: …", ô "Bật extension", nút "Mở Options".*
+
+1. Bấm icon **AIMailHelper** trên thanh công cụ → popup hiện ra với tiêu đề **"AIMailHelper"**, dòng **"Provider"** (giá trị mặc định), ô tick **"Bật extension"** và nút **"Mở Options"** (Hình 1).
+2. Bấm **"Mở Options"** → trang **"AIMailHelper — Cấu hình"** hiển thị đủ các phần (xem mục 3 + Hình 2-4).
+3. Mở Outlook Web và mở 1 email → xuất hiện **panel AI** cạnh email với nút **"AI phân tích"** (Hình 5) — đây là dấu hiệu chính. Nút này cũng được thêm vào **thanh công cụ của email** khi extension tìm được thanh công cụ Outlook; trên một số phiên bản OWA nút toolbar có thể chưa xuất hiện — nút trên panel luôn dùng được (xem mục 6.3).
 4. Trang `chrome://extensions` → thẻ AIMailHelper **không có nút "Errors"** báo đỏ.
 
 | Triệu chứng | Nguyên nhân | Cách xử lý |
@@ -140,6 +163,9 @@ Khi extension được duyệt lên **Chrome Web Store** và **Edge Add-ons** (x
 ## 3. Cấu hình ban đầu (Quick Start)
 
 Bấm icon extension → **"Mở Options"**. Trang **"AIMailHelper — Cấu hình"** gồm 8 phần xếp dọc (đúng như giao diện thật):
+
+![Hình 2 — Options: Provider LLM + Model](../../docs/screenshots/02-options-provider-model.png)
+*Hình 2 — Phần "Provider LLM" + "Model" (ảnh chụp thật với provider `local` / LM Studio).*
 
 1. **Provider LLM** — chọn và cấu hình dịch vụ AI
 2. **Model** — chọn model AI
@@ -183,6 +209,9 @@ Bấm **"Lưu cấu hình provider"** → thấy dòng xanh **"Đã lưu cấu h
 > 🔐 **Riêng `openai-compatible` và `local`:** ngay lúc bấm Lưu, trình duyệt sẽ hỏi *"có cho phép extension truy cập địa chỉ này không?"* — bấm **Allow/Cho phép**. Nếu bạn từ chối, khi dùng sẽ gặp lỗi **"Extension chưa có quyền truy cập host này. Cấp quyền trong trang Options."** (ERR-14) — sửa bằng cách bấm Lưu lại và chọn Allow.
 
 ### Bước 3 — Kiểm tra kết nối (Test Connection)
+
+![Hình 3 — Kiểm tra kết nối + Chat thử](../../docs/screenshots/03-options-test-chat.png)
+*Hình 3 — Phần "Kiểm tra kết nối" và "Chat thử (streaming)" (ảnh chụp thật).*
 
 Trong phần **"Kiểm tra kết nối"**, bấm nút **"Kiểm tra kết nối"**:
 
@@ -238,10 +267,21 @@ Phần **"Cài đặt chung"** → **"Ngôn ngữ giao diện"**: **"Tiếng Vi�
 
 **Cách làm:**
 
+![Hình 5 — Panel AIMailHelper trong Outlook Web](../../docs/screenshots/06-panel-aimh.png)
+*Hình 5 — Panel AIMailHelper góc phải Outlook Web: "Đang phân tích…" / "Diagnose" / "Quét mail chưa đọc" / "Sàng lọc hộp thư" / "Hàng chờ duyệt".*
+
 1. Mở email trong Outlook Web (xem ở khung đọc bên phải, hoặc bật riêng ra cửa sổ — cả hai chế độ đều được).
-2. Bấm nút **"AI phân tích"** — nút trên **panel AI** cạnh email luôn có sẵn; ngoài ra còn 1 chỗ nữa là **thanh công cụ của email** (nút toolbar chỉ xuất hiện khi extension tìm được toolbar của Outlook — nếu không thấy, dùng nút trên panel).
+2. Bấm nút **"AI phân tích"** — nút trên **panel AI** cạnh email luôn có sẵn (Hình 5); ngoài ra còn 1 chỗ nữa là **thanh công cụ của email** (nút toolbar chỉ xuất hiện khi extension tìm được toolbar của Outlook — nếu không thấy, dùng nút trên panel).
 3. Lần đầu tiên sẽ hiện banner xin phép (nguyên văn): *"Lần đầu dùng: nội dung email bạn mở sẽ được gửi tới endpoint LLM bạn cấu hình để phân tích."* → bấm **"Đã hiểu"** (banner chỉ hiện một lần).
-4. Panel hiển thị **"Đang đọc email…"** → **"Đang phân tích…"** → kết quả hiện dần từng phần. Có thể bấm **"Dừng"** bất cứ lúc nào.
+4. Panel hiển thị **"Đang đọc email…"** → **"Đang phân tích…"** (Hình 6) → kết quả hiện dần từng phần. Có thể bấm **"Dừng"** bất cứ lúc nào.
+
+![Hình 6 — Panel đang phân tích](../../docs/screenshots/07-panel-analyzing.png)
+*Hình 6 — Panel ở trạng thái "Đang phân tích…".*
+
+**Tích hợp Copilot Outlook (từ 1.1.10):** nếu tài khoản OWA của bạn có **Copilot side panel**, extension tự dùng Copilot — mở panel Copilot, bấm chip "Summarize this email" (Hình 7), đọc lời Copilot **nguyên văn, giữ nguyên format heading/bullet/link** và hiển thị trong panel AIMailHelper — **không cần cấu hình API key**. Không có Copilot → extension tự dùng LLM bạn cấu hình ở mục 3.
+
+![Hình 7 — Copilot side panel với chip "Summarize this email"](../../docs/screenshots/09-copilot-panel.png)
+*Hình 7 — Copilot side panel trong Outlook — chip "Summarize this email" mà extension bấm hộ bạn.*
 
 **Đọc kết quả — 5 khía cạnh (tên mục lấy nguyên văn từ panel):**
 
@@ -319,7 +359,7 @@ Sau khi phân tích xong, phần **"Soạn trả lời AI"** hiện sẵn bên d
 
 - Extension theo dõi **email mới đến** trong inbox bạn đang mở và **tự động phân tích** (nội dung email mới được gửi tự động tới provider AI của bạn — đây chính là điều cảnh báo trên nói rõ).
 - Nếu email **khớp quy tắc** (rule theo người gửi / chủ đề / điểm quan trọng tối thiểu) → tự soạn nháp → đưa vào **hàng chờ duyệt**.
-- Bản 0.1.0 **chưa có giao diện soạn rule** — khi chưa cấu hình rule nào, extension chỉ **phân tích** email mới, **không tự soạn nháp cho email nào** (thiết kế an toàn fail-closed: rule rỗng → không draft).
+- Bản 1.1.10 **chưa có giao diện soạn rule** — khi chưa cấu hình rule nào, extension chỉ **phân tích** email mới, **không tự soạn nháp cho email nào** (thiết kế an toàn fail-closed: rule rỗng → không draft).
 - Trên panel AI xuất hiện nút **"Hàng chờ duyệt"** kèm nhãn đỏ **"{N} chờ duyệt"** khi có nháp đang chờ.
 
 **Duyệt như thế nào** (mở panel → **"Hàng chờ duyệt auto-mode"**):
@@ -346,6 +386,9 @@ Bấm icon **AIMailHelper** trên thanh công cụ:
 ## 5. Cấu hình nâng cao
 
 ### 5.1 System prompt tùy chỉnh
+
+![Hình 4 — Prompt, Tự động hóa, Cài đặt chung](../../docs/screenshots/04-options-prompt-auto-general.png)
+*Hình 4 — Các phần "Prompt & phản hồi", "Tự động hóa", "Cài đặt chung" (ảnh chụp thật).*
 
 Phần **"Prompt & phản hồi"** → ô **"System prompt tùy chỉnh"**: bổ sung chỉ dẫn nền cho AI khi phân tích email và soạn nháp.
 
@@ -585,7 +628,7 @@ dịch vụ tùy chỉnh / Ollama-LM Studio trên chính máy bạn)
 
 ## 9. Phím tắt & mẹo
 
-**Phím tắt:** bản 0.1.0 **chưa khai báo phím tắt riêng** (manifest không có section commands). Toàn bộ thao tác qua popup, panel AI và trang Options.
+**Phím tắt:** bản 1.1.10 **chưa khai báo phím tắt riêng** (manifest không có section commands). Toàn bộ thao tác qua popup, panel AI và trang Options.
 
 **Mẹo dùng hiệu quả:**
 
@@ -633,7 +676,7 @@ dịch vụ tùy chỉnh / Ollama-LM Studio trên chính máy bạn)
 
 | Phiên bản extension | Nội dung | Ghi chú |
 |---------------------|----------|---------|
-| 0.1.0 | Đầy đủ 4 năng lực (GĐ1–6); 6 provider; i18n vi/en; Test Connection + Chat thử; auto-mode + hàng chờ duyệt | Chưa có giao diện soạn rule auto-mode (rule rỗng → chỉ tự phân tích, không tự draft); chưa phát hành store; chưa có phím tắt |
+| 1.1.10 | Đầy đủ 4 năng lực (GĐ1–6); 6 provider; i18n vi/en; Test Connection + Chat thử; auto-mode + hàng chờ duyệt | Chưa có giao diện soạn rule auto-mode (rule rỗng → chỉ tự phân tích, không tự draft); chưa phát hành store; chưa có phím tắt |
 
 ### 10.4 Ghi chú cho quản trị viên / người triển khai
 

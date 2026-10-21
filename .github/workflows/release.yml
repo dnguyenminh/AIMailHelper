@@ -1,51 +1,64 @@
-# AIMailHelper — Release skeleton (GitHub Actions)
-# Trigger: pushing a tag v* -> build + zip + create a DRAFT GitHub Release.
-# IMPORTANT: this workflow does NOT publish to the Chrome Web Store / Edge Add-ons.
-# Store upload is a MANUAL step performed by a maintainer (see DPG section 5.4).
-# Requires the GD1 scaffold (package.json with "build" script) to run green.
-
+# Release — push tag v* (vd v1.1.10) → CI gates → build → zip dist → GitHub Release kèm zip.
+# Tạo tag:  git tag v1.1.10 && git push origin v1.1.10
 name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    tags: ["v*"]
 
 permissions:
   contents: write
 
 jobs:
   release:
-    name: Build + draft GitHub Release
+    name: Build + GitHub Release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node 20
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: "20"
+          cache: "npm"
 
-      - name: Install dependencies (npm ci)
+      - name: Install dependencies
         run: npm ci
 
-      - name: Build extension (vite + @crxjs/vite-plugin)
+      - name: Typecheck + Lint + Test (gates trước khi phát hành)
+        run: |
+          npm run typecheck
+          npm run lint
+          npm test
+
+      - name: Build (Vite + CRXJS)
         run: npm run build
 
-      - name: Package extension zip
+      - name: Verify manifest version khớp tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          MANIFEST_VERSION=$(node -p "require('./dist/manifest.json').version")
+          echo "tag=$VERSION manifest=$MANIFEST_VERSION"
+          if [ "$VERSION" != "$MANIFEST_VERSION" ]; then
+            echo "::error::Tag $VERSION ≠ manifest version $MANIFEST_VERSION — bump version trước khi tag."
+            exit 1
+          fi
+
+      - name: Package dist → zip
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           cd dist
-          zip -r "../aimailhelper-v${VERSION}.zip" .
+          zip -r "../AIMailHelper-v${VERSION}.zip" .
+          cd ..
+          ls -la AIMailHelper-v*.zip
 
-      - name: Create draft GitHub Release with zip
+      - name: Create GitHub Release
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
-            --draft \
-            --title "AIMailHelper ${GITHUB_REF_NAME}" \
+          VERSION="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" \
+            --title "AIMailHelper v$VERSION" \
             --generate-notes \
-            "aimailhelper-${GITHUB_REF_NAME}.zip"
+            "AIMailHelper-v${VERSION}.zip"
