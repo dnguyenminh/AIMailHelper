@@ -1,17 +1,19 @@
-// src/content/owa-adapter/row-finder.ts — uat62: tìm row inbox SỐNG theo messageId cho 👁/↗.
+// src/content/owa-adapter/row-finder.ts — uat62/uat63: tìm row inbox SỐNG theo messageId cho 👁/↗.
 // Bug: sau deep-scan OWA virtualize row khỏi DOM → element trong currentScan đã detach →
 // scrollToItem/openItem trả false im lặng ("không có chuyện gì xảy ra").
 // Chiến lược: (1) native attribute probe; (2) rescan DOM hiện tại + so messageId (synthetic
 // id khớp vì cùng subject/sender/preview); (3) scroll-search danh sách ảo hóa top→bottom —
+// scroller dùng findListScroller (anchor region + hidden-scroller — cùng primitive deep-scan).
 // CHỈ ĐỌC: không click, không mutate DOM (SR-10).
+import { findListScroller, liveMailList } from "./list-scroller";
 import { locateInboxList } from "./inbox-list-locator";
 import { SELECTOR_CHAINS } from "./selectors";
 import { readItem } from "./triage";
 import type { LocateFn } from "./triage";
 
 const ROW_SELECTOR = SELECTOR_CHAINS["inbox-item"].join(",");
-const SCROLL_STEP_WAIT_MS = 250; // chờ OWA render lại row sau khi cuộn (virtualization)
-const MAX_SCROLL_STEPS = 80; // folder ~vài trăm mail — mỗi bước cuộn ~80% viewport
+const SCROLL_STEP_WAIT_MS = 280; // chờ OWA render lại row sau khi cuộn (virtualization)
+const MAX_SCROLL_STEPS = 80; // folder ~vài trăm mail — mỗi bước cuộn ~1 viewport
 const ID_ATTRIBUTES = ["data-itemid", "data-convid", "data-message-id"] as const;
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
@@ -51,15 +53,14 @@ export async function findLiveRow(messageId: string, locate: LocateFn): Promise<
   return null;
 }
 
-// Ancestor cuộn được (overflow auto/scroll) — container ảo hóa của danh sách inbox.
-function scrollableAncestor(el: Element): HTMLElement | null {
-  let p: HTMLElement | null = el.parentElement;
-  while (p !== null) {
-    const style = window.getComputedStyle(p);
-    if (/(auto|scroll)/.test(style.overflowY) && p.scrollHeight > p.clientHeight + 10) return p;
-    p = p.parentElement;
+// Gán scrollTop + wheel burst — React virtualizer của OWA nghe cả scroll lẫn wheel.
+function scrollTo(scroller: HTMLElement, top: number): void {
+  try {
+    scroller.scrollTop = top;
+    scroller.dispatchEvent(new WheelEvent("wheel", { deltaY: 600, bubbles: true, cancelable: true }));
+  } catch {
+    /* jsdom không có WheelEvent — bỏ qua */
   }
-  return null;
 }
 
 // Tìm row; nếu đang ngoài DOM (virtualized) → CUỘN danh sách top→bottom tìm từng bước.
@@ -68,23 +69,23 @@ function scrollableAncestor(el: Element): HTMLElement | null {
 export async function scrollSearchRow(messageId: string, locate: LocateFn, stepWaitMs = SCROLL_STEP_WAIT_MS): Promise<Element | null> {
   const direct = await findLiveRow(messageId, locate);
   if (direct !== null) return direct;
-  const list = await locateInboxList(locate);
+  const list = liveMailList() ?? await locateInboxList(locate);
   if (list === null) return null;
-  const scroller = scrollableAncestor(list) ?? (list as HTMLElement);
+  const scroller = findListScroller(list) ?? (list as HTMLElement);
   const savedTop = scroller.scrollTop;
-  scroller.scrollTop = 0;
+  scrollTo(scroller, 0); // về ĐẦU danh sách — feedback nhìn thấy được ngay
   await sleep(stepWaitMs);
   let found = await findLiveRow(messageId, locate);
   if (found !== null) return found;
   for (let step = 0; step < MAX_SCROLL_STEPS && found === null; step += 1) {
     const before = scroller.scrollTop;
-    scroller.scrollTop = before + Math.max(240, Math.floor(scroller.clientHeight * 0.8));
+    scrollTo(scroller, before + Math.max(240, Math.floor(scroller.clientHeight * 0.8)));
     await sleep(stepWaitMs);
     found = await findLiveRow(messageId, locate);
     if (found !== null) return found;
     if (scroller.scrollTop === before) break; // chạm đáy — hết dữ liệu đã load
   }
-  scroller.scrollTop = savedTop; // không thấy → trả trải nghiệm về trạng thái cũ
+  scrollTo(scroller, savedTop); // không thấy → trả trải nghiệm về trạng thái cũ
   await sleep(stepWaitMs);
   return null;
 }

@@ -5,6 +5,8 @@
 import type { EmailData, CancelSignal } from "../../shared/types";
 import { sendMessage } from "../../shared/messaging";
 import { insertDraft, openReplyBox } from "./actions";
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 import type { ActionsDeps, InsertDecision, InsertOutcome } from "./actions";
 import { readEditableText, writeEditableText } from "./editable";
 import { detectView } from "./detector";
@@ -13,7 +15,7 @@ import { readEmail } from "./reader";
 import { SelectorTier } from "./selectors";
 import type { FunctionKey, LocatorStrategy } from "./selectors";
 import { collectInboxItemsDeep as collectItemsDeep } from "./deep-triage";
-import { scrollSearchRow } from "./row-finder";
+import { scrollSearchRow, findLiveRow } from "./row-finder";
 import type { InboxItem } from "./triage";
 import { VisionFallback } from "./vision-fallback";
 import type { VisionLocator } from "./vision-fallback";
@@ -77,7 +79,7 @@ export class OwaAdapter {
   }
 
   // UAT — cuộn đến mail trong danh sách (KHÔNG mở mail, KHÔNG đổi trạng thái đã đọc).
-  // uat62: row có thể bị OWA virtualize khỏi DOM sau deep-scan → scroll-search danh sách.
+  // uat63: scroll-search → scrollIntoView → re-find (virtualization có thể thay element).
   async scrollToItem(messageId: string): Promise<boolean> {
     const row = await scrollSearchRow(messageId, (key, question) => this.locate(key, question));
     if (row === null) {
@@ -85,17 +87,31 @@ export class OwaAdapter {
       return false;
     }
     row.scrollIntoView({ block: "center", behavior: "smooth" });
+    await sleep(400);
+    const fresh = await findLiveRow(messageId, (key, question) => this.locate(key, question));
+    if (fresh !== null && fresh !== row) fresh.scrollIntoView({ block: "center", behavior: "smooth" });
     return true;
   }
 
   // UAT — MỞ mail (click) → Outlook đánh dấu "đã đọc". Người dùng chủ động chọn.
-  // uat62: (1) row virtualized → scroll-search; (2) OWA mới BỎ QUA click tổng hợp
-  // (isTrusted=false — cùng lớp flyout) → trusted click qua SW chrome.debugger (COPIL_INPUT_CLICK).
+  // uat63: (1) scroll-search + scrollIntoView TRƯỚC khi tính toạ độ (bug v1: click theo rect
+  // của row chưa vào viewport → trượt); (2) re-find sau virtualization; (3) trusted click qua
+  // SW chrome.debugger (COPIL_INPUT_CLICK) — OWA mới bỏ qua click tổng hợp isTrusted=false.
   async openItem(messageId: string): Promise<boolean> {
-    const row = await scrollSearchRow(messageId, (key, question) => this.locate(key, question));
+    const locateFn = (key: FunctionKey, question: string) => this.locate(key, question);
+    let row = await scrollSearchRow(messageId, locateFn);
     if (row === null) {
       console.warn("[AIMH][panel] ↗ không tìm thấy mail trong danh sách hiện tại — thử refresh Outlook rồi quét lại");
       return false;
+    }
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      row.scrollIntoView({ block: "center" });
+      await sleep(400);
+      const fresh = await findLiveRow(messageId, locateFn); // virtualization có thể thay element
+      if (fresh !== null) row = fresh;
+      const rect = row.getBoundingClientRect();
+      const inViewport = rect.top >= 0 && rect.bottom <= window.innerHeight && rect.width > 0;
+      if (inViewport) break;
     }
     const rect = row.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return false;

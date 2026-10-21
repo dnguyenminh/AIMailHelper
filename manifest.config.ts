@@ -7,7 +7,7 @@ export default defineManifest({
   manifest_version: 3,
   name: "AIMailHelper",
   description: "Trợ lý AI cho Outlook Web — phân tích email, draft reply (không tự gửi), triage hộp thư.",
-  version: "1.1.10",
+  version: "1.1.11",
   // BR-15/BR-04: chrome.storage sync + local — quyền cốt lõi (SR-12 least privilege).
   // UAT 18/10: "debugger" — chrome.debugger CDP Input (trusted-scroll) cho deep-scan quét
   // toàn folder (SPIKE §7.1: OWA chỉ nhận input isTrusted). Hiện infobar "đang gỡ lỗi" khi quét.
