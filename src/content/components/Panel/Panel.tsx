@@ -10,7 +10,7 @@ import { createAnalyzeController } from "../../modules/analyze";
 import type { AnalysisUiState } from "../../modules/analyze";
 import { owaAdapter } from "../../owa-adapter/owa-adapter";
 import { createTriageController, createUnreadTriageController } from "../../modules/digest-controllers";
-import type { TriageUiState } from "../../modules/digest";
+import type { DigestEntry, TriageUiState } from "../../modules/digest";
 const IDLE_SCAN: TriageUiState = { status: "running", progress: { done: 0, total: 0, failed: 0 }, cachedSkipped: 0, cap: 0, overflow: 0, folderStopped: false, userStopped: false, error: null, digest: [] };
 import { AnalysisView } from "./AnalysisView";
 import { CopilotResult } from "./CopilotResult"; // GĐ-B — Copilot verbatim (result=null)
@@ -87,10 +87,12 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
     void triageRef.current?.start();
   }, [triage]);
   // uat80 — ↗ mở mail thành công → mail chuyển "đã đọc" → loại khỏi danh sách chưa đọc ngay.
-  const scrollToUnread = useCallback(async (id: string): Promise<void> => { void owaAdapter.scrollToItem(id); }, []);
-  const openUnread = useCallback(async (id: string): Promise<void> => {
-    const opened = await owaAdapter.openItem(id);
-    if (opened === true) unreadRef.current?.markEntryRead(id);
+  const scrollToUnread = useCallback(async (entry: DigestEntry): Promise<void> => {
+    void owaAdapter.scrollToItem(entry.messageId, { subject: entry.subject, sender: entry.sender });
+  }, []);
+  const openUnread = useCallback(async (entry: DigestEntry): Promise<void> => {
+    const opened = await owaAdapter.openItem(entry.messageId, { subject: entry.subject, sender: entry.sender });
+    if (opened === true) unreadRef.current?.markEntryRead(entry.messageId);
   }, []);
 
   const busy = state.status === "reading" || state.status === "streaming";
@@ -158,8 +160,8 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
             onRescan={() => { void unreadRef.current?.rescan(); }}
             onStop={() => { unreadRef.current?.cancel(); }}
             titleKey="panel.unread.title"
-            onScrollToItem={(id) => void scrollToUnread(id)}
-            onOpenItem={(id) => void openUnread(id)}
+            onScrollToItem={(entry) => void scrollToUnread(entry)}
+            onOpenItem={(entry) => void openUnread(entry)}
             onRefreshTop={() => void unreadRef.current?.refreshTop()}
           />
         </>
@@ -172,8 +174,8 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
           onRescan={() => { void triageRef.current?.rescan(); }}
           onStop={() => { triageRef.current?.cancel(); }}
           titleKey="panel.triage.title"
-          onScrollToItem={(id) => void scrollToUnread(id)}
-          onOpenItem={(id) => void openUnread(id)}
+          onScrollToItem={(entry) => void scrollToUnread(entry)}
+          onOpenItem={(entry) => void openUnread(entry)}
         />
       )}
       {showQueue && <QueueView state={auto} controller={autoRef.current} />}

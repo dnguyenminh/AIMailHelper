@@ -60,7 +60,7 @@ describe("row-finder — 👁/↗ tìm row sống (uat62)", () => {
   });
 
   it("scrollSearchRow: không thấy trong DOM + jsdom không có layout → null (không ném)", async () => {
-    const row = await scrollSearchRow("synthetic:khongtontai", locate, 0);
+    const row = await scrollSearchRow("synthetic:khongtontai", locate, undefined, 0);
     expect(row).toBeNull();
   });
 });

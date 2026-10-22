@@ -81,13 +81,15 @@ export async function detachTab(tabId: number): Promise<void> {
   }
 }
 
-// Gửi `times` gesture cuộn xuống tại (x, y). Mỗi gesture tự animate (CDP resolve khi xong).
+// Gửi `times` gesture cuộn tại (x, y). deltaY > 0 = cuộn XUỐNG, deltaY < 0 = cuộn LÊN
+// (CDP synthesizeScrollGesture: yDistance âm = cuộn xuống, DƯƠNG = cuộn lên — uat83: trước
+// đây Math.abs() khiến pha "cuộn lên" của 👁/↗ cũng thành cuộn xuống → không bao giờ tìm thấy).
 export async function scrollTab(tabId: number, tabUrl: string | undefined, x: number, y: number, deltaY: number, times: number): Promise<number> {
   const target = await ensureAttached(tabId, tabUrl);
   scheduleDetach(tabId);
   for (let index = 0; index < times; index += 1) {
     await chrome.debugger.sendCommand(target, ALLOWED_COMMAND, {
-      x: x, y: y, xDistance: 0, yDistance: -Math.abs(deltaY), speed: 700
+      x: x, y: y, xDistance: 0, yDistance: -deltaY, speed: 700
     });
   }
   return times;

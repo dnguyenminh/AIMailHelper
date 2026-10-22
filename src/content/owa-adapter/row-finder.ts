@@ -42,15 +42,22 @@ function probeNative(messageId: string): Element | null {
   return null;
 }
 
-// Tìm row trong DOM HIỆN TẠI — synthetic id vẫn khớp nhờ rescan + so messageId.
-export async function findLiveRow(messageId: string, locate: LocateFn): Promise<Element | null> {
+// Tìm row trong DOM HIỆN TẠI — khớp messageId; nếu không thấy → khớp THEO SUBJECT (uat83:
+// subject ổn định qua re-render/virtualization — id synthetic có thể lệch do preview đổi).
+export async function findLiveRow(
+  messageId: string,
+  locate: LocateFn,
+  hint?: { subject: string; sender: string }
+): Promise<Element | null> {
   const native = probeNative(messageId);
   if (native !== null) return native;
   const list = await locateInboxList(locate);
   if (list === null) return null;
   for (const row of Array.from(list.querySelectorAll(ROW_SELECTOR))) {
     const item = await readItem(row);
-    if (item !== null && item.messageId === messageId) return row;
+    if (item === null) continue;
+    if (item.messageId === messageId) return row;
+    if (hint !== undefined && hint.subject.length > 0 && item.subject === hint.subject) return row;
   }
   return null;
 }
@@ -70,8 +77,13 @@ function scrollTo(scroller: HTMLElement, top: number): void {
 // nên scroll-search phải dùng cùng primitive với deep-scan. Thứ tự: cuộn LÊN (deep-scan để
 // list ở đáy — mail cần tìm thường ở trên) → cuộn XUỐNG → fallback scrollTop (OWA cũ).
 // Hết 2 pha không thấy → null (caller warn cho user, không im lặng). stepWaitMs inject (test).
-export async function scrollSearchRow(messageId: string, locate: LocateFn, stepWaitMs = SCROLL_STEP_WAIT_MS): Promise<Element | null> {
-  let found = await findLiveRow(messageId, locate);
+export async function scrollSearchRow(
+  messageId: string,
+  locate: LocateFn,
+  hint?: { subject: string; sender: string },
+  stepWaitMs = SCROLL_STEP_WAIT_MS
+): Promise<Element | null> {
+  let found = await findLiveRow(messageId, locate, hint);
   if (found !== null) return found;
   const list = liveMailList() ?? await locateInboxList(locate);
   if (list === null) return null;
@@ -99,7 +111,7 @@ export async function scrollSearchRow(messageId: string, locate: LocateFn, stepW
   for (let i = 0; i < MAX_BURSTS && found === null && stableUp < 2; i += 1) {
     try { await trustedScrollBurst(cx, cy, -1200); } catch { break; } // gesture lỗi → pha B
     await sleep(stepWaitMs);
-    found = await findLiveRow(messageId, locate);
+    found = await findLiveRow(messageId, locate, hint);
     if (found !== null) return found;
     const first = await firstRowId();
     stableUp = first === prevFirst ? stableUp + 1 : 0;
@@ -111,7 +123,7 @@ export async function scrollSearchRow(messageId: string, locate: LocateFn, stepW
   for (let i = 0; i < MAX_BURSTS && found === null && stableDown < 2; i += 1) {
     try { await trustedScrollBurst(cx, cy, 1200); } catch { break; }
     await sleep(stepWaitMs);
-    found = await findLiveRow(messageId, locate);
+    found = await findLiveRow(messageId, locate, hint);
     if (found !== null) return found;
     const last = await lastRowId();
     stableDown = last === prevLast ? stableDown + 1 : 0;
@@ -123,12 +135,12 @@ export async function scrollSearchRow(messageId: string, locate: LocateFn, stepW
   const savedTop = scroller.scrollTop;
   scrollTo(scroller, 0);
   await sleep(stepWaitMs);
-  found = await findLiveRow(messageId, locate);
+  found = await findLiveRow(messageId, locate, hint);
   for (let step = 0; step < MAX_SCROLL_STEPS && found === null; step += 1) {
     const before = scroller.scrollTop;
     scrollTo(scroller, before + Math.max(240, Math.floor(scroller.clientHeight * 0.8)));
     await sleep(stepWaitMs);
-    found = await findLiveRow(messageId, locate);
+    found = await findLiveRow(messageId, locate, hint);
     if (found !== null) return found;
     if (scroller.scrollTop === before) break;
   }

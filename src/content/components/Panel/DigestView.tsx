@@ -3,7 +3,7 @@
 // EF-1 cache trống → hướng dẫn "Chạy Triage inbox trước"; EF-5 overflow → nút "Quét tiếp";
 // EF-2/EF-4 đổi folder → ghi chú dừng an toàn; AF-5 scanMore giữ kết quả cũ; AF-2 rescan bỏ cache.
 import { t } from "../../../shared/i18n";
-import type { TriageUiState } from "../../modules/digest";
+import type { DigestEntry, TriageUiState } from "../../modules/digest";
 
 const badgeClassOf = (score: number): string =>
   score >= 70 ? "aimh-badge-high" : score >= 40 ? "aimh-badge-medium" : "aimh-badge-low"; // đỏ/cam/xanh
@@ -15,8 +15,8 @@ export interface DigestViewProps {
   onRescan: () => void;
   onStop: () => void;
   titleKey?: string;
-  onScrollToItem?: (messageId: string) => void; // UAT — cuộn đến mail (không mở, không đổi trạng thái)
-  onOpenItem?: (messageId: string) => void; // UAT — mở mail (Outlook đánh dấu đã đọc)
+  onScrollToItem?: (entry: DigestEntry) => void; // UAT — cuộn đến mail (không mở, không đổi trạng thái)
+  onOpenItem?: (entry: DigestEntry) => void; // UAT — mở mail (Outlook đánh dấu đã đọc)
   onRefreshTop?: () => void; // uat80 — refresh nhẹ 30s (mail mới về / mail đã đọc) do Panel điều khiển
 }
 
@@ -72,10 +72,10 @@ export function DigestView({ state, onStart, onScanMore, onRescan, onStop, title
               <span className="aimh-text"> {entry.subject}</span>
               <span className="aimh-note"> — {entry.reason}</span> {/* FR-GD5-04 — lý do */}
               {onScrollToItem !== undefined && (
-                <button type="button" className="aimh-btn" aria-label={t("panel.digest.scrollTo")} onClick={() => onScrollToItem(entry.messageId)}>👁</button>
+                <button type="button" className="aimh-btn" aria-label={t("panel.digest.scrollTo")} onClick={() => onScrollToItem(entry)}>👁</button>
               )}
               {onOpenItem !== undefined && (
-                <button type="button" className="aimh-btn" aria-label={t("panel.digest.open")} onClick={() => onOpenItem(entry.messageId)}>↗</button>
+                <button type="button" className="aimh-btn" aria-label={t("panel.digest.open")} onClick={() => onOpenItem(entry)}>↗</button>
               )}
             </li>
           ))}
