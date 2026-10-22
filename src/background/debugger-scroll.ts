@@ -62,6 +62,10 @@ async function ensureAttached(tabId: number, tabUrl: string | undefined): Promis
   }
   const target = { tabId: tabId };
   await chrome.debugger.attach(target, "1.3");
+  // uat82 — tab ẩn bị Chromium đình chỉ render + throttle timer: gesture vẫn gửi nhưng OWA
+  // không render row mới (IntersectionObserver không fire khi không có frame). Đưa tab lên
+  // active trước khi quét — gestures + virtualizer hoạt động đầy đủ.
+  try { await chrome.tabs.update(tabId, { active: true }); } catch { /* tab đóng giữa chừng */ }
   attached.set(tabId, { target: target, timer: setTimeout(() => void detachTab(tabId), ATTACH_TTL_MS) });
   return target;
 }
