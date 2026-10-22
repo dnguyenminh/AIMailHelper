@@ -17,6 +17,7 @@ export interface DigestViewProps {
   titleKey?: string;
   onScrollToItem?: (messageId: string) => void; // UAT — cuộn đến mail (không mở, không đổi trạng thái)
   onOpenItem?: (messageId: string) => void; // UAT — mở mail (Outlook đánh dấu đã đọc)
+  onRefreshTop?: () => void; // uat80 — refresh nhẹ 30s (mail mới về / mail đã đọc) do Panel điều khiển
 }
 
 export function DigestView({ state, onStart, onScanMore, onRescan, onStop, titleKey, onScrollToItem, onOpenItem }: DigestViewProps) {

@@ -40,11 +40,42 @@ export async function collectInboxItemsDeep(locate: LocateFn, deps?: DeepScanDep
 
 // Quét sâu + lọc CHỈ mail chưa đọc. Check isUnreadItem NGAY trong visitRound — TRƯỚC khi OWA
 // virtualize row khỏi DOM (element detach → computed style rỗng → mất signal bold).
-export async function collectUnreadItemsDeep(locate: LocateFn, deps?: DeepScanDeps): Promise<InboxItem[]> {
+// uat80 — WATERMARK TĂNG DẦN: lưu ids mail đầu lần quét trước (chrome.storage.local); lần sau
+// gặp ≥3 mail đã biết liên tiếp → dừng sớm (mail mới luôn nằm trên). full=true (Quét lại) bỏ mốc.
+const WATERMARK_KEY = "unread.watermark.v1";
+const WATERMARK_MAX_IDS = 300;
+const STOP_AFTER_KNOWN = 3;
+
+async function loadKnownIds(): Promise<Set<string>> {
+  try {
+    if (typeof chrome === "undefined" || chrome.storage?.local === undefined) return new Set();
+    const got = await chrome.storage.local.get(WATERMARK_KEY);
+    const ids = (got?.[WATERMARK_KEY] as { ids?: string[] } | undefined)?.ids ?? [];
+    return new Set(ids);
+  } catch {
+    return new Set();
+  }
+}
+
+async function saveWatermark(ids: string[]): Promise<void> {
+  try {
+    if (typeof chrome === "undefined" || chrome.storage?.local === undefined) return;
+    await chrome.storage.local.set({ [WATERMARK_KEY]: { ids: ids.slice(0, WATERMARK_MAX_IDS), at: Date.now() } });
+  } catch {
+    /* quota — bỏ qua; lần sau quét lại toàn bộ */
+  }
+}
+
+export async function collectUnreadItemsDeep(locate: LocateFn, deps?: DeepScanDeps, opts?: { full?: boolean }): Promise<InboxItem[]> {
   const unread = new Map<string, InboxItem>();
   const unreadElements = new Map<string, Element>();
+  const known = opts?.full === true ? new Set<string>() : await loadKnownIds();
+  const seen = new Set<string>();
+  const seenOrder: string[] = [];
+  let knownStreak = 0;
   await deepScanCollect(locate, (items, elements) => {
     for (const item of items) {
+      if (seen.has(item.messageId) === false) { seen.add(item.messageId); seenOrder.push(item.messageId); }
       const element = elements.get(item.messageId);
       if (element === undefined || unread.has(item.messageId)) continue;
       if (isUnreadItem(element)) {
@@ -52,8 +83,13 @@ export async function collectUnreadItemsDeep(locate: LocateFn, deps?: DeepScanDe
         unreadElements.set(item.messageId, element);
       }
     }
-  }, {}, deps ?? deepDeps());
+  }, { stopWhen: (item) => {
+    if (known.has(item.messageId) === false) { knownStreak = 0; return false; }
+    knownStreak += 1;
+    return knownStreak >= STOP_AFTER_KNOWN; // ≥3 mail đã biết liên tiếp → hết vùng mới — dừng
+  } }, deps ?? deepDeps());
   replaceCurrentScan(unreadElements); // findItemElement (👁/↗) tra theo lần quét này
-  console.info(`[AIMH][triage] unread deep: ${unread.size} mail chưa đọc (cuộn quét toàn folder, chỉ đọc DOM)`);
+  await saveWatermark(seenOrder); // mốc tăng dần cho lần quét sau
+  console.info(`[AIMH][triage] unread deep: ${unread.size} mail chưa đọc (quét tăng dần theo watermark)`);
   return Array.from(unread.values());
 }

@@ -1,7 +1,5 @@
-// src/content/components/Panel/Panel.tsx — Panel AI GĐ3+GĐ4 (TDD §3.6; FR-GD3-05/06, FR-GD4-01..06).
-// Shadow DOM (đã mount bởi index.tsx): nút "AI phân tích" + "Dừng", consent banner lần đầu
-// analyze (SR-18), streaming raw, AnalysisView structured + badge, ErrorBanner (ERR + Thử lại),
-// ReplySection UC-02 (soạn trả lời — khi analyze done) + DiagnoseView UC-09.
+// src/content/components/Panel/Panel.tsx — Panel AI (TDD §3.6; FR-GD3-05/06, FR-GD4-01..06):
+// nút analyze/Dừng, consent (SR-18), streaming, AnalysisView, ErrorBanner, Reply, Diagnose.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getCache, setCache } from "../../../shared/cache-store";
 import { t } from "../../../shared/i18n";
@@ -11,7 +9,7 @@ import { IDLE_AUTO } from "../../modules/automode-types";
 import { createAnalyzeController } from "../../modules/analyze";
 import type { AnalysisUiState } from "../../modules/analyze";
 import { owaAdapter } from "../../owa-adapter/owa-adapter";
-import { createTriageController, createUnreadTriageController } from "../../modules/digest";
+import { createTriageController, createUnreadTriageController } from "../../modules/digest-controllers";
 import type { TriageUiState } from "../../modules/digest";
 const IDLE_SCAN: TriageUiState = { status: "running", progress: { done: 0, total: 0, failed: 0 }, cachedSkipped: 0, cap: 0, overflow: 0, folderStopped: false, userStopped: false, error: null, digest: [] };
 import { AnalysisView } from "./AnalysisView";
@@ -25,8 +23,6 @@ import { ReplySection } from "./ReplySection";
 
 const CONSENT_KEY = "panel.consentShown"; // SR-18 — ghi nhận đã hiển thị
 const EXTERNAL_ANALYZE_EVENT = "aimh:analyze"; // nút toolbar inject (owa-adapter) bắn event này
-
-const isTrue = (value: unknown): true | null => (value === true ? true : null);
 
 export function Panel({ host }: { host: HTMLDivElement | null }) {
   const [state, setState] = useState<AnalysisUiState>({ status: "idle", raw: "", result: null, error: null });
@@ -49,7 +45,7 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
     unreadRef.current = createUnreadTriageController(setUnread); // UAT — list mail chưa đọc (chỉ-đọc DOM)
     autoRef.current = createAutoModeController(setAuto); // GĐ6 — observer CHỈ khi enabled (BR-02)
     void autoRef.current.sync();
-    void getCache(CONSENT_KEY, isTrue).then((shown) => setConsentVisible(shown !== true));
+    void getCache(CONSENT_KEY, (value) => (value === true ? true : null)).then((shown) => setConsentVisible(shown !== true));
     const onExternal = (): void => {
       void controllerRef.current?.start();
     };
@@ -68,45 +64,33 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
     void controllerRef.current?.start();
   }, []);
 
-  const stop = useCallback((): void => {
-    controllerRef.current?.cancel();
-  }, []);
-
   // GĐ5 — UC-03/UC-04: Triage inbox + Quét tiếp (AF-5) + Quét lại (AF-2) + Dừng (EF-3).
   const triageStart = useCallback((): void => {
     setShowDiagnose(false);
     void triageRef.current?.start();
   }, []);
-  const triageScanMore = useCallback((): void => {
-    void triageRef.current?.scanMore();
-  }, []);
-  const triageRescan = useCallback((): void => {
-    void triageRef.current?.rescan();
-  }, []);
-  const triageStop = useCallback((): void => {
-    triageRef.current?.cancel();
-  }, []);
 
-  // UAT (mail chưa đọc + sàng lọc) — callbacks gọn; set state NGAY để spinner hiện.
   const unreadStart = useCallback((): void => {
     setShowDiagnose(false); setShowUnread(true); setShowTriage(false);
     if (unread?.status !== "running") setUnread(IDLE_SCAN);
     void unreadRef.current?.start();
   }, [unread]);
-  const unreadScanMore = useCallback((): void => { void unreadRef.current?.scanMore(); }, []);
-  const unreadRescan = useCallback((): void => { void unreadRef.current?.rescan(); }, []);
-  const unreadStop = useCallback((): void => { unreadRef.current?.cancel(); }, []);
+  // uat80 — refresh NHẸ 30s khi danh sách chưa đọc đang hiển thị (mail mới về / mail đã đọc).
+  useEffect(() => {
+    if (showUnread === false || unread?.status !== "done") return;
+    const id = window.setInterval(() => { void unreadRef.current?.refreshTop(); }, 30_000);
+    return () => window.clearInterval(id);
+  }, [showUnread, unread?.status]);
   const triageStartFromPanel = useCallback((): void => {
     setShowDiagnose(false); setShowUnread(false); setShowTriage(true);
     if (triage?.status !== "running") setTriage(IDLE_SCAN);
     void triageRef.current?.start();
   }, [triage]);
+  // uat80 — ↗ mở mail thành công → mail chuyển "đã đọc" → loại khỏi danh sách chưa đọc ngay.
   const scrollToUnread = useCallback(async (id: string): Promise<void> => { void owaAdapter.scrollToItem(id); }, []);
-  const openUnread = useCallback(async (id: string): Promise<void> => { void owaAdapter.openItem(id); }, []);
-
-  const ackConsent = useCallback((): void => {
-    setConsentVisible(false);
-    void setCache(CONSENT_KEY, true); // SR-18 — ghi nhận đã hiển thị; lỗi storage không chặn luồng
+  const openUnread = useCallback(async (id: string): Promise<void> => {
+    const opened = await owaAdapter.openItem(id);
+    if (opened === true) unreadRef.current?.markEntryRead(id);
   }, []);
 
   const busy = state.status === "reading" || state.status === "streaming";
@@ -122,7 +106,7 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
           {busy ? t("panel.analyze.running") : t("panel.analyze.button")}
         </button>
         {state.status === "streaming" && (
-          <button type="button" className="aimh-btn" onClick={stop}>{t("panel.analyze.stop")}</button>
+          <button type="button" className="aimh-btn" onClick={() => { controllerRef.current?.cancel(); }}>{t("panel.analyze.stop")}</button>
         )}
         <button type="button" className="aimh-btn" onClick={() => setShowDiagnose((value) => !value)}>
           {t("panel.diagnose.button")}
@@ -146,7 +130,7 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
       {consentVisible && (
         <div className="aimh-consent" role="note">
           <p className="aimh-note">{t("panel.consent.banner")}</p>
-          <button type="button" className="aimh-btn" onClick={ackConsent}>{t("panel.consent.ack")}</button>
+          <button type="button" className="aimh-btn" onClick={() => { setConsentVisible(false); void setCache(CONSENT_KEY, true); }}>{t("panel.consent.ack")}</button>
         </div>
       )}
       {state.status === "reading" && <p className="aimh-note">{t("panel.analyze.readingEmail")}</p>}
@@ -159,9 +143,9 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
         <DigestView
           state={triage}
           onStart={triageStart}
-          onScanMore={triageScanMore}
-          onRescan={triageRescan}
-          onStop={triageStop}
+          onScanMore={() => { void triageRef.current?.scanMore(); }}
+          onRescan={() => { void triageRef.current?.rescan(); }}
+          onStop={() => { triageRef.current?.cancel(); }}
         />
       )}
       {showUnread && unread !== null && (
@@ -170,12 +154,13 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
           <DigestView
             state={unread}
             onStart={unreadStart}
-            onScanMore={unreadScanMore}
-            onRescan={unreadRescan}
-            onStop={unreadStop}
+            onScanMore={() => { void unreadRef.current?.scanMore(); }}
+            onRescan={() => { void unreadRef.current?.rescan(); }}
+            onStop={() => { unreadRef.current?.cancel(); }}
             titleKey="panel.unread.title"
             onScrollToItem={(id) => void scrollToUnread(id)}
             onOpenItem={(id) => void openUnread(id)}
+            onRefreshTop={() => void unreadRef.current?.refreshTop()}
           />
         </>
       )}
@@ -183,15 +168,15 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
         <DigestView
           state={triage}
           onStart={triageStartFromPanel}
-          onScanMore={triageScanMore}
-          onRescan={triageRescan}
-          onStop={triageStop}
+          onScanMore={() => { void triageRef.current?.scanMore(); }}
+          onRescan={() => { void triageRef.current?.rescan(); }}
+          onStop={() => { triageRef.current?.cancel(); }}
           titleKey="panel.triage.title"
           onScrollToItem={(id) => void scrollToUnread(id)}
           onOpenItem={(id) => void openUnread(id)}
         />
       )}
-      {showQueue && <QueueView state={auto} controller={autoRef.current} />} {/* GĐ6 — UC-07 */}
+      {showQueue && <QueueView state={auto} controller={autoRef.current} />}
       {showDiagnose && <DiagnoseView onClose={() => setShowDiagnose(false)} />}
       </div>
     </PanelWindow>

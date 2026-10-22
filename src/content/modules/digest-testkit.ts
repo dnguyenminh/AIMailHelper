@@ -57,6 +57,7 @@ export function makeHarness(items: InboxItem[], cached: Map<string, TriageScore>
       badges.push({ messageId: messageId, score: score });
     }),
     getAutomation: vi.fn(async () => config),
+    collectUnreadTop: vi.fn(async () => []),
     request: (batch, onEvent) => {
       requests.push({ items: batch as InboxItem[], emit: onEvent });
       if (script !== undefined) script.respond(batch as InboxItem[], onEvent);

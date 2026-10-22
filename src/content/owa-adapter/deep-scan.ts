@@ -11,6 +11,9 @@ import { describeScroller, findListScroller, loadMoreByScroll } from "./list-scr
 export interface DeepScanOptions {
   maxItems?: number; // cap an toàn — mặc định 500 (khớp triageCap tối đa ở Options), chặn giữa các round
   maxRounds?: number;
+  // uat80 — watermark: gặp mail ĐÃ CÓ trong lần quét trước (≥ STREAK lần liên tiếp do caller
+  // đếm) → dừng sớm, KHÔNG cuộn tiếp — tiết kiệm thời gian lớn trên folder dài.
+  stopWhen?: (item: InboxItem) => boolean;
 }
 
 export interface DeepScanDeps {
@@ -21,7 +24,7 @@ export interface DeepScanDeps {
   onScanEnd?: () => Promise<void>; // dọn dẹp cuối quét (detach debugger — infobar tắt)
 }
 
-const DEFAULTS: Required<DeepScanOptions> = { maxItems: 500, maxRounds: 150 };
+const DEFAULTS = { maxItems: 500, maxRounds: 150 };
 const NO_GROWTH_STOP = 3; // hết row mới N round liên tiếp → coi như đã hết folder
 
 interface RoundResult {
@@ -53,7 +56,7 @@ async function collectRound(locate: LocateFn, deps: DeepScanDeps, merged: Map<st
 async function scanRounds(
   locate: LocateFn,
   visitRound: (items: InboxItem[], elements: Map<string, Element>) => void,
-  opts: Required<DeepScanOptions>,
+  opts: Omit<Required<DeepScanOptions>, "stopWhen"> & Pick<DeepScanOptions, "stopWhen">,
   deps: DeepScanDeps,
   list: Element,
   merged: Map<string, InboxItem>
@@ -64,6 +67,11 @@ async function scanRounds(
     const before = merged.size;
     const fresh = await collectRound(locate, deps, merged);
     if (fresh.items.length > 0) visitRound(fresh.items, fresh.elements);
+    if (opts.stopWhen !== undefined) {
+      for (const item of fresh.items) {
+        if (opts.stopWhen(item) === true) return; // chạm vùng đã quét lần trước — dừng, KHÔNG cuộn tiếp
+      }
+    }
     noGrowth = merged.size === before ? noGrowth + 1 : 0;
     if (noGrowth >= NO_GROWTH_STOP) return; // hết folder — N round liên tiếp không có mail mới
     if (merged.size < opts.maxItems) await loadMore(list);
@@ -79,7 +87,11 @@ export async function deepScanCollect(
   options: DeepScanOptions,
   deps: DeepScanDeps
 ): Promise<InboxItem[]> {
-  const opts = { ...DEFAULTS, ...options };
+  const opts = {
+    maxItems: options.maxItems ?? DEFAULTS.maxItems,
+    maxRounds: options.maxRounds ?? DEFAULTS.maxRounds,
+    stopWhen: options.stopWhen
+  };
   const list = await deps.locateList(locate);
   if (list === null) throw new AppError("ERR-06", "errors.owaNotFound"); // ERR-06 — panel gợi ý Diagnose
   console.info(`[AIMH][deep-scan] scroll container: ${describeScroller(list)}`);

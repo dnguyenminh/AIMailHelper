@@ -3,16 +3,12 @@
 // score giảm dần (FR-GD5-04); EF-2/EF-4 dừng an toàn; AF-5 quét tiếp; AF-2 quét lại bỏ cache.
 import type { TriageScore } from "../../shared/types";
 import type { AutomationConfig } from "../../shared/types";
-import { PortClient } from "../../shared/port-client";
-import { storage } from "../../shared/storage";
-import type { InboxItem, LocateFn } from "../owa-adapter/triage";
-import { collectUnreadItemsDeep } from "../owa-adapter/deep-triage";
-import { hasFolderChanged as folderChangedFn, readFolderSignature } from "../owa-adapter/triage";
-import { getTriageMany, setTriageMany } from "../owa-adapter/triage-cache";
-import { owaAdapter } from "../owa-adapter/owa-adapter";
+import type { InboxItem } from "../owa-adapter/triage";
+import { findItemElement, isUnreadItem } from "../owa-adapter/triage";
 import type { BatchError } from "./digest-batch";
-import { defaultSleep, runBatchWithRetry } from "./digest-batch";
+import { runBatchWithRetry } from "./digest-batch";
 import { chunks, entriesFromCached, idsOf, toTriageError, upsertDigest } from "./digest-helpers";
+import { mergeNewUnread, pruneReadEntries, removeEntry } from "./digest-unread";
 import type { DigestEntry, TriageDeps, TriageError, TriageUiState } from "./digest-types";
 
 export type { DigestEntry, TriageDeps, TriageError, TriageProgress, TriageUiState } from "./digest-types";
@@ -44,14 +40,15 @@ export class TriageController {
 
   constructor(private readonly deps: TriageDeps) {}
 
-  // UC-03 bước 1-6 — AF-2: force bỏ cache; keepDigest: giữ kết quả cũ (AF-5 "Quét tiếp").
+  // UC-03 bước 1-6 — AF-2: force bỏ cache; keepDigest: giữ kết quả cũ (AF-5 "Quét tiếp");
+  // uat80: force (Quét lại) → full=true bỏ watermark quét toàn folder như cũ.
   async start(options: { force?: boolean; keepDigest?: boolean } = {}): Promise<void> {
     this.currentRun?.cancel();
     this.currentRun = null;
     this.signature = await this.deps.folderSignature();
     let items: InboxItem[];
     try {
-      items = await this.deps.collectItems(); // BR-07 + ERR-12 lọc sẵn trong triage.ts
+      items = await this.deps.collectItems(options.force === true ? { full: true } : undefined); // BR-07 + ERR-12 lọc sẵn trong triage.ts
     } catch (error) {
       this.scan = null;
       this.setState({ ...IDLE, status: "error", error: toTriageError(error) });
@@ -92,6 +89,29 @@ export class TriageController {
   cancel(): void {
     this.currentRun?.cancel();
     this.currentRun = null;
+  }
+
+  // uat80 — ↗ mở mail thành công → mail chuyển "đã đọc" → loại khỏi danh sách ngay.
+  markEntryRead(messageId: string): void {
+    this.setState(removeEntry(this.state, messageId));
+  }
+
+  // uat80 — refresh NHẸ danh sách chưa đọc (view đang mở, chu kỳ 30s): gộp mail mới về
+  // (chưa chấm điểm) + loại mail đã chuyển "đã đọc" (row còn kết nối). KHÔNG cuộn, KHÔNG LLM.
+  async refreshTop(): Promise<void> {
+    if (this.state.status !== "done") return;
+    let top: InboxItem[] = [];
+    try {
+      top = await this.deps.collectUnreadTop();
+    } catch {
+      return; // ERR-06 nhất thời — giữ danh sách hiện tại
+    }
+    const unreadStateOf = (messageId: string): boolean | null => {
+      const element = findItemElement(messageId);
+      if (element === null || element.isConnected === false) return null;
+      return isUnreadItem(element);
+    };
+    this.setState(pruneReadEntries(mergeNewUnread(this.state, top), unreadStateOf));
   }
 
   // 6.6d outer loop — folderChanged() TRƯỚC MỖI batch → dừng an toàn giữ kết quả (EF-2/EF-4).
@@ -176,24 +196,3 @@ export class TriageController {
   }
 }
 
-// Deps dùng chung (PortClient + adapter + cache GĐ5; vision opt-out BR-03) — UAT 17/10: cả 2 controller dùng quét SÂU (cuộn dần ảo hóa, KHÔNG đổi trạng thái đã đọc).
-function baseDeps(collect: (locate: LocateFn) => Promise<InboxItem[]>, onState: (state: TriageUiState) => void): TriageDeps {
-  const client = new PortClient();
-  const locate = (key: Parameters<typeof owaAdapter.locate>[0], question: string) => owaAdapter.locate(key, question);
-  return {
-    collectItems: () => collect(locate), folderSignature: () => readFolderSignature(locate),
-    hasFolderChanged: (before) => folderChangedFn(before, locate),
-    getCached: (ids) => getTriageMany(ids), saveScores: (scores) => setTriageMany(scores),
-    attachBadge: (messageId, score) => owaAdapter.attachBadge(messageId, score),
-    getAutomation: () => storage.getAutomation(),
-    request: (batch, onEvent) => client.request("triage-batch", { items: batch }, onEvent),
-    sleep: defaultSleep, onState: onState
-  };
-}
-
-export function createTriageController(onState: (state: TriageUiState) => void): TriageController {
-  return new TriageController(baseDeps(() => owaAdapter.collectInboxItemsDeep(), onState));
-}
-export function createUnreadTriageController(onState: (state: TriageUiState) => void): TriageController {
-  return new TriageController(baseDeps((locate) => collectUnreadItemsDeep(locate), onState));
-}

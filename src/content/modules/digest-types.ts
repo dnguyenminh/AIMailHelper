@@ -33,13 +33,14 @@ export interface TriageUiState {
 }
 
 export interface TriageDeps {
-  collectItems: () => Promise<InboxItem[]>; // BR-07 — chỉ item đang hiển thị
+  collectItems: (opts?: { full?: boolean }) => Promise<InboxItem[]>; // BR-07; uat80: full=true bỏ watermark
   folderSignature: () => Promise<Element | null>; // EF-2/EF-4 — mốc folder trước scan
   hasFolderChanged: (before: Element | null) => Promise<boolean>; // check trước mỗi batch
   getCached: (ids: string[]) => Promise<Map<string, TriageScore>>; // BR-09
   saveScores: (scores: TriageScore[]) => Promise<void>; // ghi GỘP batch (§3.3)
   attachBadge: (messageId: string, score: number) => void; // FR-GD5-03
   getAutomation: () => Promise<AutomationConfig>; // batchSize/throttleMs/triageCap (AF-3 UC-03)
+  collectUnreadTop: () => Promise<InboxItem[]>; // uat80 — refresh nhẹ: mail chưa đọc ĐANG hiển thị
   request: BatchRequest; // Port "triage-batch" (§6.2)
   sleep: (ms: number) => Promise<void>; // throttle/backoff — injectable (test)
   onState: (state: TriageUiState) => void;
