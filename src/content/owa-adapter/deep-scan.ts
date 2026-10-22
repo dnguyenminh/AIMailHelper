@@ -21,6 +21,7 @@ export interface DeepScanDeps {
   findElement: (messageId: string) => Element | null; // = findItemElement (đọc currentScan)
   locateList: (locate: LocateFn) => Promise<Element | null>; // = locateInboxList
   loadMore?: (list: Element) => Promise<boolean>; // mặc định: lai synthetic + trusted (deep-triage)
+  resetToTop?: () => Promise<boolean>; // uat81 — cuộn về ĐẦU danh sách trước khi quét (mail mới ở trên)
   onScanEnd?: () => Promise<void>; // dọn dẹp cuối quét (detach debugger — infobar tắt)
 }
 
@@ -94,6 +95,12 @@ export async function deepScanCollect(
   };
   const list = await deps.locateList(locate);
   if (list === null) throw new AppError("ERR-06", "errors.owaNotFound"); // ERR-06 — panel gợi ý Diagnose
+  // uat81 — QUÉT LUÔN BẮT ĐẦU TỪ ĐẦU danh sách: deep-scan trước để list ở đáy, mail mới về
+  // nằm trên đỉnh — không reset thì mọi mail mới bị bỏ qua (bug user báo 23/10).
+  if (deps.resetToTop !== undefined) {
+    const atTop = await deps.resetToTop();
+    console.info(`[AIMH][deep-scan] reset về đầu danh sách: ${atTop === true ? "OK" : "KHÔNG xác nhận (vẫn thử quét)"}`);
+  }
   console.info(`[AIMH][deep-scan] scroll container: ${describeScroller(list)}`);
   const merged = new Map<string, InboxItem>();
   // Phục hồi vị trí cuộn sau khi quét — scroller có thể bị React thay thế giữa chừng → best-effort.

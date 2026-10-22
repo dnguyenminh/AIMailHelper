@@ -6,7 +6,7 @@
 import { deepScanCollect, type DeepScanDeps } from "./deep-scan";
 import { locateInboxList } from "./inbox-list-locator";
 import { loadMoreByScroll } from "./list-scroller";
-import { trustedScrollAdvance, trustedScrollDetach } from "./trusted-scroll";
+import { trustedScrollAdvance, trustedScrollDetach, trustedScrollToTop } from "./trusted-scroll";
 import { collectInboxItems, findItemElement, isUnreadItem, replaceCurrentScan } from "./triage";
 import type { InboxItem, LocateFn } from "./triage";
 
@@ -28,6 +28,7 @@ function deepDeps(): DeepScanDeps {
     findElement: findItemElement,
     locateList: locateInboxList,
     loadMore: hybridLoadMore,
+    resetToTop: trustedScrollToTop, // uat81 — quét luôn bắt đầu từ mail mới nhất
     onScanEnd: () => trustedScrollDetach() // infobar "đang gỡ lỗi" tắt khi quét xong
   };
 }

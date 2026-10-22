@@ -11,6 +11,7 @@ const GROW_TIMEOUT_MS = 2500; // chờ OWA materialize/render thêm row sau gest
 const GROW_POLL_MS = 250;
 const GESTURE_TIMES = 3;
 const GESTURE_DELTA = 1200;
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 export interface TrustedScrollResult {
   sent: number;
@@ -48,4 +49,38 @@ export async function trustedScrollAdvance(): Promise<boolean> {
     if (fresh !== null && fresh.querySelectorAll('[role="option"], [role="listitem"]').length > before) return true;
   }
   return false;
+}
+
+// uat81 — cuộn LÊN về ĐẦU danh sách bằng trusted gesture (deltaY âm). Bắt buộc trước mỗi lần
+// quét sâu: deep-scan trước đó để list ở đáy, mail MỚI nằm trên đỉnh — quét từ đáy = misses.
+// Nhận diện "đã ở đỉnh": row đầu tiên không đổi qua 2 burst liên tiếp.
+export async function trustedScrollToTop(maxBursts = 30): Promise<boolean> {
+  const firstKey = (): string => {
+    const box = liveMailList();
+    if (box === null) return "";
+    const first = box.querySelector('[role="option"], [role="listitem"]');
+    return (first?.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 120);
+  };
+  const list = liveMailList();
+  if (list === null) return false;
+  let prev = firstKey();
+  let stable = 0;
+  for (let i = 0; i < maxBursts; i += 1) {
+    const rect = (liveMailList() ?? list).getBoundingClientRect();
+    try {
+      await trustedScrollBurst(Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2), -1200);
+    } catch {
+      return false;
+    }
+    await sleep(280);
+    const now = firstKey();
+    if (now.length > 0 && now === prev) {
+      stable += 1;
+      if (stable >= 2) return true; // 2 lần liên tiếp row đầu không đổi → đã ở đỉnh
+    } else {
+      stable = 0;
+    }
+    prev = now;
+  }
+  return stable >= 2;
 }
