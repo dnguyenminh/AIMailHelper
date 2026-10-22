@@ -16,10 +16,11 @@ export interface TrustedScrollResult {
   sent: number;
 }
 
-// Bắn chuỗi gesture cuộn xuống tại tâm list (SW attach tab + CDP). Ném AppError nếu tab
+// Bắn chuỗi gesture cuộn tại tâm list (SW attach tab + CDP). deltaY âm = cuộn LÊN, dương = XUỐNG
+// (uat63: row-finder cần cuộn lên tìm mail cũ — deep-scan chỉ cần xuống). Ném AppError nếu tab
 // không phải OWA / payload sai — caller coi như "cuộn thất bại" và dừng theo no-growth.
-export async function trustedScrollBurst(x: number, y: number): Promise<TrustedScrollResult> {
-  const payload: DebuggerScrollPayload = { x: x, y: y, deltaY: GESTURE_DELTA, times: GESTURE_TIMES };
+export async function trustedScrollBurst(x: number, y: number, deltaY: number = GESTURE_DELTA): Promise<TrustedScrollResult> {
+  const payload: DebuggerScrollPayload = { x: x, y: y, deltaY: deltaY, times: GESTURE_TIMES };
   return sendMessage<TrustedScrollResult>("DEBUGGER_SCROLL", payload);
 }
 
