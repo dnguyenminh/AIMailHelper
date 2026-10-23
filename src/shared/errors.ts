@@ -16,7 +16,8 @@ export type ErrCode =
   | "ERR-13" // thiếu i18n key
   | "ERR-14" // thiếu host permission (BR-05)
   | "ERR-15" // request bị từ chối (400/404/413/model sai — KHÔNG retry)
-  | "ERR-16"; // provider quá tải (5xx/529/503 — backoff)
+  | "ERR-16" // provider quá tải (5xx/529/503 — backoff)
+  | "ERR-17"; // extension context invalidated (reload extension — F5 trang để phục hồi)
 
 export class AppError extends Error {
   readonly code: ErrCode;
@@ -59,7 +60,8 @@ export const DEFAULT_ERROR_I18N: Record<ErrCode, string> = {
   "ERR-13": "errors.missingI18nKey",
   "ERR-14": "errors.hostPermission",
   "ERR-15": "errors.badRequest",
-  "ERR-16": "errors.providerOverloaded"
+  "ERR-16": "errors.providerOverloaded",
+  "ERR-17": "errors.reloadRequired"
 };
 
 // Stub GĐ1 — handler/khả năng chưa triển khai trả ERR-15 kèm GĐ hoàn thành (khách hàng: router).

@@ -41,6 +41,9 @@ async function collectRound(locate: LocateFn, deps: DeepScanDeps, merged: Map<st
   try {
     items = await deps.collect(locate);
   } catch (error) {
+    // uat91 — ERR-17 (extension context invalidated): context chết → dừng TOÀN BỘ lần quét
+    // (retries vô ích) — panel hiện yêu cầu F5 qua ErrorBanner.
+    if (error instanceof AppError && error.code === "ERR-17") throw error;
     console.warn("[AIMH][deep-scan] round thu thập lỗi — thử round sau:", error);
     return fresh; // ERR-06 nhất thời (re-render) — không hủy cả lần quét
   }

@@ -128,10 +128,24 @@ export function toAppError(payload: RpcErrorPayload): AppError {
 }
 
 // §3.4 — sendMessage bọc chrome.runtime.sendMessage: sinh requestId, parse envelope, ném AppError.
+// uat91 — chrome.runtime CHẾT khi extension được Tải lại trong khi tab đang mở →
+// "Extension context invalidated" → chuyển thành ERR-17 (panel hiện yêu cầu F5) thay vì lỗi thô.
 export async function sendMessage<T>(kind: RpcKind, payload: unknown = {}): Promise<T> {
   const request: RpcRequest = { kind: kind, requestId: nextRequestId("rpc"), payload: payload };
-  const response = (await chrome.runtime.sendMessage(request)) as RpcResponse<T> | undefined;
+  let response: RpcResponse<T> | undefined;
+  try {
+    response = (await chrome.runtime.sendMessage(request)) as RpcResponse<T> | undefined;
+  } catch (error) {
+    if (/extension context invalidated/i.test(String(error instanceof Error ? error.message : error))) {
+      throw new AppError("ERR-17", "errors.reloadRequired", undefined, true);
+    }
+    throw error instanceof Error ? error : new AppError("ERR-15", "errors.badRequest");
+  }
   if (!response || typeof response !== "object" || !("ok" in response)) {
+    const lastError = chrome.runtime.lastError;
+    if (lastError !== undefined && /extension context invalidated/i.test(String(lastError.message))) {
+      throw new AppError("ERR-17", "errors.reloadRequired", undefined, true);
+    }
     throw new AppError("ERR-15", "errors.badRequest");
   }
   if (response.ok) return response.data;
