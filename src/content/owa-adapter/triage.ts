@@ -16,6 +16,7 @@ export type LocateFn = (functionKey: FunctionKey, question: string) => Promise<E
 
 export interface InboxItem extends TriageItem {
   provenance: "native" | "synthetic"; // §7.5 — synthetic ghi kèm để quét lại có thể thay id thật
+  ariaKey?: string; // uat92 — aria-label row lúc quét: vân tay ổn định để 👁/↗ tra lại (O(1))
 }
 
 const SUBJECT_PROBE = '[role="heading"], h1, h2';

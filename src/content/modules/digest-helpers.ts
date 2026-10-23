@@ -39,7 +39,7 @@ export const sortByScore = (entries: DigestEntry[]): DigestEntry[] =>
   [...entries].sort((a, b) => b.score - a.score); // FR-GD5-04
 
 function toEntry(item: InboxItem, score: TriageScore): DigestEntry {
-  return { messageId: score.messageId, subject: item.subject, sender: item.sender, score: score.score, reason: score.reason };
+  return { messageId: score.messageId, subject: item.subject, sender: item.sender, score: score.score, reason: score.reason, ariaKey: item.ariaKey };
 }
 
 // AppError / unknown → TriageError (i18nKey render theo uiLanguage — BR-08, KHÔNG chứa key/body).

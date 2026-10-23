@@ -96,10 +96,10 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
   }, [triage]);
   // uat80 — ↗ mở mail thành công → mail chuyển "đã đọc" → loại khỏi danh sách chưa đọc ngay.
   const scrollToUnread = useCallback(async (entry: DigestEntry): Promise<void> => {
-    void owaAdapter.scrollToItem(entry.messageId, { subject: entry.subject, sender: entry.sender });
+    void owaAdapter.scrollToItem(entry.messageId, { subject: entry.subject, sender: entry.sender, ariaKey: entry.ariaKey });
   }, []);
   const openUnread = useCallback(async (entry: DigestEntry): Promise<void> => {
-    const opened = await owaAdapter.openItem(entry.messageId, { subject: entry.subject, sender: entry.sender });
+    const opened = await owaAdapter.openItem(entry.messageId, { subject: entry.subject, sender: entry.sender, ariaKey: entry.ariaKey });
     if (opened === true) unreadRef.current?.markEntryRead(entry.messageId);
   }, []);
 

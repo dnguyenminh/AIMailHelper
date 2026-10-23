@@ -5,5 +5,9 @@
     "sdlcAgents.mcpServerPort": 9481,
     "sdlcAgents.enableMcpServer": true,
     "sdlcAgents.backend.url": "http://127.0.0.1:48721",
-    "sdlcAgents.jiraLastProject": "AMH"
+    "sdlcAgents.jiraLastProject": "AMH",
+    "sdlcAgents.pega.endpoint": "http://localhost12:8080/prweb",
+    "sdlcAgents.pega.username": "đ",
+    "sdlcAgents.mcp.serverPort": 9481,
+    "sdlcAgents.mcp.enabled": true
 }

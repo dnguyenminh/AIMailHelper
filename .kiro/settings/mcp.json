@@ -1,9 +1,24 @@
 {
   "mcpServers": {
     "code-intelligence": {
-      "url": "http://127.0.0.1:9181/mcp",
+      "url": "http://127.0.0.1:9481/mcp",
       "transportType": "httpStream",
       "disabled": false
+    },
+    "atlassian": {
+      "url": "http://localhost:3010/mcp",
+      "type": "httpStream",
+      "transportType": "httpStream",
+      "disabled": false,
+      "autoApprove": [
+        "jira_get_issue",
+        "jira_search",
+        "jira_get_transitions",
+        "jira_get_all_projects",
+        "jira_get_agile_boards",
+        "confluence_search",
+        "confluence_get_page"
+      ]
     }
   }
 }

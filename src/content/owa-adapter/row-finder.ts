@@ -30,7 +30,14 @@ function rowOf(el: Element): Element | null {
 }
 
 // Probe nhanh theo attribute native (data-itemid/data-convid/data-message-id) — O(1) query.
-function probeNative(messageId: string): Element | null {
+function probeNative(messageId: string, ariaKey?: string): Element | null {
+  if (ariaKey !== undefined && ariaKey.length > 0) {
+    const hit = document.querySelector('[aria-label="' + attrValueSafe(ariaKey) + '"]');
+    if (hit !== null) {
+      const row = rowOf(hit);
+      if (row !== null) return row;
+    }
+  }
   for (const attr of ID_ATTRIBUTES) {
     const hit = document.querySelector("[" + attr + '="' + attrValueSafe(messageId) + '"]');
     if (hit !== null) {
@@ -46,9 +53,9 @@ function probeNative(messageId: string): Element | null {
 export async function findLiveRow(
   messageId: string,
   locate: LocateFn,
-  hint?: { subject: string; sender: string }
+  hint?: { subject: string; sender: string; ariaKey?: string }
 ): Promise<Element | null> {
-  const native = probeNative(messageId);
+  const native = probeNative(messageId, hint?.ariaKey);
   if (native !== null) return native;
   const list = await locateInboxList(locate);
   if (list === null) return null;
@@ -60,6 +67,7 @@ export async function findLiveRow(
     if (hint !== undefined) {
       if (hint.subject.length > 0 && item.subject === hint.subject) return row;
       if (hint.sender.length > 0 && item.sender === hint.sender) return row;
+      if (hint.ariaKey !== undefined && row.getAttribute("aria-label") === hint.ariaKey) return row;
     }
   }
   return null;

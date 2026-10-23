@@ -80,7 +80,7 @@ export class OwaAdapter {
 
   // UAT — cuộn đến mail trong danh sách (KHÔNG mở mail, KHÔNG đổi trạng thái đã đọc).
   // uat83: hint subject/sender — khớp row ổn định qua re-render (id synthetic có thể lệch).
-  async scrollToItem(messageId: string, hint?: { subject: string; sender: string }): Promise<boolean> {
+  async scrollToItem(messageId: string, hint?: { subject: string; sender: string; ariaKey?: string }): Promise<boolean> {
     const row = await scrollSearchRow(messageId, (key, question) => this.locate(key, question), hint);
     if (row === null) {
       console.warn("[AIMH][panel] 👁 không tìm thấy mail trong danh sách hiện tại — thử refresh Outlook rồi quét lại");
@@ -97,7 +97,7 @@ export class OwaAdapter {
   // uat63: (1) scroll-search + scrollIntoView TRƯỚC khi tính toạ độ (bug v1: click theo rect
   // của row chưa vào viewport → trượt); (2) re-find sau virtualization; (3) trusted click qua
   // SW chrome.debugger (COPIL_INPUT_CLICK) — OWA mới bỏ qua click tổng hợp isTrusted=false.
-  async openItem(messageId: string, hint?: { subject: string; sender: string }): Promise<boolean> {
+  async openItem(messageId: string, hint?: { subject: string; sender: string; ariaKey?: string }): Promise<boolean> {
     const locateFn = (key: FunctionKey, question: string) => this.locate(key, question);
     let row = await scrollSearchRow(messageId, locateFn, hint);
     if (row === null) {

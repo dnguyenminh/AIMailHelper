@@ -80,6 +80,7 @@ export async function collectUnreadItemsDeep(locate: LocateFn, deps?: DeepScanDe
       const element = elements.get(item.messageId);
       if (element === undefined || unread.has(item.messageId)) continue;
       if (isUnreadItem(element)) {
+        item.ariaKey = element.getAttribute("aria-label") ?? undefined; // vân tay row (uat92)
         unread.set(item.messageId, item);
         unreadElements.set(item.messageId, element);
       }

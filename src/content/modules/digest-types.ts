@@ -12,6 +12,7 @@ export interface DigestEntry {
   sender: string;
   score: number;
   reason: string; // hiển thị Digest (AC4 US-08; ≤300 — TD-8)
+  ariaKey?: string; // uat92 — vân tay aria-label row (👁/↗ tra lại O(1) qua attribute query)
 }
 
 export interface TriageError {
