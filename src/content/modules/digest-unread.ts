@@ -36,3 +36,12 @@ export function pruneReadEntries(
 ): TriageUiState {
   return { ...state, digest: state.digest.filter((entry) => unreadStateOf(entry.messageId) !== false) };
 }
+
+// uat90 — state "done" cho danh sách đã lưu (restore sau F5/restart — không mất kết quả quét).
+export function restoreDone(state: TriageUiState, digest: DigestEntry[]): TriageUiState {
+  return {
+    ...state, status: "done", progress: { done: digest.length, total: digest.length, failed: 0 },
+    cachedSkipped: 0, cap: 0, overflow: 0, folderStopped: false, userStopped: false,
+    error: null, digest: [...digest]
+  };
+}

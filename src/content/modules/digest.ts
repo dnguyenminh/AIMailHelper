@@ -1,6 +1,5 @@
-// src/content/modules/digest.ts — UC-03/UC-04 orchestration (TDD §3.7; FSD 6.6d; FR-GD5-01..06).
-// collect (BR-07) → cache (BR-09) → cap 50 → batch+throttle → retry → cache GỘP + Digest sort
-// score giảm dần (FR-GD5-04); EF-2/EF-4 dừng an toàn; AF-5 quét tiếp; AF-2 quét lại bỏ cache.
+// src/content/modules/digest.ts — UC-03/UC-04 orchestration (TDD §3.7; FSD 6.6d; FR-GD5-01..06):
+// collect → cache → cap 50 → batch+throttle → retry → Digest sort score giảm dần; EF/AF đầy đủ.
 import type { TriageScore } from "../../shared/types";
 import type { AutomationConfig } from "../../shared/types";
 import type { InboxItem } from "../owa-adapter/triage";
@@ -8,7 +7,7 @@ import { findItemElement, isUnreadItem } from "../owa-adapter/triage";
 import type { BatchError } from "./digest-batch";
 import { runBatchWithRetry } from "./digest-batch";
 import { chunks, entriesFromCached, idsOf, toTriageError, upsertDigest } from "./digest-helpers";
-import { mergeNewUnread, pruneReadEntries, removeEntry } from "./digest-unread";
+import { mergeNewUnread, pruneReadEntries, removeEntry, restoreDone } from "./digest-unread";
 import type { DigestEntry, TriageDeps, TriageError, TriageUiState } from "./digest-types";
 
 export type { DigestEntry, TriageDeps, TriageError, TriageProgress, TriageUiState } from "./digest-types";
@@ -40,15 +39,13 @@ export class TriageController {
 
   constructor(private readonly deps: TriageDeps) {}
 
-  // UC-03 bước 1-6 — AF-2: force bỏ cache; keepDigest: giữ kết quả cũ (AF-5 "Quét tiếp");
-  // uat80: force (Quét lại) → full=true bỏ watermark quét toàn folder như cũ.
   async start(options: { force?: boolean; keepDigest?: boolean } = {}): Promise<void> {
     this.currentRun?.cancel();
     this.currentRun = null;
     this.signature = await this.deps.folderSignature();
     let items: InboxItem[];
     try {
-      items = await this.deps.collectItems(options.force === true ? { full: true } : undefined); // BR-07 + ERR-12 lọc sẵn trong triage.ts
+      items = await this.deps.collectItems(options.force === true ? { full: true } : undefined); // ERR-12 lọc sẵn
     } catch (error) {
       this.scan = null;
       this.setState({ ...IDLE, status: "error", error: toTriageError(error) });
@@ -75,12 +72,10 @@ export class TriageController {
     await this.runBatches();
   }
 
-  // AF-5 — quét phần mới hiển thị, giữ kết quả cũ (item đã cache không tốn token — BR-09).
   scanMore(): Promise<void> {
     return this.start({ keepDigest: true });
   }
 
-  // AF-2 — quét lại bỏ cache (gọi LLM lại cho toàn bộ item hiển thị).
   rescan(): Promise<void> {
     return this.start({ force: true });
   }
@@ -96,8 +91,14 @@ export class TriageController {
     this.setState(removeEntry(this.state, messageId));
   }
 
+  // uat90 — khôi phục danh sách đã lưu (F5/restart không mất kết quả quét; chỉ khi idle).
+  restore(digest: DigestEntry[]): void {
+    if (digest.length === 0 || this.state.status === "running") return;
+    this.scan = null;
+    this.setState(restoreDone(this.state, digest));
+  }
+
   // uat80 — refresh NHẸ danh sách chưa đọc (view đang mở, chu kỳ 30s): gộp mail mới về
-  // (chưa chấm điểm) + loại mail đã chuyển "đã đọc" (row còn kết nối). KHÔNG cuộn, KHÔNG LLM.
   async refreshTop(): Promise<void> {
     if (this.state.status !== "done") return;
     let top: InboxItem[] = [];

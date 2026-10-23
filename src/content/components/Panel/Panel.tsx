@@ -10,6 +10,7 @@ import { createAnalyzeController } from "../../modules/analyze";
 import type { AnalysisUiState } from "../../modules/analyze";
 import { owaAdapter } from "../../owa-adapter/owa-adapter";
 import { createTriageController, createUnreadTriageController } from "../../modules/digest-controllers";
+import { loadUnreadDigest, saveUnreadDigest } from "../../modules/unread-store";
 import type { DigestEntry, TriageUiState } from "../../modules/digest";
 const IDLE_SCAN: TriageUiState = { status: "running", progress: { done: 0, total: 0, failed: 0 }, cachedSkipped: 0, cap: 0, overflow: 0, folderStopped: false, userStopped: false, error: null, digest: [] };
 import { AnalysisView } from "./AnalysisView";
@@ -42,7 +43,14 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
   useEffect(() => {
     controllerRef.current = createAnalyzeController(setState);
     triageRef.current = createTriageController(setTriage); // GĐ5 — UC-03/UC-04
-    unreadRef.current = createUnreadTriageController(setUnread); // UAT — list mail chưa đọc (chỉ-đọc DOM)
+    // uat90 — unread: persist danh sách khi done + KHÔI PHỤC lúc boot (F5/restart không mất)
+    unreadRef.current = createUnreadTriageController((state) => {
+      setUnread(state);
+      if (state.status === "done" && state.digest.length > 0) void saveUnreadDigest(state.digest);
+    });
+    void loadUnreadDigest().then((digest) => {
+      if (digest.length > 0) unreadRef.current?.restore(digest);
+    });
     autoRef.current = createAutoModeController(setAuto); // GĐ6 — observer CHỈ khi enabled (BR-02)
     void autoRef.current.sync();
     void getCache(CONSENT_KEY, (value) => (value === true ? true : null)).then((shown) => setConsentVisible(shown !== true));
