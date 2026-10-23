@@ -1,8 +1,8 @@
 {
-  "mcpUrl": "http://127.0.0.1:9481/mcp",
+  "mcpUrl": "http://127.0.0.1:9181/mcp",
   "host": "127.0.0.1",
-  "port": 9481,
-  "pid": 44136,
+  "port": 9181,
+  "pid": 54220,
   "workspace": "c:\\projects\\nodejs\\AIMailHelper",
-  "startedAt": "2026-10-22T00:25:49.776Z"
+  "startedAt": "2026-10-22T23:52:43.340Z"
 }

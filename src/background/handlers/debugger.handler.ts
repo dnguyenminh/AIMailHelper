@@ -28,7 +28,12 @@ function parseScrollPayload(payload: unknown): DebuggerScrollPayload {
   return {
     x: int(raw["x"], 0, 20_000),
     y: int(raw["y"], 0, 20_000),
-    deltaY: int(raw["deltaY"], MIN_DELTA, MAX_DELTA),
+    // uat86 — cho phép DẤU: âm = cuộn lên (trustedScrollToTop), dương = cuộn xuống; |delta| trong biên
+    deltaY: (() => {
+      const n = int(raw["deltaY"], -MAX_DELTA, MAX_DELTA);
+      if (Math.abs(n) < MIN_DELTA) throw new AppError("ERR-15", "errors.badRequest");
+      return n;
+    })(),
     times: int(raw["times"], 1, MAX_TIMES)
   };
 }
