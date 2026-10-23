@@ -15,7 +15,6 @@ import type { LocateFn } from "./triage";
 const ROW_SELECTOR = SELECTOR_CHAINS["inbox-item"].join(",");
 const SCROLL_STEP_WAIT_MS = 280; // chờ OWA render lại row sau khi cuộn (virtualization)
 const MAX_SCROLL_STEPS = 80; // pha C (scrollTop) — folder ~vài trăm mail
-const MAX_BURSTS = 15; // pha A/B — mỗi burst = 3 gesture × 1200px
 const ID_ATTRIBUTES = ["data-itemid", "data-convid", "data-message-id"] as const;
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
@@ -57,7 +56,11 @@ export async function findLiveRow(
     const item = await readItem(row);
     if (item === null) continue;
     if (item.messageId === messageId) return row;
-    if (hint !== undefined && hint.subject.length > 0 && item.subject === hint.subject) return row;
+    // uat89 — hint match: subject HOẶC sender (subject rỗng trên một số template OWA)
+    if (hint !== undefined) {
+      if (hint.subject.length > 0 && item.subject === hint.subject) return row;
+      if (hint.sender.length > 0 && item.sender === hint.sender) return row;
+    }
   }
   return null;
 }
@@ -108,8 +111,8 @@ export async function scrollSearchRow(
   // PHA A — trusted cuộn LÊN tới đỉnh (first row không đổi 2 lần liên tiếp = chạm đỉnh)
   let prevFirst = await firstRowId();
   let stableUp = 0;
-  for (let i = 0; i < MAX_BURSTS && found === null && stableUp < 2; i += 1) {
-    try { await trustedScrollBurst(cx, cy, -1200); } catch { break; } // gesture lỗi → pha B
+  for (let i = 0; i < 60 && found === null && stableUp < 2; i += 1) {
+    try { await trustedScrollBurst(cx, cy, -600, 1); } catch { break; } // gesture lỗi → pha B
     await sleep(stepWaitMs);
     found = await findLiveRow(messageId, locate, hint);
     if (found !== null) return found;
@@ -120,8 +123,8 @@ export async function scrollSearchRow(
   // PHA B — trusted cuộn XUỐNG tới đáy (last row không đổi 2 lần liên tiếp = chạm đáy)
   let prevLast = await lastRowId();
   let stableDown = 0;
-  for (let i = 0; i < MAX_BURSTS && found === null && stableDown < 2; i += 1) {
-    try { await trustedScrollBurst(cx, cy, 1200); } catch { break; }
+  for (let i = 0; i < 100 && found === null && stableDown < 2; i += 1) {
+    try { await trustedScrollBurst(cx, cy, 600, 1); } catch { break; }
     await sleep(stepWaitMs);
     found = await findLiveRow(messageId, locate, hint);
     if (found !== null) return found;
