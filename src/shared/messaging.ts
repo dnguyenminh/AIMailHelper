@@ -30,7 +30,8 @@ export type RpcKind =
   | "COPIL_PANEL_STRUCTURE"
   | "COPIL_PANEL_HTML"
   | "COPIL_INPUT_HOVER"
-  | "COPIL_INPUT_CLICK";
+  | "COPIL_INPUT_CLICK"
+  | "COPIL_REPLY_SUBMIT";
 
 export const RPC_KINDS: readonly RpcKind[] = [
   "CONFIG_GET",
@@ -58,7 +59,8 @@ export const RPC_KINDS: readonly RpcKind[] = [
   "COPIL_PANEL_STRUCTURE",
   "COPIL_PANEL_HTML",
   "COPIL_INPUT_HOVER",
-  "COPIL_INPUT_CLICK"
+  "COPIL_INPUT_CLICK",
+  "COPIL_REPLY_SUBMIT"
 ];
 
 export function isRpcKind(value: unknown): value is RpcKind {

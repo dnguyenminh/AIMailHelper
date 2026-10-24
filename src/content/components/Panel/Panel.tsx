@@ -15,6 +15,7 @@ import type { DigestEntry, TriageUiState } from "../../modules/digest";
 const IDLE_SCAN: TriageUiState = { status: "running", progress: { done: 0, total: 0, failed: 0 }, cachedSkipped: 0, cap: 0, overflow: 0, folderStopped: false, userStopped: false, error: null, digest: [] };
 import { AnalysisView } from "./AnalysisView";
 import { CopilotResult } from "./CopilotResult"; // GĐ-B — Copilot verbatim (result=null)
+import { CopilotReplySection } from "./CopilotReplySection"; // uat93 — soạn reply bằng Copilot
 import { DiagnoseView } from "./DiagnoseView";
 import { DigestView } from "./DigestView";
 import { ErrorBanner } from "./ErrorBanner";
@@ -35,6 +36,7 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
   const [showQueue, setShowQueue] = useState(false);
   const [consentVisible, setConsentVisible] = useState(false);
   const [showDiagnose, setShowDiagnose] = useState(false);
+  const [copilotDraft, setCopilotDraft] = useState<string | null>(null); // uat93 — nháp Copilot → ReplySection
   const controllerRef = useRef<ReturnType<typeof createAnalyzeController> | null>(null);
   const triageRef = useRef<ReturnType<typeof createTriageController> | null>(null);
   const unreadRef = useRef<ReturnType<typeof createUnreadTriageController> | null>(null);
@@ -55,6 +57,7 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
     void autoRef.current.sync();
     void getCache(CONSENT_KEY, (value) => (value === true ? true : null)).then((shown) => setConsentVisible(shown !== true));
     const onExternal = (): void => {
+      setCopilotDraft(null);
       void controllerRef.current?.start();
     };
     document.addEventListener(EXTERNAL_ANALYZE_EVENT, onExternal);
@@ -69,6 +72,7 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
 
   const analyze = useCallback((): void => {
     setShowDiagnose(false);
+    setCopilotDraft(null); // nháp Copilot thuộc email cũ — bỏ khi đổi email (EF-5 gốc)
     void controllerRef.current?.start();
   }, []);
 
@@ -146,9 +150,10 @@ export function Panel({ host }: { host: HTMLDivElement | null }) {
       {state.status === "reading" && <p className="aimh-note">{t("panel.analyze.readingEmail")}</p>}
       {state.status === "streaming" && <pre className="aimh-stream">{state.raw}</pre>}
       {state.copilot === true && state.status === "done" && <CopilotResult raw={state.raw} md={state.rawHtml} />}
+      {state.copilot === true && state.status === "done" && <CopilotReplySection onDraft={setCopilotDraft} />}
       {state.result !== null && <AnalysisView result={state.result} />}
       {state.error !== null && <ErrorBanner error={state.error} onRetry={analyze} />}
-      {state.result !== null && <ReplySection email={email} />}
+      {(state.result !== null || copilotDraft !== null) && <ReplySection email={email} externalDraft={copilotDraft} />}
       {triage !== null && (
         <DigestView
           state={triage}

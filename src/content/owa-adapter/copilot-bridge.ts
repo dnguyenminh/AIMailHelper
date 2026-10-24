@@ -1,8 +1,7 @@
 // src/content/owa-adapter/copilot-bridge.ts — GĐ-A/B (20/10): phân tích bằng Copilot OWA.
-// user quyết định: Copilot THAY LLM+VL. 1 click, KHÔNG gửi mail (BR-01).
-// 21/10 (UAT Edge thật): flyout OWA CHỈ nghe event TRUSTED → trigger qua SW Input
+// user quyết định: Copilot THAY LLM+VL. 1 click, KHÔNG gửi mail (BR-01). Đọc READ-ONLY
+// (SR-12). 21/10 (UAT Edge thật): flyout OWA CHỈ nghe event TRUSTED → trigger qua SW Input
 // (RPC COPIL_INPUT_*). Poll 90s — panel auto-inject prompt + stream tóm tắt mất 20–70s.
-// Đọc READ-ONLY (SR-12): chỉ click nút của Copilot, không gõ prompt.
 import { sendMessage } from "../../shared/messaging";
 import { filterNewExchange } from "../../shared/copilot-format";
 import type { MdNode } from "../../shared/copilot-format";
@@ -19,8 +18,9 @@ export type CopilotTriggerResult = "clicked" | "no-entry" | "popup-not-found";
 
 // CopilotRead/ChipOutcome — trả về của SW (structural); nút Copilot: ưu tiên aria-label,
 // fallback #BottomBar child thứ 2 (user chỉ).
-interface CopilotRead { text: string; parts: string[]; lines: string[] }
-interface ChipOutcome { clicked: boolean; reason: string }
+export interface CopilotRead { text: string; parts: string[]; lines: string[] }
+export interface ChipOutcome { clicked: boolean; reason: string }
+
 
 export function findCopilotEntry(): HTMLElement | null {
   const bar = document.querySelector("#BottomBar");
@@ -102,7 +102,7 @@ export function describeCopilotLines(): string[] {
 // ── GĐ-B 20/10 — analyzeViaCopilot: trigger "Summarize this email" + đọc ổn định text panel ──
 
 // Đọc panel qua SW (CDP vào iframe cross-origin). Lỗi (SW ngủ/không response) → struct rỗng.
-async function readCopilotPanel(): Promise<CopilotRead> {
+export async function readCopilotPanel(): Promise<CopilotRead> {
   try {
     return await sendMessage<CopilotRead>("COPIL_PANEL_READ", {});
   } catch {
@@ -150,7 +150,7 @@ export async function analyzeViaCopilot(signal?: CancelSignal): Promise<{ text: 
 // DIFF theo TEXT NODE (đã lọc script/style từ 21/10): node MỚI không ở baseline = tóm tắt
 // thật; ổn định 2 vòng + ≥120 chars. KHÔNG dùng text cũ khi trigger fail (bài học 20/10).
 // Bài học 21/10: suggestion chip lặp ("Summarize this email" ×N) — dedupe part liền kề trước diff.
-function freshParts(current: string[], baseSet: Set<string>): string {
+export function freshParts(current: string[], baseSet: Set<string>): string {
   const deduped = current.filter((part, index) => part !== current[index - 1]);
   return deduped.filter((part) => !baseSet.has(part)).join(" ").trim();
 }

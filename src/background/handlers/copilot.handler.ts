@@ -9,6 +9,7 @@ import { readCopilotPanelText, triggerCopilotChip } from "../copilot-reader";
 import { readCopilotStructuredText } from "../copilot-structure";
 import { readCopilotPanelHtml } from "../copilot-html";
 import { copilInputHover, copilInputClick } from "../copilot-input";
+import { submitCopilotPrompt } from "../copilot-submit";
 import type { MessageRouter, RpcHandler } from "../router";
 
 interface InputPoint { x?: number; y?: number }
@@ -55,6 +56,16 @@ const copilotHtmlHandler: RpcHandler = async (_payload, ctx) => {
   return await readCopilotPanelHtml();
 };
 
+// uat93 — soạn reply: prompt do CS dựng từ tone/ngôn ngữ/hướng dẫn (≤4000 ký tự).
+const copilotReplyHandler: RpcHandler = async (payload, ctx) => {
+  validateOwaCaller(ctx);
+  const prompt = (payload as { prompt?: unknown } | null | undefined)?.prompt;
+  if (typeof prompt !== "string" || prompt.trim().length === 0 || prompt.length > 4000) {
+    throw new AppError("ERR-15", "errors.badRequest");
+  }
+  return await submitCopilotPrompt(prompt);
+};
+
 export function registerCopilotHandlers(router: MessageRouter): void {
   router.register("COPIL_PANEL_READ", copilotReadHandler);
   router.register("COPIL_CHIP_CLICK", copilotChipHandler);
@@ -62,4 +73,5 @@ export function registerCopilotHandlers(router: MessageRouter): void {
   router.register("COPIL_PANEL_HTML", copilotHtmlHandler);
   router.register("COPIL_INPUT_HOVER", copilotHoverHandler);
   router.register("COPIL_INPUT_CLICK", copilotClickHandler);
+  router.register("COPIL_REPLY_SUBMIT", copilotReplyHandler);
 }

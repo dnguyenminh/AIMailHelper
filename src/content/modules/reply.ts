@@ -78,6 +78,16 @@ export class ReplyController {
     if (this.sourceEmail && this.options) this.start(this.sourceEmail, this.options);
   }
 
+  // uat93 — Hướng A: Panel đưa nháp do Copilot soạn vào preview; UX "Chèn vào Reply" giữ nguyên
+  // (EF-5 vẫn so khớp messageId trước khi chèn — nháp thuộc email đang phân tích).
+  adoptDraft(email: EmailData, draft: string): void {
+    this.cancelStream();
+    this.sourceEmail = email;
+    this.options = null;
+    this.raw = draft;
+    this.setState({ status: "ready", draft: draft, error: null, mismatch: false });
+  }
+
   cancel(): void {
     this.cancelStream();
     this.setState(IDLE_REPLY);

@@ -11,7 +11,7 @@ import { createReplyController } from "../../modules/reply";
 import type { ReplyUiState } from "../../modules/reply";
 import { ErrorBanner } from "./ErrorBanner";
 
-export function ReplySection(props: { email: EmailData | null }): JSX.Element | null {
+export function ReplySection(props: { email: EmailData | null; externalDraft?: string | null }): JSX.Element | null {
   const [state, setState] = useState<ReplyUiState>({ status: "idle", draft: "", error: null, mismatch: false });
   const [tone, setTone] = useState<ReplyTone>("chinh-thuc");
   const [language, setLanguage] = useState<ReplyLanguage>("auto");
@@ -30,6 +30,14 @@ export function ReplySection(props: { email: EmailData | null }): JSX.Element | 
       .catch(() => undefined); // storage hỏng → giữ defaults fail-closed
     return () => controllerRef.current?.cancel();
   }, []);
+
+  // uat93 — Hướng A: nháp do Copilot soạn (Panel truyền xuống) → adopt vào preview;
+  // UX "Chèn vào Reply" + EF-5 giữ nguyên (adoptDraft gán sourceEmail = email đang mở).
+  useEffect(() => {
+    const draft = props.externalDraft ?? "";
+    if (draft.trim().length === 0 || props.email === null) return;
+    controllerRef.current?.adoptDraft(props.email, draft);
+  }, [props.externalDraft]);
 
   const start = (): void => {
     setNeedsConfirm(null);
