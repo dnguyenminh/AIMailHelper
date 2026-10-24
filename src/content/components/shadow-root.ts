@@ -13,6 +13,12 @@ export function createShadowHost(target: ParentNode = document.body): ShadowMoun
   const host = document.createElement("div"); // SR-10 — DOM API an toàn
   host.id = HOST_ID;
   host.style.cssText = HOST_STYLE; // tránh kế thừa style OWA (§2.3)
+  // uat95 — chặn phím gõ TRONG panel bubble ra document OWA: keydown/keyup composed xuyên
+  // shadow boundary (retarget về host) → OWA bắt "n"/"r"… = New mail/Reply + STEAL FOCUS.
+  // React 17+ gắn listener trong shadow root nên stopPropagation synthetic KHÔNG đủ — phải
+  // chặn native NGAY TẠI HOST; gõ trong panel vẫn bình thường, phím tắt OWA không thấy gì.
+  const stopBubble = (event: Event): void => event.stopPropagation();
+  for (const type of ["keydown", "keyup", "keypress"] as const) host.addEventListener(type, stopBubble);
   target.appendChild(host);
   const shadow = host.attachShadow({ mode: "closed" }); // closed — OWA script không can thiệp được
   return { host: host, shadow: shadow };
