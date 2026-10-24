@@ -52,14 +52,22 @@ async function lastExchangeHtml(targetId: string): Promise<string | undefined> {
   return html.slice(0, MAX_HTML_CHARS);
 }
 
-// API chính: attach → outerHTML lượt cuối → detach LUÔN (kể cả lỗi). Lỗi → { error }.
+// API chính: dò ĐA target (uat99 — iframe cũ rỗng đứng trước) → attach → outerHTML lượt cuối
+// → detach LUÔN. Giữ bản html DÀI NHẤT (panel thật); lỗi → { error }.
 export async function readCopilotPanelHtml(): Promise<{ html?: string; error?: string }> {
-  const [target] = await copilotTargets(1);
-  const id = target?.id;
-  if (id === undefined) return { error: "no-copilot-target" };
-  await cdpAttach(id);
-  const html = await lastExchangeHtml(id);
-  await cdpDetach(id);
-  if (html === undefined) return { error: "cdp-dom-fail" };
-  return { html: html };
+  const targets = await copilotTargets(3);
+  let best = "", sawTarget = false;
+  for (const target of targets) {
+    const id = target.id;
+    if (id === undefined) continue;
+    sawTarget = true;
+    await cdpAttach(id);
+    const html = await lastExchangeHtml(id);
+    await cdpDetach(id);
+    if (html !== undefined && html.length > best.length) best = html;
+    if (best.length > 0) break; // có nội dung — panel thật
+  }
+  if (sawTarget === false) return { error: "no-copilot-target" };
+  if (best.length === 0) return { error: "cdp-dom-fail" };
+  return { html: best };
 }
