@@ -8,7 +8,7 @@
 // đã đọc/chưa đọc (yêu cầu bắt buộc).
 const ITEM_SELECTOR = '[role="option"], [role="listitem"]';
 const LIST_CONTAINER = '[role="listbox"], [role="list"]';
-const LIST_REGION_SELECTOR = '[id="Skip to message list-region"]';
+const LIST_REGION_SELECTOR = '[id*="Skip to message list"]';
 const SCROLL_OVERFLOW = /(auto|scroll|overlay)/;
 const MIN_SCROLL_DELTA = 20; // scroller chuẩn — overflow hợp lệ + còn dư nội dung
 const HIDDEN_SCROLLER_DELTA = 100; // scroller ẩn (overflow:hidden) — phải dư nhiều mới tin

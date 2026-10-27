@@ -62,7 +62,7 @@ export const SELECTOR_CHAINS: Record<FunctionKey, SelectorChain> = {
     '[role="main"] [role="list"]',
     '[role="list"]'
   ],
-  "inbox-item": ['[role="listitem"]', '[role="main"] [role="option"]', '[role="option"]', '[role="treeitem"]']
+  "inbox-item": ['[role="listitem"]', '[role="main"] [role="option"]', '[role="option"]']
 };
 
 // BR-01 / SR-14 invariant: send-button KHÔNG thuộc FunctionKey — CHỈ phục vụ diagnose đối chiếu

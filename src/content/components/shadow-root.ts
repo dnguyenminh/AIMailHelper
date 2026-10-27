@@ -13,12 +13,18 @@ export function createShadowHost(target: ParentNode = document.body): ShadowMoun
   const host = document.createElement("div"); // SR-10 — DOM API an toàn
   host.id = HOST_ID;
   host.style.cssText = HOST_STYLE; // tránh kế thừa style OWA (§2.3)
-  // uat95 — chặn phím gõ TRONG panel bubble ra document OWA: keydown/keyup composed xuyên
-  // shadow boundary (retarget về host) → OWA bắt "n"/"r"… = New mail/Reply + STEAL FOCUS.
-  // React 17+ gắn listener trong shadow root nên stopPropagation synthetic KHÔNG đủ — phải
-  // chặn native NGAY TẠI HOST; gõ trong panel vẫn bình thường, phím tắt OWA không thấy gì.
+  // uat95+uat103 — chặn sự kiện panel bubble ra document OWA. PHÍM (uat95): keydown/keyup
+  // composed xuyên shadow boundary → OWA bắt "n"/"r"… = New mail/Reply + STEAL FOCUS.
+  // CON TRỎ/CLICK (uat103): click nút "Soạn bằng Copilot" bubble → retarget về host → rơi
+  // trúng nút Copilot của OWA ngay dưới panel nổi → OWA TÁI TẠO panel Copilot + re-summarize
+  // → ô chat biến mất đúng lúc submit dò input → input-khong-thay. React 17+ gắn listener
+  // trong shadow root nên stopPropagation synthetic KHÔNG đủ — chặn native NGAY TẠI HOST;
+  // handler trong shadow vẫn chạy trước (bubble chạm host sau cùng), drag dùng pointer
+  // capture trên chính thanh tiêu đề (listeners trong shadow) nên không bị ảnh hưởng.
   const stopBubble = (event: Event): void => event.stopPropagation();
-  for (const type of ["keydown", "keyup", "keypress"] as const) host.addEventListener(type, stopBubble);
+  const BLOCKED = ["keydown", "keyup", "keypress", "pointerdown", "pointerup", "pointermove",
+    "mousedown", "mouseup", "mousemove", "click", "dblclick", "auxclick", "contextmenu", "wheel"] as const;
+  for (const type of BLOCKED) host.addEventListener(type, stopBubble);
   target.appendChild(host);
   const shadow = host.attachShadow({ mode: "closed" }); // closed — OWA script không can thiệp được
   return { host: host, shadow: shadow };
@@ -51,6 +57,7 @@ export const PANEL_BASE_CSS = [
   ".aimh-panel-note { margin: 0; color: #5f6368; font-size: 12px; }",
   // GĐ3 — panel actions + analysis views
   ".aimh-panel-actions { display: flex; gap: 6px; flex-wrap: wrap; }",
+  ".aimh-lang { max-width: 170px; flex: 0 1 auto; }", // uat112 — select ngôn ngữ tóm tắt gọn trong hàng nút
   ".aimh-btn { padding: 4px 10px; border-radius: 4px; border: 1px solid #d1d1d7;",
   "  background: #ffffff; color: #1b1b1f; font: inherit; cursor: pointer; }",
   ".aimh-btn:disabled { opacity: 0.55; cursor: not-allowed; }",
@@ -101,8 +108,9 @@ export const PANEL_BASE_CSS = [
   "  padding-top: 8px; }",
   ".aimh-digest-list { max-height: 220px; overflow: auto; display: flex; flex-direction: column;",
   "  gap: 4px; }",
-  // UAT — window chrome: panel như cửa sổ (kéo thả qua titlebar, thu nhỏ/ẩn, resize góc phải dưới)
-  ".aimh-panel { resize: both; overflow: auto; max-height: 80vh; max-width: 480px; min-width: 230px;",
+  // UAT — window chrome: panel như cửa sổ (kéo thả titlebar, thu nhỏ/ẩn, resize góc phải dưới).
+  // uat115 (theo yêu cầu user): KHÔNG resize nội tại — tránh double-window.
+  ".aimh-panel { resize: none; overflow: auto; max-height: none; max-width: 480px; min-width: 230px;",
   "  min-height: 96px; }",
   ".aimh-titlebar { display: flex; align-items: center; justify-content: space-between;",
   "  cursor: move; user-select: none; touch-action: none; padding-bottom: 6px; }",

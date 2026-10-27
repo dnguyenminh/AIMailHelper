@@ -36,6 +36,8 @@ export async function collectInboxItems(locate: LocateFn): Promise<InboxItem[]> 
   currentScan.clear();
   const items: InboxItem[] = [];
   for (const element of list.querySelectorAll(SELECTOR_CHAINS["inbox-item"].join(","))) {
+    const aria = element.getAttribute("aria-label") ?? "";
+    if (/collapsed/i.test(aria)) continue; // bỏ qua group header đã thu gọn
     const item = await readItem(element);
     if (item === null) continue; // ERR-12 — đã log, batch không gián đoạn (FR-GD5-06)
     currentScan.set(item.messageId, element);
